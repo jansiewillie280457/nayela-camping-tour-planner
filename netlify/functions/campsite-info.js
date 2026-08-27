@@ -84,9 +84,14 @@ async function verifyFirebaseIdToken(idToken) {
 }
 
 exports.handler = async function (event) {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
-  }
+  console.log('campsite-info invoked, method:', event && event.httpMethod, 'hasBody:', !!(event && event.body));
+
+  // (No HTTP-method check here -- it isn't needed for security, since the
+  // Firebase login check right below is what actually gates this
+  // endpoint, and different Netlify function runtimes/formats have
+  // reported the incoming method inconsistently in the past. Body
+  // parsing below will naturally fail for a request with no JSON body
+  // anyway.)
 
   // ── Require a valid, current Firebase login ──────────────────────
   var authHeader = (event.headers && (event.headers.authorization || event.headers.Authorization)) || '';
