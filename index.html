@@ -245,7 +245,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(180deg,#
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v2.3 (26 Aug data)</div>
+  <div class="hdr-ver">v2.3 (31 Aug data)</div>
 </div>
 
 <!-- MAIN MENU PAGE -->
@@ -911,7 +911,6 @@ function pullFromCampsite(){
   try{ csSel = sel; csCamps = camps; } catch(e){ toast(tr('tour.pull.openSearchFirst')); return; }
   if(!csSel || !csSel.length){ toast(tr('tour.pull.noneSelected')); return; }
   var added = 0;
-  var newIndicesNeedingAI = [];
   csSel.forEach(function(i){
     var c = csCamps[i];
     if(!c) return;
@@ -923,7 +922,6 @@ function pullFromCampsite(){
         booked: 'NO', fuelCost: 0, date: '', gps: clean(c.gps), notes: c.notes || ''
       });
       added++;
-      if(!c.notes) newIndicesNeedingAI.push(tourStops.length-1);
     }
   });
   if(!added){ toast(tr('tour.pull.alreadyInSchedule')); return; }
@@ -963,15 +961,6 @@ function pullFromCampsite(){
   // straight-line GPS estimate automatically. Either way, distances
   // should just be there without a separate manual step.
   if(typeof calcAllStopDistances==='function') calcAllStopDistances();
-  // Auto-fill area/campsite info too, one at a time with a short stagger
-  // -- firing them all at once would hit the Netlify function (and
-  // Claude's API) with a burst of simultaneous requests for what could
-  // be a dozen+ campsites pulled in from a round trip.
-  if(typeof generateCampsiteInfo==='function' && newIndicesNeedingAI.length){
-    newIndicesNeedingAI.forEach(function(idx, order){
-      setTimeout(function(){ generateCampsiteInfo(idx); }, order*600);
-    });
-  }
 }
 
 document.addEventListener('DOMContentLoaded', function(){
@@ -4143,11 +4132,11 @@ Object.assign(I18N.af, {
   'tour.hdr.email': '📧 E-pos Toerprogram',
   'tour.hdr.save': '💾 Stoor Toer',
   'tour.hdr.import': '📥 Voer Toerplan In',
+  'tour.hdr.gpx': '📍 Voer uit na Garmin (GPX)',
   'tour.hdr.aiFillAll': '🤖 AI Vul Alles In',
   'tour.hdr.aiFillAllNone': 'Elke stop het reeds inligting — niks om te genereer nie.',
   'tour.hdr.aiFillAllProgress': 'Genereer... ({done}/{total})',
   'tour.hdr.aiFillAllDone': '✓ {n} kampplek-beskrywings gegenereer',
-  'tour.hdr.gpx': '📍 Voer uit na Garmin (GPX)',
   'tour.gpx.arrive': 'Aankoms',
   'tour.gpx.nights': 'Nagte',
   'tour.gpx.noneError': 'Geen van die stops het GPS-koördinate nie — kan nie \'n GPX-lêer skep nie.',
@@ -4255,7 +4244,9 @@ Object.assign(I18N.af, {
   'tour.schedule.bookedYes': '✓ JA',
   'tour.schedule.bookedNo': '✗ NEE',
   'tour.schedule.routeLegBtn': '🗺️',
-  'tour.schedule.routeLegTitle': 'Wys roete vir hierdie dag se rit (vorige kampeerterrein → hierdie een)',
+  'tour.schedule.routeLegTitle': 'Wys roete vir hierdie dag se rit (vorige kampeerterrein → hierdie een) — OpenStreetMap',
+  'tour.schedule.routeLegGoogleBtn': '🚗',
+  'tour.schedule.routeLegGoogleTitle': 'Open Google Maps GPS-navigasie vir hierdie dag se rit (vorige kampeerterrein → hierdie een)',
   'tour.schedule.routeLegNoGps': 'Kan nie roete wys nie — een of albei kampeerterreine het geen GPS-koördinate nie.',
 
   'tour.gmaps.hdr': '🌐 OpenStreetMap Afstand (KM) Outomatiese Invul',
@@ -4424,11 +4415,11 @@ Object.assign(I18N.en, {
   'tour.hdr.email': '📧 Email Tour Program',
   'tour.hdr.save': '💾 Save Tour',
   'tour.hdr.import': '📥 Import Tour Plan',
+  'tour.hdr.gpx': '📍 Export to Garmin (GPX)',
   'tour.hdr.aiFillAll': '🤖 AI Fill All In',
   'tour.hdr.aiFillAllNone': 'Every stop already has info — nothing to generate.',
   'tour.hdr.aiFillAllProgress': 'Generating... ({done}/{total})',
   'tour.hdr.aiFillAllDone': '✓ Generated {n} campsite descriptions',
-  'tour.hdr.gpx': '📍 Export to Garmin (GPX)',
   'tour.gpx.arrive': 'Arrive',
   'tour.gpx.nights': 'Nights',
   'tour.gpx.noneError': 'None of the stops have GPS coordinates — can\'t create a GPX file.',
@@ -4536,7 +4527,9 @@ Object.assign(I18N.en, {
   'tour.schedule.bookedYes': '✓ YES',
   'tour.schedule.bookedNo': '✗ NO',
   'tour.schedule.routeLegBtn': '🗺️',
-  'tour.schedule.routeLegTitle': 'Show route for this day\'s drive (previous campsite → this one)',
+  'tour.schedule.routeLegTitle': 'Show route for this day\'s drive (previous campsite → this one) — OpenStreetMap',
+  'tour.schedule.routeLegGoogleBtn': '🚗',
+  'tour.schedule.routeLegGoogleTitle': 'Open Google Maps GPS navigation for this day\'s drive (previous campsite → this one)',
   'tour.schedule.routeLegNoGps': 'Can\'t show route — one or both campsites has no GPS coordinates on record.',
 
   'tour.gmaps.hdr': '🌐 OpenStreetMap Distance (KM) Auto-Fill',
@@ -5297,7 +5290,6 @@ function addStop(){
     if(insertAt < newIndex){
       var newStop = tourStops.pop();
       tourStops.splice(insertAt, 0, newStop);
-      newIndex = insertAt; // stop moved -- keep newIndex pointing at it
     }
     // Respect the given date exactly and only push the change forward
     // through any LATER stops, the same way a manual edit of the Begin
@@ -5325,13 +5317,6 @@ function addStop(){
   recalcFuel();
   renderOverview();
   toast(tr('tour.schedule.addedToSchedule', {name: name}));
-  // Auto-fill the area/campsite info with AI, same spirit as the
-  // automatic KM lookup -- runs in the background and doesn't block the
-  // form. Only for the stop actually just added, and only when it's not
-  // already carrying notes.
-  if(!tourStops[newIndex].notes && typeof generateCampsiteInfo==='function'){
-    generateCampsiteInfo(newIndex);
-  }
 }
 
 // ── Return leg: puts the FIRST stop back onto the end of the schedule,
@@ -5746,6 +5731,7 @@ function renderSchedule(){
         +(s.kmSource==='straight' ? ' <span title="'+esc(tr('tour.gmaps.straightTooltip'))+'" style="color:#b26a00;font-weight:700;cursor:help;">~</span>' : '')
         +(s.kmSource==='osrm' ? ' <span title="'+esc(tr('tour.gmaps.googleTooltip'))+'" style="color:#2e7d32;font-weight:700;cursor:help;">✓</span>' : '')
         +(i>0 ? ' <button type="button" onclick="openTourLegRoute('+i+')" title="'+esc(tr('tour.schedule.routeLegTitle'))+'" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:.9rem;vertical-align:middle;touch-action:manipulation;">'+tr('tour.schedule.routeLegBtn')+'</button>' : '')
+        +(i>0 ? ' <button type="button" onclick="openTourLegRouteGoogle('+i+')" title="'+esc(tr('tour.schedule.routeLegGoogleTitle'))+'" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:.9rem;vertical-align:middle;touch-action:manipulation;">'+tr('tour.schedule.routeLegGoogleBtn')+'</button>' : '')
       +'</td>'
       +'<td>R <input type="number" min="0" value="'+((parseFloat(s.costPP)||0)*people).toFixed(0)+'" style="width:64px;text-align:center;padding:3px;border:1px solid #ccc;border-radius:4px;font-size:.78rem;" onchange="updateStopCostPerNight('+i+',this.value)"></td>'
       +'<td><strong>R '+campCost.toFixed(0)+'</strong></td>'
@@ -5997,6 +5983,33 @@ function openTourLegRoute(i){
   var url = 'https://www.openstreetmap.org/directions'
     + '?engine=fossgis_osrm_car'
     + '&route=' + [fromGps, toGps].map(encodeURIComponent).join(';');
+  openUrlWithFallback(url);
+}
+
+// Google Maps equivalent of openTourLegRoute() above, for the day's drive
+// FROM the previous stop TO stop i. Brought back specifically as a GPS/
+// turn-by-turn navigation option for members who prefer or already trust
+// Google Maps on their phone over OpenStreetMap -- separate from (and does
+// not replace) the numeric KM auto-fill above, which stays on the free,
+// keyless OSRM service. This uses Google's plain "Directions URL" deep
+// link (maps.google.com/maps/dir/?api=1&origin=...&destination=...&
+// travelmode=driving) -- NOT the Distance Matrix or Routes JavaScript
+// APIs that caused the REQUEST_DENIED/billing headaches earlier in this
+// app's history. A plain directions link like this needs no API key, no
+// Google Cloud project and no billing at all -- it just opens Google
+// Maps (app or website) the same way tapping a Google Maps link anywhere
+// else on the web would.
+function openTourLegRouteGoogle(i){
+  if(i<=0 || i>=tourStops.length) return; // first stop has no "previous" leg
+  var fromGps = stopGps(tourStops[i-1]), toGps = stopGps(tourStops[i]);
+  if(!fromGps || !toGps){
+    toast(tr('tour.schedule.routeLegNoGps'));
+    return;
+  }
+  var url = 'https://www.google.com/maps/dir/?api=1'
+    + '&origin=' + encodeURIComponent(fromGps)
+    + '&destination=' + encodeURIComponent(toGps)
+    + '&travelmode=driving';
   openUrlWithFallback(url);
 }
 
@@ -7560,12 +7573,14 @@ const firebaseConfig = {
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
-// Exposed on window so plain (non-module) functions elsewhere in the app
-// -- like generateCampsiteInfo() -- can grab the current user's ID token
-// to send along with requests to our own Netlify functions (e.g. the AI
-// campsite-info generator), which verify it server-side before doing
-// anything that costs money. Nothing secret leaves this scope by doing
-// so: `auth` itself holds no credentials, just the SDK's session state.
+// BUGFIX ("Meld eers aan" shown even when actually logged in): the AI
+// campsite-info functions (generateCampsiteInfo/generateAllCampsiteInfo/
+// generateCampsiteInfoSilent) check `window.fbAuth.currentUser` to decide
+// whether someone's logged in -- but this module never exposed its local
+// `auth` instance as `window.fbAuth`, so that check was always undefined
+// and always failed, regardless of actual login state. Exposing the same
+// `auth` object here (already used for the login gate above) is all
+// those functions need.
 window.fbAuth = auth;
 
 let currentMember = null;   // {email, active, role}
