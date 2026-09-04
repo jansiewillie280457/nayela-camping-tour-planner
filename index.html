@@ -5509,11 +5509,19 @@ function generateCampsiteInfo(i){
   // database (town + province/country), the same fuzzy match addStop()
   // already uses -- this cuts down on the AI having to guess/hallucinate
   // where the place actually is.
-  var town = '', province = '';
+  var town = '', province = '', matchedGps = '';
   try{
     var match = findCampsiteMatch(s.name);
-    if(match){ town = match.dorp||''; province = (typeof provLabel==='function' ? provLabel(match.provinsie) : match.provinsie) || ''; }
+    if(match){
+      town = match.dorp||'';
+      province = (typeof provLabel==='function' ? provLabel(match.provinsie) : match.provinsie) || '';
+      matchedGps = clean(match.gps);
+    }
   }catch(e){}
+  // Prefer the stop's own GPS (e.g. from a manual pin) but fall back to
+  // the matched database entry's coordinates -- a stop added by typing a
+  // name doesn't always end up with gps filled in on itself.
+  var effectiveGps = clean(s.gps) || matchedGps;
 
   var lang = (typeof LANG!=='undefined' && LANG==='en') ? 'en' : 'af';
 
@@ -5524,7 +5532,7 @@ function generateCampsiteInfo(i){
         'Content-Type':'application/json',
         'Authorization':'Bearer '+idToken
       },
-      body: JSON.stringify({ name:s.name, town:town, province:province, gps:s.gps||'', lang:lang })
+      body: JSON.stringify({ name:s.name, town:town, province:province, gps:effectiveGps, lang:lang })
     });
   })
   .then(function(r){ return r.json().then(function(data){ return {ok:r.ok, data:data}; }); })
@@ -5637,11 +5645,19 @@ function generateCampsiteInfoSilent(i){
   var user = window.fbAuth && window.fbAuth.currentUser;
   if(!user) return Promise.resolve();
 
-  var town = '', province = '';
+  var town = '', province = '', matchedGps = '';
   try{
     var match = findCampsiteMatch(s.name);
-    if(match){ town = match.dorp||''; province = (typeof provLabel==='function' ? provLabel(match.provinsie) : match.provinsie) || ''; }
+    if(match){
+      town = match.dorp||'';
+      province = (typeof provLabel==='function' ? provLabel(match.provinsie) : match.provinsie) || '';
+      matchedGps = clean(match.gps);
+    }
   }catch(e){}
+  // Prefer the stop's own GPS (e.g. from a manual pin) but fall back to
+  // the matched database entry's coordinates -- a stop added by typing a
+  // name doesn't always end up with gps filled in on itself.
+  var effectiveGps = clean(s.gps) || matchedGps;
 
   var lang = (typeof LANG!=='undefined' && LANG==='en') ? 'en' : 'af';
 
@@ -5649,7 +5665,7 @@ function generateCampsiteInfoSilent(i){
     return fetch('/.netlify/functions/campsite-info', {
       method:'POST',
       headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+idToken },
-      body: JSON.stringify({ name:s.name, town:town, province:province, gps:s.gps||'', lang:lang })
+      body: JSON.stringify({ name:s.name, town:town, province:province, gps:effectiveGps, lang:lang })
     });
   })
   .then(function(r){ return r.json().then(function(data){ return {ok:r.ok, data:data}; }); })
