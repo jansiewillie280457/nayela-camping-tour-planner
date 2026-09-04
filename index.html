@@ -3508,6 +3508,11 @@ if(window.matchMedia){
   // merge). Uses the same 7-column layout exportCampsitesCSV() writes, so a
   // round-trip export → edit → import always works without reformatting.
   document.getElementById('importCampsFile').addEventListener('change', function(e){
+    if(!window.fbIsAdmin || !window.fbIsAdmin()){
+      alert('Net die admin kan die databasis vervang.');
+      e.target.value = '';
+      return;
+    }
     var file = e.target.files && e.target.files[0];
     e.target.value = ''; // allow re-selecting the same filename later
     if(!file) return;
@@ -3603,6 +3608,7 @@ if(window.matchMedia){
   // additions/edits/deletions already applied), not the raw shipped DATA,
   // so the export always matches exactly what's shown in the app right now.
   document.getElementById('exportCampsBtn').addEventListener('click',function(){
+    if(!window.fbIsAdmin || !window.fbIsAdmin()){ alert('Net die admin kan die databasis uitvoer.'); return; }
     try{
       exportCampsitesCSV();
     }catch(e){ csToast('Export error: '+e.message); }
@@ -7842,6 +7848,16 @@ onAuthStateChanged(auth, async function(user){
       acctEmail.textContent = user.email;
       acct.style.display = 'flex';
     }
+    // Export/Import replace the ENTIRE shared campsite database (import
+    // is a full wipe-and-replace, not a merge) -- restrict both to the
+    // admin only, and hide them outright for everyone else rather than
+    // just blocking the click after the fact, so it's not even visible
+    // as something to try.
+    var isAdmin = window.fbIsAdmin && window.fbIsAdmin();
+    var exportBtn = document.getElementById('exportCampsBtn');
+    var importBtn = document.getElementById('importCampsBtn');
+    if(exportBtn) exportBtn.style.display = isAdmin ? '' : 'none';
+    if(importBtn) importBtn.style.display = isAdmin ? '' : 'none';
   }catch(e){
     gateShow('Kon nie kampplek-data laai nie: '+e.message);
   }
