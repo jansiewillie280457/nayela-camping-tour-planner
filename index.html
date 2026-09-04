@@ -3480,6 +3480,7 @@ if(window.matchMedia){
   // place broke that promise for anyone who'd ever used Wysig on a
   // campsite DATA has since been corrected for.
   document.getElementById('resetCampsBtn').addEventListener('click',function(){
+    if(!window.fbIsAdmin || !window.fbIsAdmin()){ alert('Net die admin kan die databasis herstel.'); return; }
     gConfirm(tr('cs.resetConfirm'), function(){
       try{
         var knownNames={};
@@ -7848,16 +7849,18 @@ onAuthStateChanged(auth, async function(user){
       acctEmail.textContent = user.email;
       acct.style.display = 'flex';
     }
-    // Export/Import replace the ENTIRE shared campsite database (import
-    // is a full wipe-and-replace, not a merge) -- restrict both to the
-    // admin only, and hide them outright for everyone else rather than
-    // just blocking the click after the fact, so it's not even visible
-    // as something to try.
+    // Export/Import/Reset all touch the ENTIRE shared campsite database
+    // (import and reset are both full wipe-and-replace, not a merge) --
+    // restrict all three to the admin only, and hide them outright for
+    // everyone else rather than just blocking the click after the fact,
+    // so it's not even visible as something to try.
     var isAdmin = window.fbIsAdmin && window.fbIsAdmin();
     var exportBtn = document.getElementById('exportCampsBtn');
     var importBtn = document.getElementById('importCampsBtn');
+    var resetBtn = document.getElementById('resetCampsBtn');
     if(exportBtn) exportBtn.style.display = isAdmin ? '' : 'none';
     if(importBtn) importBtn.style.display = isAdmin ? '' : 'none';
+    if(resetBtn) resetBtn.style.display = isAdmin ? '' : 'none';
   }catch(e){
     gateShow('Kon nie kampplek-data laai nie: '+e.message);
   }
