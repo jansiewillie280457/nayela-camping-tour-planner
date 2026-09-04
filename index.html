@@ -245,7 +245,11 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(180deg,#
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v2.3 (31 Aug data)</div>
+  <div class="hdr-ver">v2.3 (26 Aug data)</div>
+  <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
+    <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+    <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
+  </div>
 </div>
 
 <!-- MAIN MENU PAGE -->
@@ -563,6 +567,9 @@ function setLang(l){
 Object.assign(I18N.af, {
   'app.title': 'NAYELA Kampeer Toer Beplanner',
   'app.subtitle': 'Jou volledige Suid-Afrikaanse kampeermaat',
+  'app.logout': '🚪 Teken uit',
+  'app.logoutConfirm': 'Wil jy afmeld? Jy sal weer moet aanmeld om die kampplek-databasis te gebruik.',
+  'app.loggedOut': 'Afgemeld ✓',
   'gc.cancel': 'Kanselleer',
   'gc.ok': 'OK',
   'menu.heading': '🌎 Wat wil jy doen?',
@@ -637,6 +644,9 @@ Object.assign(I18N.af, {
 Object.assign(I18N.en, {
   'app.title': 'NAYELA Camping Tour Planner',
   'app.subtitle': 'Your complete South African camping companion',
+  'app.logout': '🚪 Log out',
+  'app.logoutConfirm': 'Log out? You\'ll need to log in again to use the shared campsite database.',
+  'app.loggedOut': 'Logged out ✓',
   'gc.cancel': 'Cancel',
   'gc.ok': 'OK',
   'menu.heading': '🌎 What would you like to do?',
@@ -911,6 +921,7 @@ function pullFromCampsite(){
   try{ csSel = sel; csCamps = camps; } catch(e){ toast(tr('tour.pull.openSearchFirst')); return; }
   if(!csSel || !csSel.length){ toast(tr('tour.pull.noneSelected')); return; }
   var added = 0;
+  var newIndicesNeedingAI = [];
   csSel.forEach(function(i){
     var c = csCamps[i];
     if(!c) return;
@@ -919,9 +930,10 @@ function pullFromCampsite(){
       tourStops.push({
         name: c.naam, km: 0, nights: 1, costPP: 0,
         email: c.url || c.info || '', phone: [c.sel, c.tel].filter(Boolean).join(' / '),
-        booked: 'NO', fuelCost: 0, date: '', gps: clean(c.gps), notes: c.notes || ''
+        booked: 'NO', fuelCost: 0, date: '', gps: clean(c.gps), notes: c.notes || '', highlight: ''
       });
       added++;
+      if(!c.notes) newIndicesNeedingAI.push(tourStops.length-1);
     }
   });
   if(!added){ toast(tr('tour.pull.alreadyInSchedule')); return; }
@@ -961,6 +973,15 @@ function pullFromCampsite(){
   // straight-line GPS estimate automatically. Either way, distances
   // should just be there without a separate manual step.
   if(typeof calcAllStopDistances==='function') calcAllStopDistances();
+  // Auto-fill area/campsite info too, one at a time with a short stagger
+  // -- firing them all at once would hit the Netlify function (and
+  // Claude's API) with a burst of simultaneous requests for what could
+  // be a dozen+ campsites pulled in from a round trip.
+  if(typeof generateCampsiteInfo==='function' && newIndicesNeedingAI.length){
+    newIndicesNeedingAI.forEach(function(idx, order){
+      setTimeout(function(){ generateCampsiteInfo(idx); }, order*600);
+    });
+  }
 }
 
 document.addEventListener('DOMContentLoaded', function(){
@@ -2205,6 +2226,26 @@ var ZONES=[
 // ── Helpers ───────────────────────────────────────────────────────────
 function esc(s){return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):'';}
 function clean(s){return s&&s!='nan'?s.trim():'';}
+
+// Finds the campsite database entry for a given tour-stop name. Tries an
+// EXACT (case-insensitive) match first, since that's what pullFromCampsite()
+// and most manually-typed names give us. Only falls back to a substring
+// match using the FULL campsite name (never just its first few letters --
+// that used to match "Oranjerus" against "Oranje Gaste plaas" in a
+// completely different town, since both start with "oranje"). A short
+// prefix is nowhere near unique enough among ~700 campsite names to be
+// trustworthy, so this deliberately requires the whole name to line up.
+function findCampsiteMatch(name){
+  if(typeof camps === 'undefined' || !name) return null;
+  var target = name.toLowerCase().trim();
+  var exact = camps.find(function(c){ return c.naam && c.naam.toLowerCase().trim() === target; });
+  if(exact) return exact;
+  return camps.find(function(c){
+    if(!c.naam) return false;
+    var cn = c.naam.toLowerCase().trim();
+    return cn.length > 6 && (target.indexOf(cn) !== -1 || cn.indexOf(target) !== -1);
+  }) || null;
+}
 function csToast(msg,ms){
   var t=document.getElementById('cs-toast');
   t.textContent=msg; t.classList.add('show');
@@ -4132,11 +4173,11 @@ Object.assign(I18N.af, {
   'tour.hdr.email': '📧 E-pos Toerprogram',
   'tour.hdr.save': '💾 Stoor Toer',
   'tour.hdr.import': '📥 Voer Toerplan In',
-  'tour.hdr.gpx': '📍 Voer uit na Garmin (GPX)',
   'tour.hdr.aiFillAll': '🤖 AI Vul Alles In',
   'tour.hdr.aiFillAllNone': 'Elke stop het reeds inligting — niks om te genereer nie.',
   'tour.hdr.aiFillAllProgress': 'Genereer... ({done}/{total})',
   'tour.hdr.aiFillAllDone': '✓ {n} kampplek-beskrywings gegenereer',
+  'tour.hdr.gpx': '📍 Voer uit na Garmin (GPX)',
   'tour.gpx.arrive': 'Aankoms',
   'tour.gpx.nights': 'Nagte',
   'tour.gpx.noneError': 'Geen van die stops het GPS-koördinate nie — kan nie \'n GPX-lêer skep nie.',
@@ -4244,9 +4285,7 @@ Object.assign(I18N.af, {
   'tour.schedule.bookedYes': '✓ JA',
   'tour.schedule.bookedNo': '✗ NEE',
   'tour.schedule.routeLegBtn': '🗺️',
-  'tour.schedule.routeLegTitle': 'Wys roete vir hierdie dag se rit (vorige kampeerterrein → hierdie een) — OpenStreetMap',
-  'tour.schedule.routeLegGoogleBtn': '🚗',
-  'tour.schedule.routeLegGoogleTitle': 'Open Google Maps GPS-navigasie vir hierdie dag se rit (vorige kampeerterrein → hierdie een)',
+  'tour.schedule.routeLegTitle': 'Wys roete vir hierdie dag se rit (vorige kampeerterrein → hierdie een)',
   'tour.schedule.routeLegNoGps': 'Kan nie roete wys nie — een of albei kampeerterreine het geen GPS-koördinate nie.',
 
   'tour.gmaps.hdr': '🌐 OpenStreetMap Afstand (KM) Outomatiese Invul',
@@ -4415,11 +4454,11 @@ Object.assign(I18N.en, {
   'tour.hdr.email': '📧 Email Tour Program',
   'tour.hdr.save': '💾 Save Tour',
   'tour.hdr.import': '📥 Import Tour Plan',
-  'tour.hdr.gpx': '📍 Export to Garmin (GPX)',
   'tour.hdr.aiFillAll': '🤖 AI Fill All In',
   'tour.hdr.aiFillAllNone': 'Every stop already has info — nothing to generate.',
   'tour.hdr.aiFillAllProgress': 'Generating... ({done}/{total})',
   'tour.hdr.aiFillAllDone': '✓ Generated {n} campsite descriptions',
+  'tour.hdr.gpx': '📍 Export to Garmin (GPX)',
   'tour.gpx.arrive': 'Arrive',
   'tour.gpx.nights': 'Nights',
   'tour.gpx.noneError': 'None of the stops have GPS coordinates — can\'t create a GPX file.',
@@ -4527,9 +4566,7 @@ Object.assign(I18N.en, {
   'tour.schedule.bookedYes': '✓ YES',
   'tour.schedule.bookedNo': '✗ NO',
   'tour.schedule.routeLegBtn': '🗺️',
-  'tour.schedule.routeLegTitle': 'Show route for this day\'s drive (previous campsite → this one) — OpenStreetMap',
-  'tour.schedule.routeLegGoogleBtn': '🚗',
-  'tour.schedule.routeLegGoogleTitle': 'Open Google Maps GPS navigation for this day\'s drive (previous campsite → this one)',
+  'tour.schedule.routeLegTitle': 'Show route for this day\'s drive (previous campsite → this one)',
   'tour.schedule.routeLegNoGps': 'Can\'t show route — one or both campsites has no GPS coordinates on record.',
 
   'tour.gmaps.hdr': '🌐 OpenStreetMap Distance (KM) Auto-Fill',
@@ -5252,17 +5289,13 @@ function addStop(){
 
   // Try to auto-fill from campsite search data
   var matchGps = '';
-  if(typeof camps !== 'undefined'){
-    var match = camps.find(function(c){
-      return c.naam && name.toLowerCase().includes(c.naam.toLowerCase().substring(0,6));
-    });
-    if(match){
-      if(!email && match.url) email = match.url;
-      if(!email && match.info) email = match.info;
-      if(!phone && match.sel) phone = match.sel;
-      if(!phone && match.tel) phone = match.tel;
-      matchGps = clean(match.gps);
-    }
+  var match = findCampsiteMatch(name);
+  if(match){
+    if(!email && match.url) email = match.url;
+    if(!email && match.info) email = match.info;
+    if(!phone && match.sel) phone = match.sel;
+    if(!phone && match.tel) phone = match.tel;
+    matchGps = clean(match.gps);
   }
 
   // Auto-calc fuel cost — prefers real rates from the Fuel Calculator log
@@ -5272,7 +5305,7 @@ function addStop(){
   tourStops.push({
     name:name, km:km, nights:nights, costPP:costPP,
     email:email, phone:phone, booked:booked,
-    fuelCost:fuelCost, date: dateVal||'', gps: matchGps, notes:''
+    fuelCost:fuelCost, date: dateVal||'', gps: matchGps, notes:'', highlight:''
   });
   var newIndex = tourStops.length-1;
   if(dateVal){
@@ -5290,6 +5323,7 @@ function addStop(){
     if(insertAt < newIndex){
       var newStop = tourStops.pop();
       tourStops.splice(insertAt, 0, newStop);
+      newIndex = insertAt; // stop moved -- keep newIndex pointing at it
     }
     // Respect the given date exactly and only push the change forward
     // through any LATER stops, the same way a manual edit of the Begin
@@ -5317,6 +5351,13 @@ function addStop(){
   recalcFuel();
   renderOverview();
   toast(tr('tour.schedule.addedToSchedule', {name: name}));
+  // Auto-fill the area/campsite info with AI, same spirit as the
+  // automatic KM lookup -- runs in the background and doesn't block the
+  // form. Only for the stop actually just added, and only when it's not
+  // already carrying notes.
+  if(!tourStops[newIndex].notes && typeof generateCampsiteInfo==='function'){
+    generateCampsiteInfo(newIndex);
+  }
 }
 
 // ── Return leg: puts the FIRST stop back onto the end of the schedule,
@@ -5337,7 +5378,7 @@ function addReturnLeg(){
   tourStops.push({
     name: first.name, km:0, nights:0, costPP:0,
     email: first.email, phone: first.phone, booked:'NO',
-    fuelCost:0, date: '', gps: first.gps || '', notes: first.notes || '',
+    fuelCost:0, date: '', gps: first.gps || '', notes: first.notes || '', highlight: first.highlight || '',
     isReturn: true
   });
   recalcAllStopDates();
@@ -5425,6 +5466,11 @@ function updateStopNotes(i, val){
   // scroll position while someone's mid-way through a long tour's notes.
 }
 
+function updateStopHighlight(i, val){
+  tourStops[i].highlight = val;
+  try{localStorage.setItem('nayela_stops', JSON.stringify(tourStops));}catch(e){}
+}
+
 // ── AI campsite/area info ────────────────────────────────
 // Calls our own Netlify serverless function (netlify/functions/
 // campsite-info.js), which holds the Anthropic API key privately and
@@ -5458,12 +5504,8 @@ function generateCampsiteInfo(i){
   // where the place actually is.
   var town = '', province = '';
   try{
-    if(typeof camps !== 'undefined'){
-      var match = camps.find(function(c){
-        return c.naam && s.name && s.name.toLowerCase().includes(c.naam.toLowerCase().substring(0,6));
-      });
-      if(match){ town = match.dorp||''; province = (typeof provLabel==='function' ? provLabel(match.provinsie) : match.provinsie) || ''; }
-    }
+    var match = findCampsiteMatch(s.name);
+    if(match){ town = match.dorp||''; province = (typeof provLabel==='function' ? provLabel(match.provinsie) : match.provinsie) || ''; }
   }catch(e){}
 
   var lang = (typeof LANG!=='undefined' && LANG==='en') ? 'en' : 'af';
@@ -5484,8 +5526,20 @@ function generateCampsiteInfo(i){
       throw new Error((res.data && (res.data.error||res.data.detail)) || 'AI error');
     }
     tourStops[i].notes = res.data.text;
+    tourStops[i].highlight = res.data.highlight || '';
     try{localStorage.setItem('nayela_stops', JSON.stringify(tourStops));}catch(e){}
     if(ta) ta.value = res.data.text;
+    // The highlight badge only exists in the DOM if the stop already had
+    // one when this row was last rendered -- if this is the first time
+    // (hlBox exists as an empty placeholder div), just re-render this one
+    // row's worth rather than reinventing the badge markup here twice.
+    var hlBox = document.getElementById('hlBox'+i);
+    if(hlBox && res.data.highlight){
+      hlBox.outerHTML = '<div id="hlBox'+i+'" style="display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#fff8e1,#fff3cd);border:1px solid #e8c368;border-radius:8px;padding:6px 12px;margin-bottom:8px;">'
+        +'<span style="font-size:1.1rem;">🌟</span>'
+        +'<input id="hlInput'+i+'" type="text" value="'+esc(res.data.highlight)+'" onchange="updateStopHighlight('+i+',this.value)" style="flex:1;border:none;background:transparent;font-weight:700;font-size:.92rem;color:#5D3A1A;padding:2px 0;min-width:0;">'
+      +'</div>';
+    }
     if(status) status.textContent = '✓';
     if(btn) btn.textContent = tr('tour.schedule.aiRegenerate');
     setTimeout(function(){ if(status) status.textContent=''; }, 2500);
@@ -5578,12 +5632,8 @@ function generateCampsiteInfoSilent(i){
 
   var town = '', province = '';
   try{
-    if(typeof camps !== 'undefined'){
-      var match = camps.find(function(c){
-        return c.naam && s.name && s.name.toLowerCase().includes(c.naam.toLowerCase().substring(0,6));
-      });
-      if(match){ town = match.dorp||''; province = (typeof provLabel==='function' ? provLabel(match.provinsie) : match.provinsie) || ''; }
-    }
+    var match = findCampsiteMatch(s.name);
+    if(match){ town = match.dorp||''; province = (typeof provLabel==='function' ? provLabel(match.provinsie) : match.provinsie) || ''; }
   }catch(e){}
 
   var lang = (typeof LANG!=='undefined' && LANG==='en') ? 'en' : 'af';
@@ -5599,6 +5649,7 @@ function generateCampsiteInfoSilent(i){
   .then(function(res){
     if(res.ok && res.data && res.data.text){
       tourStops[i].notes = res.data.text;
+      tourStops[i].highlight = res.data.highlight || '';
       try{localStorage.setItem('nayela_stops', JSON.stringify(tourStops));}catch(e){}
     } else {
       console.error('generateCampsiteInfoSilent failed for stop', i, res.data);
@@ -5731,7 +5782,6 @@ function renderSchedule(){
         +(s.kmSource==='straight' ? ' <span title="'+esc(tr('tour.gmaps.straightTooltip'))+'" style="color:#b26a00;font-weight:700;cursor:help;">~</span>' : '')
         +(s.kmSource==='osrm' ? ' <span title="'+esc(tr('tour.gmaps.googleTooltip'))+'" style="color:#2e7d32;font-weight:700;cursor:help;">✓</span>' : '')
         +(i>0 ? ' <button type="button" onclick="openTourLegRoute('+i+')" title="'+esc(tr('tour.schedule.routeLegTitle'))+'" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:.9rem;vertical-align:middle;touch-action:manipulation;">'+tr('tour.schedule.routeLegBtn')+'</button>' : '')
-        +(i>0 ? ' <button type="button" onclick="openTourLegRouteGoogle('+i+')" title="'+esc(tr('tour.schedule.routeLegGoogleTitle'))+'" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:.9rem;vertical-align:middle;touch-action:manipulation;">'+tr('tour.schedule.routeLegGoogleBtn')+'</button>' : '')
       +'</td>'
       +'<td>R <input type="number" min="0" value="'+((parseFloat(s.costPP)||0)*people).toFixed(0)+'" style="width:64px;text-align:center;padding:3px;border:1px solid #ccc;border-radius:4px;font-size:.78rem;" onchange="updateStopCostPerNight('+i+',this.value)"></td>'
       +'<td><strong>R '+campCost.toFixed(0)+'</strong></td>'
@@ -5747,6 +5797,10 @@ function renderSchedule(){
       // specific stop -- see printTourPlan() below for how this reaches
       // the printed Tour Plan.
       +'<tr class="sched-notes-row"><td colspan="14" style="background:#f7f5ef;border-top:none;padding:6px 10px 10px;">'
+      +(clean(s.highlight) ? '<div id="hlBox'+i+'" style="display:flex;align-items:center;gap:8px;background:linear-gradient(135deg,#fff8e1,#fff3cd);border:1px solid #e8c368;border-radius:8px;padding:6px 12px;margin-bottom:8px;">'
+        +'<span style="font-size:1.1rem;">🌟</span>'
+        +'<input id="hlInput'+i+'" type="text" value="'+esc(s.highlight)+'" onchange="updateStopHighlight('+i+',this.value)" style="flex:1;border:none;background:transparent;font-weight:700;font-size:.92rem;color:#5D3A1A;padding:2px 0;min-width:0;">'
+      +'</div>' : '<div id="hlBox'+i+'"></div>')
       +'<div style="display:inline-flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:3px;">'
         +'<label style="font-size:.72rem;font-weight:700;color:#5D3A1A;">'+tr('tour.schedule.notesLbl',{name:s.name})+'</label>'
         +'<button type="button" id="aiBtn'+i+'" onclick="generateCampsiteInfo('+i+')" title="'+esc(tr('tour.schedule.aiGenerateTitle'))+'" style="background:#eef0e6;border:1px solid #c8cdb8;border-radius:12px;padding:2px 10px;font-size:.7rem;cursor:pointer;color:#3d4a2a;white-space:nowrap;">'+tr(s.notes?'tour.schedule.aiRegenerate':'tour.schedule.aiGenerate')+'</button>'
@@ -5983,33 +6037,6 @@ function openTourLegRoute(i){
   var url = 'https://www.openstreetmap.org/directions'
     + '?engine=fossgis_osrm_car'
     + '&route=' + [fromGps, toGps].map(encodeURIComponent).join(';');
-  openUrlWithFallback(url);
-}
-
-// Google Maps equivalent of openTourLegRoute() above, for the day's drive
-// FROM the previous stop TO stop i. Brought back specifically as a GPS/
-// turn-by-turn navigation option for members who prefer or already trust
-// Google Maps on their phone over OpenStreetMap -- separate from (and does
-// not replace) the numeric KM auto-fill above, which stays on the free,
-// keyless OSRM service. This uses Google's plain "Directions URL" deep
-// link (maps.google.com/maps/dir/?api=1&origin=...&destination=...&
-// travelmode=driving) -- NOT the Distance Matrix or Routes JavaScript
-// APIs that caused the REQUEST_DENIED/billing headaches earlier in this
-// app's history. A plain directions link like this needs no API key, no
-// Google Cloud project and no billing at all -- it just opens Google
-// Maps (app or website) the same way tapping a Google Maps link anywhere
-// else on the web would.
-function openTourLegRouteGoogle(i){
-  if(i<=0 || i>=tourStops.length) return; // first stop has no "previous" leg
-  var fromGps = stopGps(tourStops[i-1]), toGps = stopGps(tourStops[i]);
-  if(!fromGps || !toGps){
-    toast(tr('tour.schedule.routeLegNoGps'));
-    return;
-  }
-  var url = 'https://www.google.com/maps/dir/?api=1'
-    + '&origin=' + encodeURIComponent(fromGps)
-    + '&destination=' + encodeURIComponent(toGps)
-    + '&travelmode=driving';
   openUrlWithFallback(url);
 }
 
@@ -6443,8 +6470,11 @@ function buildTourPrintArea(){
       // Area/campsite notes for this stop, gathered online beforehand or
       // jotted down while actually AT the campsite -- only take up space
       // on the printed sheet when there's actually something to show.
-      if(clean(s.notes)){
-        h += '<tr><td></td><td colspan="10" style="font-size:8pt;color:#444;padding:2mm 3mm;background:#f7f5ef;text-align:left;white-space:pre-wrap;"><strong>'+tr('tour.schedule.notesLbl',{name:s.name})+':</strong> '+esc(s.notes).replace(/\n/g,'<br>')+'</td></tr>';
+      if(clean(s.notes) || clean(s.highlight)){
+        h += '<tr><td></td><td colspan="10" style="font-size:8pt;color:#444;padding:2mm 3mm;background:#f7f5ef;text-align:left;white-space:pre-wrap;">'
+          +(clean(s.highlight) ? '<div style="font-size:9.5pt;font-weight:700;color:#8a6d1f;margin-bottom:1.5mm;">🌟 '+esc(s.highlight)+'</div>' : '')
+          +(clean(s.notes) ? '<strong>'+tr('tour.schedule.notesLbl',{name:s.name})+':</strong> '+esc(s.notes).replace(/\n/g,'<br>') : '')
+          +'</td></tr>';
       }
     });
     h += '</tbody><tfoot><tr><td colspan="5">'+tr('tour.schedule.totalsLabel',{people:people})+'</td><td>'+totNights+'</td>'
@@ -7573,14 +7603,12 @@ const firebaseConfig = {
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
-// BUGFIX ("Meld eers aan" shown even when actually logged in): the AI
-// campsite-info functions (generateCampsiteInfo/generateAllCampsiteInfo/
-// generateCampsiteInfoSilent) check `window.fbAuth.currentUser` to decide
-// whether someone's logged in -- but this module never exposed its local
-// `auth` instance as `window.fbAuth`, so that check was always undefined
-// and always failed, regardless of actual login state. Exposing the same
-// `auth` object here (already used for the login gate above) is all
-// those functions need.
+// Exposed on window so plain (non-module) functions elsewhere in the app
+// -- like generateCampsiteInfo() -- can grab the current user's ID token
+// to send along with requests to our own Netlify functions (e.g. the AI
+// campsite-info generator), which verify it server-side before doing
+// anything that costs money. Nothing secret leaves this scope by doing
+// so: `auth` itself holds no credentials, just the SDK's session state.
 window.fbAuth = auth;
 
 let currentMember = null;   // {email, active, role}
@@ -7776,7 +7804,13 @@ document.getElementById('fbLoginBtn').addEventListener('click', async function()
 });
 
 onAuthStateChanged(auth, async function(user){
-  if(!user){ currentMember=null; gateShow(''); return; }
+  if(!user){
+    currentMember=null;
+    gateShow('');
+    var acct0 = document.getElementById('hdrAcct');
+    if(acct0) acct0.style.display = 'none';
+    return;
+  }
   gateShow('Gaan lidmaatskap na...');
   var member;
   try{ member = await loadMembership(user); }
@@ -7798,9 +7832,31 @@ onAuthStateChanged(auth, async function(user){
     subscribeRecipes();
     subscribeRoadConditions();
     gateHide();
+    // Show who's logged in + a real, working logout button in the
+    // header -- previously signOut() was only ever called automatically
+    // by the code above (when an admin deactivates someone), with no
+    // way for a person to log themselves out on purpose.
+    var acct = document.getElementById('hdrAcct');
+    var acctEmail = document.getElementById('hdrAcctEmail');
+    if(acct && acctEmail){
+      acctEmail.textContent = user.email;
+      acct.style.display = 'flex';
+    }
   }catch(e){
     gateShow('Kon nie kampplek-data laai nie: '+e.message);
   }
 });
+
+// Exposed on window (not just inside this module) so the onclick="appLogout()"
+// button in the plain HTML header can reach it.
+window.appLogout = function(){
+  gConfirm(tr('app.logoutConfirm'), function(){
+    signOut(auth).then(function(){
+      // onAuthStateChanged above handles hiding hdrAcct and showing the
+      // gate again -- nothing else to do here.
+      toast(tr('app.loggedOut'));
+    });
+  });
+};
 </script>
 </body></html>
