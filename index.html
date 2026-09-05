@@ -1624,6 +1624,7 @@ I18N_REFRESH.push(function(){
     <div style="font-size:16pt;font-weight:bold;letter-spacing:1px;color:#1a4a1a;">NAYELA Campsite Search</div>
     <div id="pDate" style="font-size:9pt;color:#444;margin-top:2mm;"></div>
   </div>
+  <div id="pMap" style="margin-bottom:6mm;"></div>
   <div id="pItems"></div>
 </div>
 
@@ -3351,6 +3352,31 @@ function doPrint(){
   if(!sel.length){csToast('Kies eers kampeerplekke!');return;}
   var d=new Date().toLocaleDateString('af-ZA',{day:'numeric',month:'long',year:'numeric'});
   document.getElementById('pDate').textContent='Datum: '+d+' | Plekke: '+sel.length;
+
+  // Snapshot the map exactly as it's currently shown -- whichever of the
+  // 2D/3D base images is active, plus the SVG overlay (route line +
+  // numbered pins), which are both already just plain DOM (an <img> and
+  // an <svg>, not a canvas or WebGL map), so a straight clone of their
+  // current markup is a real, in-sync snapshot -- no screenshot library
+  // needed. Falls back to nothing if the map hasn't been opened/rendered
+  // yet in this session (mapImg missing), so printing never breaks over
+  // an optional visual.
+  var pMap = document.getElementById('pMap');
+  if(pMap){
+    var mwrap = document.getElementById('mwrap');
+    var is3d = mwrap && mwrap.classList.contains('view-3d');
+    var mapImgEl = document.getElementById(is3d ? 'mapImg3d' : 'mapImg');
+    var msvgEl = document.getElementById('msvg');
+    if(mapImgEl && msvgEl){
+      pMap.innerHTML = '<div style="position:relative;width:100%;max-width:170mm;margin:0 auto;">'
+        +'<img src="'+mapImgEl.src+'" style="width:100%;height:auto;display:block;border:1px solid #ccc;">'
+        +'<svg viewBox="0 0 950 570" style="position:absolute;top:0;left:0;width:100%;height:auto;">'+msvgEl.innerHTML+'</svg>'
+        +'</div>';
+    } else {
+      pMap.innerHTML = '';
+    }
+  }
+
   var h='';
   sel.forEach(function(i,n){
     var c=camps[i];
