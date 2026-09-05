@@ -2283,6 +2283,71 @@ function findCampsiteMatch(name){
     return cn.length > 6 && (target.indexOf(cn) !== -1 || cn.indexOf(target) !== -1);
   }) || null;
 }
+
+// ── Kampeerterrein Soektog snapshot (used by Stoor Huidige Toer / Voer
+// Toerplan In, so a saved tour also remembers which campsites were picked
+// out in the search, not just the Tour Planner schedule itself) ─────────
+// Stored by name+town, not raw `sel` indices -- indices point at whatever
+// happens to be at that position in `camps` RIGHT NOW, which silently
+// breaks the moment the database is reordered/updated (a real risk since
+// this file might get reloaded on a different day, or a different
+// device, with a different campsite list already synced).
+function getCsSelectionSnapshot(){
+  try{
+    if(typeof sel === 'undefined' || typeof camps === 'undefined') return [];
+    return sel.map(function(i){
+      var c = camps[i];
+      return c ? {naam:c.naam, dorp:c.dorp||''} : null;
+    }).filter(Boolean);
+  }catch(e){ return []; }
+}
+function getCsFilterSnapshot(){
+  try{
+    var provEl = document.getElementById('fprov');
+    var townEl = document.getElementById('ftown');
+    var nameEl = document.getElementById('fname');
+    return {
+      prov: provEl ? provEl.value : '',
+      town: townEl ? townEl.value : '',
+      name: nameEl ? nameEl.value : ''
+    };
+  }catch(e){ return {prov:'', town:'', name:''}; }
+}
+// Restores a snapshot taken by the two functions above -- re-ticks the
+// same campsites (matched by name via findCampsiteMatch, same as "Laai
+// Soektog" does) and reapplies the province/town/name filter, WITHOUT
+// touching the shared database. Safe to call even if Kampeerterrein
+// Soektog has never been opened this session, since its filter/search
+// elements already exist in the page regardless of overlay visibility.
+function restoreCsSnapshot(csSelection, csFilter){
+  try{
+    if(typeof sel === 'undefined' || typeof camps === 'undefined') return;
+    if(csFilter){
+      var provEl = document.getElementById('fprov');
+      var townEl = document.getElementById('ftown');
+      var nameEl = document.getElementById('fname');
+      if(provEl && csFilter.prov !== undefined) provEl.value = csFilter.prov;
+      if(townEl && typeof buildTownDrop === 'function') buildTownDrop(csFilter.prov||'');
+      if(townEl && csFilter.town !== undefined) townEl.value = csFilter.town;
+      if(nameEl && csFilter.name !== undefined) nameEl.value = csFilter.name;
+      if(typeof doFilter === 'function') doFilter();
+    }
+    if(csSelection && csSelection.length){
+      sel.length = 0;
+      csSelection.forEach(function(row){
+        var match = findCampsiteMatch(row.naam);
+        if(match){
+          var idx = camps.indexOf(match);
+          if(idx >= 0 && sel.indexOf(idx) < 0) sel.push(idx);
+        }
+      });
+      var selCntEl = document.getElementById('selCnt');
+      if(selCntEl) selCntEl.textContent = sel.length;
+      if(typeof renderList === 'function') renderList();
+    }
+  }catch(e){ console.error('restoreCsSnapshot failed:', e); }
+}
+
 function csToast(msg,ms){
   var t=document.getElementById('cs-toast');
   t.textContent=msg; t.classList.add('show');
@@ -5090,7 +5155,13 @@ async function saveCurrentTourAs(){
       emergencyList: emergencyList,
       depositList: depositList,
       packData: packData,
-      packCustomItems: packCustomItems
+      packCustomItems: packCustomItems,
+      // Kampeerterrein Soektog: saved by name+town (not raw array indices,
+      // which would silently point at the wrong campsite if the database
+      // has since been re-ordered or updated) so it can be matched back up
+      // reliably on restore, even on a different device/session.
+      csSelection: getCsSelectionSnapshot(),
+      csFilter: getCsFilterSnapshot()
     }
   };
   // Keep a copy inside the app too (so it shows up under "Gestoorde Toere"
@@ -5128,6 +5199,7 @@ function loadSavedTour(id){
     try{localStorage.setItem('nayela_deposits', JSON.stringify(depositList));}catch(e){}
     try{localStorage.setItem('nayela_pack', JSON.stringify(packData));}catch(e){}
     try{localStorage.setItem('nayela_pack_custom', JSON.stringify(packCustomItems));}catch(e){}
+    restoreCsSnapshot(d.csSelection, d.csFilter);
     showPage('pg-tour');
     toast('"' + t.name + '" ' + tr('menu.saved.loaded'));
   });
@@ -5359,7 +5431,9 @@ function importTourFile(inputEl){
         emergencyList: data.emergencyList || [],
         depositList: data.depositList || [],
         packData: data.packData || {},
-        packCustomItems: data.packCustomItems || {}
+        packCustomItems: data.packCustomItems || {},
+        csSelection: data.csSelection || [],
+        csFilter: data.csFilter || {prov:'', town:'', name:''}
       }
     });
     // Only claim success, and only refresh the list, if the write actually
