@@ -1480,6 +1480,7 @@ I18N_REFRESH.push(function(){
   <button style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:1rem;font-weight:600;flex-shrink:0;white-space:nowrap;" id="addBtn" data-i18n="cs.addBtn">+ Voeg Toe</button>
   <button style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:1rem;font-weight:600;flex-shrink:0;white-space:nowrap;" id="resetCampsBtn" data-i18n="cs.resetBtn" data-i18n-title="cs.resetTitle" title="Wis enige plaaslik-gestoorde kampeerdata en gebruik weer die jongste ingeboude databasis (behalwe jou eie bygevoegde plekke)">🔄 Herstel Data</button>
   <button style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:1rem;font-weight:600;flex-shrink:0;white-space:nowrap;" id="exportCampsBtn" data-i18n="cs.exportBtn" data-i18n-title="cs.exportTitle" title="Laai 'n Excel/CSV-lys af van al jou kampeerplekke (provinsie, dorp, naam, GPS, foon, webwerf)">📊 Voer uit na Excel</button>
+  <button style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:1rem;font-weight:600;flex-shrink:0;white-space:nowrap;" id="exportSearchBtn" onclick="exportFilteredCSV()" data-i18n="cs.searchExportBtn" data-i18n-title="cs.searchExportTitle" title="Laai net jou huidige gefilterde soektog-resultate af (provinsie/dorp/naam-filters wat nou toegepas is)">💾 Stoor Soektog</button>
   <label style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:1rem;font-weight:600;flex-shrink:0;white-space:nowrap;display:inline-block;touch-action:manipulation;" for="importCampsFile" id="importCampsBtn" data-i18n="cs.importBtn" data-i18n-title="cs.importTitle" title="Voer 'n Excel/CSV-lys van kampeerplekke in — vervang AL die huidige data hiermee (herstelfunksie as iets verkeerd geloop het)">📥 Voer Data In</label>
   <input type="file" id="importCampsFile" accept=".csv,text/csv" style="display:none">
   <button style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:1rem;font-weight:600;flex-shrink:0;white-space:nowrap;" onclick="window.openMembersPanel &amp;&amp; window.openMembersPanel()" title="Bestuur wie toegang het (net vir admin)">👥 Lede</button>
@@ -1869,6 +1870,10 @@ Object.assign(I18N.af, {
   'cs.exportBtn': '📊 Voer uit na Excel',
   'cs.exportTitle': 'Laai \'n Excel/CSV-lys af van al jou kampeerplekke (provinsie, dorp, naam, GPS, foon, webwerf) — geskik om gereeld op te dateer',
   'cs.exported': 'kampeerplekke uitgevoer na CSV ✓',
+  'cs.searchExportBtn': '💾 Stoor Soektog',
+  'cs.searchExportTitle': 'Laai net jou huidige gefilterde soektog-resultate af as \'n CSV (nie die hele databasis nie) — handig om \'n kortlys vir \'n toer te bewaar',
+  'cs.searchExported': 'soektog-resultate uitgevoer na CSV ✓',
+  'cs.searchExportEmpty': 'Geen resultate om te stoor nie — pas eers jou soektog aan.',
   'cs.importBtn': '📥 Voer Data In',
   'cs.importTitle': 'Voer \'n Excel/CSV-lys van kampeerplekke in — vervang AL die huidige data hiermee (herstelfunksie as iets verkeerd geloop het)',
   'cs.importParseError': 'Kon nie die lêer lees nie: {err}. Maak seker dit is dieselfde CSV-formaat as "Voer uit na Excel".',
@@ -1987,6 +1992,10 @@ Object.assign(I18N.en, {
   'cs.exportBtn': '📊 Export to Excel',
   'cs.exportTitle': 'Download an Excel/CSV list of all your campsites (province, town, name, GPS, phone, website) — handy for regular updates',
   'cs.exported': 'campsites exported to CSV ✓',
+  'cs.searchExportBtn': '💾 Save Search',
+  'cs.searchExportTitle': 'Download only your current filtered search results as a CSV (not the whole database) — handy for keeping a shortlist for a trip',
+  'cs.searchExported': 'search results exported to CSV ✓',
+  'cs.searchExportEmpty': 'No results to save — adjust your search first.',
   'cs.importBtn': '📥 Import Data',
   'cs.importTitle': 'Import an Excel/CSV list of campsites — this REPLACES all current data (recovery tool if something went wrong)',
   'cs.importParseError': 'Could not read that file: {err}. Make sure it\'s the same CSV format as "Export to Excel".',
@@ -3765,6 +3774,49 @@ if(window.matchMedia){
     document.body.removeChild(a);
     setTimeout(function(){ try{URL.revokeObjectURL(url);}catch(e){} }, 60000);
     csToast(rows.length + ' ' + tr('cs.exported'));
+  }
+
+  // "Save search" -- exports only whatever is CURRENTLY filtered/on-screen
+  // (province + town + name filters applied), not the entire ~700-site
+  // database like "Voer uit na Excel" does. Available to every logged-in
+  // member (not admin-only), since it never touches the shared database --
+  // it only ever reads what's already visible to them, same as scrolling
+  // the list themselves would.
+  function exportFilteredCSV(){
+    var rows = (typeof filt !== 'undefined' ? filt : camps).slice().filter(function(c){ return c && c.naam; });
+    if(!rows.length){ csToast(tr('cs.searchExportEmpty')); return; }
+    rows.sort(function(a,b){
+      var pa=(a.provinsie||'').toLowerCase(), pb=(b.provinsie||'').toLowerCase();
+      if(pa!==pb) return pa<pb?-1:1;
+      var ta=(a.dorp||'').toLowerCase(), tb=(b.dorp||'').toLowerCase();
+      if(ta!==tb) return ta<tb?-1:1;
+      return (a.naam||'').toLowerCase() < (b.naam||'').toLowerCase() ? -1 : 1;
+    });
+    var header = ['Provinsie','Dorp','Naam','GPS','Foon','Selfoon','Webwerf/Inligting'];
+    var lines = [header.map(csvEscape).join(',')];
+    rows.forEach(function(c){
+      lines.push([
+        csvEscape(c.provinsie),
+        csvEscape(c.dorp),
+        csvEscape(c.naam),
+        csvEscape(c.gps),
+        csvEscape(c.tel),
+        csvEscape(c.sel),
+        csvEscape(c.url || c.info)
+      ].join(','));
+    });
+    var csvContent = '\uFEFF' + lines.join('\r\n');
+    var blob = new Blob([csvContent], {type:'text/csv;charset=utf-8;'});
+    var url = URL.createObjectURL(blob);
+    var stamp = new Date().toISOString().slice(0,10);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'NAYELA_Soektog_' + stamp + '.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function(){ try{URL.revokeObjectURL(url);}catch(e){} }, 60000);
+    csToast(rows.length + ' ' + tr('cs.searchExported'));
   }
 
   // Normalizes a campsite name for duplicate comparison -- case, leading/
