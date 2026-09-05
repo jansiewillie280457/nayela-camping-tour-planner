@@ -3364,7 +3364,16 @@ function doPrint(){
     if(c.url)h+='<tr><td style="color:#5D3A1A;font-weight:bold;">Webtuiste:</td><td colspan="3">'+esc(c.url)+'</td></tr>';
     if(c.info)h+='<tr><td style="color:#5D3A1A;font-weight:bold;">Info:</td><td colspan="3">'+esc(c.info)+'</td></tr>';
     if(c.gps)h+='<tr><td style="color:#5D3A1A;font-weight:bold;">GPS:</td><td colspan="3">'+esc(c.gps)+'</td></tr>';
-    h+='</table></div></div>';
+    h+='</table>';
+    // Aantekeninge (facility notes, incl. AI-generated ones from Wysig) --
+    // this print function used to leave them out entirely even when a
+    // campsite had them saved.
+    if(clean(c.notes)){
+      h+='<div style="margin-top:5pt;padding:5pt 7pt;background:#f7f5ef;border-radius:4pt;font-size:8.5pt;">'
+        +'<strong style="color:#5D3A1A;">Aantekeninge:</strong> '+esc(c.notes).replace(/\n/g,'<br>')
+        +'</div>';
+    }
+    h+='</div></div>';
   });
   document.getElementById('pItems').innerHTML=h;
   document.getElementById('selPanel').classList.remove('open');
