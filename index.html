@@ -1481,6 +1481,8 @@ I18N_REFRESH.push(function(){
   <button style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:1rem;font-weight:600;flex-shrink:0;white-space:nowrap;" id="resetCampsBtn" data-i18n="cs.resetBtn" data-i18n-title="cs.resetTitle" title="Wis enige plaaslik-gestoorde kampeerdata en gebruik weer die jongste ingeboude databasis (behalwe jou eie bygevoegde plekke)">🔄 Herstel Data</button>
   <button style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:1rem;font-weight:600;flex-shrink:0;white-space:nowrap;" id="exportCampsBtn" data-i18n="cs.exportBtn" data-i18n-title="cs.exportTitle" title="Laai 'n Excel/CSV-lys af van al jou kampeerplekke (provinsie, dorp, naam, GPS, foon, webwerf)">📊 Voer uit na Excel</button>
   <button style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:1rem;font-weight:600;flex-shrink:0;white-space:nowrap;" id="exportSearchBtn" onclick="exportFilteredCSV()" data-i18n="cs.searchExportBtn" data-i18n-title="cs.searchExportTitle" title="Laai net jou huidige gefilterde soektog-resultate af (provinsie/dorp/naam-filters wat nou toegepas is)">💾 Stoor Soektog</button>
+  <label style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:1rem;font-weight:600;flex-shrink:0;white-space:nowrap;display:inline-block;touch-action:manipulation;" for="importSearchFile" id="importSearchBtn" data-i18n="cs.searchImportBtn" data-i18n-title="cs.searchImportTitle" title="Laai 'n vroeër gestoorde soektog-lys weer in — kies weer daardie kampeerplekke, sonder om die databasis te verander">📤 Laai Soektog</label>
+  <input type="file" id="importSearchFile" accept=".csv,text/csv" style="display:none">
   <label style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:1rem;font-weight:600;flex-shrink:0;white-space:nowrap;display:inline-block;touch-action:manipulation;" for="importCampsFile" id="importCampsBtn" data-i18n="cs.importBtn" data-i18n-title="cs.importTitle" title="Voer 'n Excel/CSV-lys van kampeerplekke in — vervang AL die huidige data hiermee (herstelfunksie as iets verkeerd geloop het)">📥 Voer Data In</label>
   <input type="file" id="importCampsFile" accept=".csv,text/csv" style="display:none">
   <button style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:1rem;font-weight:600;flex-shrink:0;white-space:nowrap;" onclick="window.openMembersPanel &amp;&amp; window.openMembersPanel()" title="Bestuur wie toegang het (net vir admin)">👥 Lede</button>
@@ -1874,6 +1876,12 @@ Object.assign(I18N.af, {
   'cs.searchExportTitle': 'Laai net jou huidige gefilterde soektog-resultate af as \'n CSV (nie die hele databasis nie) — handig om \'n kortlys vir \'n toer te bewaar',
   'cs.searchExported': 'soektog-resultate uitgevoer na CSV ✓',
   'cs.searchExportEmpty': 'Geen resultate om te stoor nie — pas eers jou soektog aan.',
+  'cs.searchImportBtn': '📤 Laai Soektog',
+  'cs.searchImportTitle': 'Laai \'n vroeër gestoorde soektog-lys weer in — kies weer daardie kampeerplekke, sonder om die databasis te verander',
+  'cs.searchImported': '{n} kampeerplekke uit die lêer gekies ✓',
+  'cs.searchImportedMissing': '({n} kon nie in die huidige databasis gevind word nie — moontlik hernoem of verwyder)',
+  'cs.searchImportEmpty': 'Geen geldige rye in die lêer gevind nie.',
+  'cs.searchImportError': 'Kon nie lêer lees nie: {err}',
   'cs.importBtn': '📥 Voer Data In',
   'cs.importTitle': 'Voer \'n Excel/CSV-lys van kampeerplekke in — vervang AL die huidige data hiermee (herstelfunksie as iets verkeerd geloop het)',
   'cs.importParseError': 'Kon nie die lêer lees nie: {err}. Maak seker dit is dieselfde CSV-formaat as "Voer uit na Excel".',
@@ -1996,6 +2004,12 @@ Object.assign(I18N.en, {
   'cs.searchExportTitle': 'Download only your current filtered search results as a CSV (not the whole database) — handy for keeping a shortlist for a trip',
   'cs.searchExported': 'search results exported to CSV ✓',
   'cs.searchExportEmpty': 'No results to save — adjust your search first.',
+  'cs.searchImportBtn': '📤 Load Search',
+  'cs.searchImportTitle': 'Load a previously saved search list back in — re-selects those campsites, without changing the database',
+  'cs.searchImported': '{n} campsites selected from the file ✓',
+  'cs.searchImportedMissing': '({n} could not be found in the current database — possibly renamed or removed)',
+  'cs.searchImportEmpty': 'No valid rows found in the file.',
+  'cs.searchImportError': 'Could not read the file: {err}',
   'cs.importBtn': '📥 Import Data',
   'cs.importTitle': 'Import an Excel/CSV list of campsites — this REPLACES all current data (recovery tool if something went wrong)',
   'cs.importParseError': 'Could not read that file: {err}. Make sure it\'s the same CSV format as "Export to Excel".',
@@ -3818,6 +3832,58 @@ if(window.matchMedia){
     setTimeout(function(){ try{URL.revokeObjectURL(url);}catch(e){} }, 60000);
     csToast(rows.length + ' ' + tr('cs.searchExported'));
   }
+
+  // "Load search" -- the read-only counterpart to exportFilteredCSV(). Takes
+  // a CSV previously saved with "Stoor Soektog" and re-selects (ticks) those
+  // same campsites in the CURRENT live database, by name. Deliberately does
+  // NOT touch the shared database itself (no writes, no admin check needed)
+  // -- it only ever changes `sel`, the same array a person changes by
+  // clicking checkboxes themselves. Uses findCampsiteMatch() (exact name
+  // match first, full-name substring only as fallback) so a short/generic
+  // name in the file can't accidentally re-select the wrong campsite.
+  function importSearchCSV(text){
+    var parsed;
+    try{ parsed = parseCampsitesCSV(text); }
+    catch(e){ csToast(tr('cs.searchImportError', {err: e.message})); return; }
+    if(!parsed.length){ csToast(tr('cs.searchImportEmpty')); return; }
+
+    var matchedIdx = [];
+    var notFoundCount = 0;
+    parsed.forEach(function(row){
+      var match = findCampsiteMatch(row.naam);
+      if(match){
+        var idx = camps.indexOf(match);
+        if(idx >= 0 && matchedIdx.indexOf(idx) < 0) matchedIdx.push(idx);
+      } else {
+        notFoundCount++;
+      }
+    });
+
+    sel.length = 0; // clear current selection, then restore the saved one --
+    matchedIdx.forEach(function(idx){ sel.push(idx); }); // keeps the same
+    // array reference alive rather than reassigning `sel`, since other
+    // code in this file already holds a reference to this exact array.
+
+    var selCntEl = document.getElementById('selCnt');
+    if(selCntEl) selCntEl.textContent = sel.length;
+    renderList();
+
+    csToast(tr('cs.searchImported', {n: matchedIdx.length}) + (notFoundCount ? ' ' + tr('cs.searchImportedMissing', {n: notFoundCount}) : ''));
+  }
+
+  document.getElementById('importSearchFile').addEventListener('change', function(e){
+    var file = e.target.files && e.target.files[0];
+    e.target.value = ''; // allow re-selecting the same filename later
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(){
+      var text = String(reader.result || '');
+      if(text.charCodeAt(0) === 0xFEFF) text = text.slice(1); // strip UTF-8 BOM
+      importSearchCSV(text);
+    };
+    reader.onerror = function(){ csToast(tr('cs.searchImportError', {err: 'read error'})); };
+    reader.readAsText(file, 'utf-8');
+  });
 
   // Normalizes a campsite name for duplicate comparison -- case, leading/
   // trailing space and internal double-spaces shouldn't make "Camp Silwane"
