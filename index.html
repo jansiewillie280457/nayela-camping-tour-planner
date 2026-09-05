@@ -245,7 +245,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(180deg,#
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v2.3 (26 Aug data)</div>
+  <div class="hdr-ver">v2.4 (5 Sep)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -7761,9 +7761,20 @@ function gateHide(){
 }
 
 async function loadMembership(user){
-  var snap = await getDoc(doc(db,'members', user.email));
+  var ref = doc(db,'members', user.email);
+  var snap = await getDoc(ref);
   if(!snap.exists() || snap.data().active !== true) return null;
-  return Object.assign({email:user.email}, snap.data());
+  var data = snap.data();
+  // Usage tracking: a simple login counter + last-active timestamp, so
+  // the admin can see at a glance who's actually using the app and
+  // roughly when -- also doubles as a quick way to narrow down who was
+  // last active if the shared data ever looks like it's been changed.
+  // Fire-and-forget: never blocks or delays login, and a failure here
+  // (e.g. briefly offline) must never lock anyone out.
+  var newCount = (data.loginCount || 0) + 1;
+  setDoc(ref, { loginCount: newCount, lastActive: new Date().toISOString() }, { merge: true })
+    .catch(function(e){ console.error('Could not update login counter:', e); });
+  return Object.assign({email:user.email}, data);
 }
 
 // One-time seed: only runs if the shared collection is completely empty,
@@ -7888,8 +7899,20 @@ async function renderMembers(){
     var m = d.data();
     var row = document.createElement('div');
     row.className='fb-mem-row';
+    var usageBits = [];
+    if(m.loginCount) usageBits.push(m.loginCount + (m.loginCount===1 ? ' aanmelding' : ' aanmeldings'));
+    if(m.lastActive){
+      try{
+        var dt = new Date(m.lastActive);
+        usageBits.push('Laaste: ' + dt.toLocaleDateString('af-ZA',{day:'numeric',month:'short',year:'numeric'}) + ', ' + dt.toLocaleTimeString('af-ZA',{hour:'2-digit',minute:'2-digit'}));
+      }catch(e){}
+    }
+    var usageLine = usageBits.length ? '<div style="font-size:.7rem;color:#888;margin-top:2px;">'+usageBits.join(' · ')+'</div>' : '';
     row.innerHTML =
-      '<span class="fb-mem-email">'+d.id+(m.role==='admin'?' 👑':'')+'</span>'+
+      '<span style="flex:1;min-width:0;">'
+        +'<span class="fb-mem-email">'+d.id+(m.role==='admin'?' 👑':'')+'</span>'
+        +usageLine
+      +'</span>'+
       '<span class="fb-mem-badge'+(m.active?'':' inactive')+'">'+(m.active?'aktief':'verwyder')+'</span>';
     var btn = document.createElement('button');
     btn.textContent = m.active ? 'Verwyder' : 'Herstel';
