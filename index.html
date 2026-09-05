@@ -2340,7 +2340,16 @@ function restoreCsSnapshot(csSelection, csFilter){
       });
       var selCntEl = document.getElementById('selCnt');
       if(selCntEl) selCntEl.textContent = sel.length;
+      // Both need to run AFTER `sel` is actually restored above, not
+      // before -- renderList() alone doesn't touch the map at all, and
+      // plotDots() draws its pins/route line from whatever `sel` holds
+      // at the moment it's called. Calling doFilter() earlier (for the
+      // csFilter branch) runs plotDots() too, but at that point `sel`
+      // is still the OLD selection -- that's exactly why the map's
+      // numbered pins and route line weren't showing up after loading
+      // a saved tour, even though the list/count looked right.
       if(typeof renderList === 'function') renderList();
+      if(typeof plotDots === 'function') plotDots();
     }
   }catch(e){ console.error('restoreCsSnapshot failed:', e); }
 }
