@@ -7931,9 +7931,39 @@ async function migrateIfEmpty(){
 function subscribeCampsites(){
   if(unsubCampsites) unsubCampsites();
   unsubCampsites = onSnapshot(collection(db,'campsites'), function(snap){
+    // `sel` is an array of plain positions INTO `camps` (e.g. sel=[3,7]
+    // means "the 4th and 8th campsite in the current array"). That's fine
+    // as long as `camps` itself never changes shape -- but this listener
+    // rebuilds `camps` from scratch every single time ANYONE, anywhere,
+    // adds or edits so much as one campsite in the shared database.
+    // Firestore doesn't guarantee document order stays stable across
+    // snapshots, so a brand new campsite landing earlier in that order
+    // shifts every index after it -- meaning someone else's unrelated
+    // edit could silently make position 3 mean a completely different
+    // campsite than it did a second ago. From the user's side, campsites
+    // they never touched would appear to "randomly" get added to their
+    // selection. Capture the CURRENT selection by stable identity (_id,
+    // falling back to name) before rebuilding, then remap it onto the
+    // new array afterwards, so a live sync can only ever change WHERE a
+    // selected campsite lives in the list, never WHICH one is selected.
+    var prevSelIds = (typeof sel !== 'undefined' && typeof camps !== 'undefined')
+      ? sel.map(function(i){ var c = camps[i]; return c ? (c._id || c.naam) : null; }).filter(Boolean)
+      : [];
+
     var arr = [];
     snap.forEach(function(d){ arr.push(Object.assign({_id:d.id}, d.data())); });
     window.camps = arr;
+
+    if(typeof sel !== 'undefined'){
+      sel.length = 0;
+      prevSelIds.forEach(function(id){
+        var idx = arr.findIndex(function(c){ return (c._id||c.naam) === id; });
+        if(idx >= 0 && sel.indexOf(idx) < 0) sel.push(idx);
+      });
+      var selCntEl = document.getElementById('selCnt');
+      if(selCntEl) selCntEl.textContent = sel.length;
+    }
+
     if(typeof window.filt !== 'undefined') window.filt = arr.slice();
     if(typeof window.doFilter === 'function') window.doFilter();
   }, function(err){
