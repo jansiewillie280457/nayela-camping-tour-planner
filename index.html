@@ -4502,6 +4502,7 @@ Object.assign(I18N.af, {
   'tour.schedule.routeLegGoogleBtn': '🚗',
   'tour.schedule.routeLegGoogleTitle': 'Wys roete vir hierdie dag se rit — Google Maps (met GPS-navigasie op jou selfoon of tablet)',
   'tour.schedule.routeLegNoGps': 'Kan nie roete wys nie — een of albei kampeerterreine het geen GPS-koördinate nie.',
+  'tour.schedule.noGpsWarning': 'Afstand kan nie outomaties bereken word nie — hierdie of die vorige kampeerterrein het geen GPS-koördinate op rekord nie. Tik die afstand self in, of voeg GPS by die kampeerterrein in Kampeerterrein Soektog.',
 
   'tour.gmaps.hdr': '🌐 OpenStreetMap Afstand (KM) Outomatiese Invul',
   'tour.gmaps.desc': 'Die Skedule se KM-kolom vul outomaties in met werklike ryafstande vanaf OpenStreetMap se gratis roeteringsdiens — geen sleutel, rekening of fakturering nodig nie. As dit nie bereik kan word nie (bv. geen internet), val dit terug op \'n reguit-lyn GPS-beraming — gemerk met \'n ~ sodat jy weet watter een dit is.',
@@ -4786,6 +4787,7 @@ Object.assign(I18N.en, {
   'tour.schedule.routeLegGoogleBtn': '🚗',
   'tour.schedule.routeLegGoogleTitle': 'Show route for this day\'s drive — Google Maps (with GPS navigation on your phone or tablet)',
   'tour.schedule.routeLegNoGps': 'Can\'t show route — one or both campsites has no GPS coordinates on record.',
+  'tour.schedule.noGpsWarning': 'Distance can\'t be calculated automatically — this or the previous campsite has no GPS coordinates on record. Type the distance in yourself, or add GPS to the campsite in Kampeerterrein Soektog.',
 
   'tour.gmaps.hdr': '🌐 OpenStreetMap Distance (KM) Auto-Fill',
   'tour.gmaps.desc': 'The Schedule\'s KM column fills in automatically with real driving distances from OpenStreetMap\'s free routing service — no key, account, or billing needed. If it can\'t be reached (e.g. no internet), it falls back to a straight-line GPS estimate instead — marked with a ~ so you know which is which.',
@@ -6071,6 +6073,7 @@ function renderSchedule(){
       +'<td><input type="number" min="0" value="'+(parseFloat(s.km)||0)+'" style="width:64px;text-align:center;padding:3px;border:1px solid #ccc;border-radius:4px;font-size:.78rem;" onchange="updateStopKm('+i+',this.value)"> km'
         +(s.kmSource==='straight' ? ' <span title="'+esc(tr('tour.gmaps.straightTooltip'))+'" style="color:#b26a00;font-weight:700;cursor:help;">~</span>' : '')
         +(s.kmSource==='osrm' ? ' <span title="'+esc(tr('tour.gmaps.googleTooltip'))+'" style="color:#2e7d32;font-weight:700;cursor:help;">✓</span>' : '')
+        +(i>0 && (!stopGps(tourStops[i-1]) || !stopGps(s)) ? ' <span title="'+esc(tr('tour.schedule.noGpsWarning'))+'" style="color:#c62828;font-weight:700;cursor:help;">⚠</span>' : '')
         +(i>0 ? ' <button type="button" onclick="openTourLegRoute('+i+')" title="'+esc(tr('tour.schedule.routeLegTitle'))+'" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:.9rem;vertical-align:middle;touch-action:manipulation;">'+tr('tour.schedule.routeLegBtn')+'</button>' : '')
         +(i>0 ? ' <button type="button" onclick="openTourLegRouteGoogle('+i+')" title="'+esc(tr('tour.schedule.routeLegGoogleTitle'))+'" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:.9rem;vertical-align:middle;touch-action:manipulation;">'+tr('tour.schedule.routeLegGoogleBtn')+'</button>' : '')
       +'</td>'
@@ -6232,12 +6235,17 @@ function findCampByName(name){
 }
 
 // Prefer the GPS captured on the stop itself (set when it was pulled/added);
-// fall back to looking the campsite up by name in the current Campsite
-// Search data, for stops saved before this feature existed.
+// fall back to looking the campsite up in the current Campsite Search
+// data, for stops saved before this feature existed. Uses
+// findCampsiteMatch() (exact name match first, full-name substring only
+// as a safe fallback) rather than a strict exact-string match -- a stop
+// typed slightly differently than the database entry (extra space,
+// different capitalisation, etc.) used to silently get no GPS and
+// therefore no distance at all; this recovers those cases too.
 function stopGps(stop){
   if(!stop) return '';
   if(clean(stop.gps)) return stop.gps.trim();
-  var c = findCampByName(stop.name);
+  var c = (typeof findCampsiteMatch === 'function') ? findCampsiteMatch(stop.name) : findCampByName(stop.name);
   return c && clean(c.gps) ? c.gps.trim() : '';
 }
 
