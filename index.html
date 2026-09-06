@@ -4181,6 +4181,11 @@ if(window.matchMedia){
       <div class="ov-stat"><div class="val" id="ovTotal">R 15546</div><div class="lbl" data-i18n="tour.overview.statTotal">Grootste Totaal</div></div>
     </div>
 
+    <div class="tp-form" id="ovMapWrap" style="display:none;">
+      <h3 data-i18n="tour.overview.mapTitle">🗺️ Toer Kaart</h3>
+      <div id="ovMap"></div>
+    </div>
+
     <!-- Tour Members summary -->
     <div class="tp-form">
       <h3><span data-i18n="tour.overview.membersHdr">👥 Toerlede</span> (<span id="memberCount">0</span>)</h3>
@@ -4424,6 +4429,7 @@ Object.assign(I18N.af, {
   'tour.overview.statCamp': 'Kampkoste',
   'tour.overview.statFuel': 'Brandstofkoste',
   'tour.overview.statTotal': 'Grootste Totaal',
+  'tour.overview.mapTitle': '🗺️ Toer Kaart',
   'tour.overview.membersHdr': '👥 Toerlede',
   'tour.overview.noMembers': 'Nog geen lede bygevoeg nie — gaan na die Lede-oortjie.',
   'tour.overview.clearConfirm': 'Maak Reisbesonderhede skoon (toernaam, datums, mense, karavane)? Dit raak nie jou Skedule, Lede of ander oortjies nie.',
@@ -4707,6 +4713,7 @@ Object.assign(I18N.en, {
   'tour.overview.statCamp': 'Camp Cost',
   'tour.overview.statFuel': 'Fuel Cost',
   'tour.overview.statTotal': 'Grand Total',
+  'tour.overview.mapTitle': '🗺️ Trip Map',
   'tour.overview.membersHdr': '👥 Tour Members',
   'tour.overview.noMembers': 'No members added yet — go to Members tab.',
   'tour.overview.clearConfirm': 'Clear Trip Details (tour name, dates, people, caravans)? This does not touch your Schedule, Members or other tabs.',
@@ -5422,8 +5429,55 @@ function scheduleSpanDays(){
   return days>0 ? days : 0;
 }
 
+// ── Overview map preview ────────────────────────────────
+// Plots every Schedule stop with usable GPS onto the SAME base map image
+// used in Kampeerterrein Soektog -- reuses gpsXY()/clampXY() (the exact
+// projection that draws the Search page's dots) so a stop lands in
+// precisely the same spot on both pages. Deliberately draws from
+// `tourStops` directly (each stop's own captured GPS), NOT from Campsite
+// Search's `sel` selection -- those two lists can easily diverge (stops
+// added manually, a search selection changed after pulling, etc.), and
+// the Tour Plan's own map should always show the actual schedule, not
+// whatever happens to be ticked in Search at that moment.
+function renderTourMapPreview(){
+  var wrap = document.getElementById('ovMapWrap');
+  var mapDiv = document.getElementById('ovMap');
+  if(!wrap || !mapDiv) return;
+
+  var pts = tourStops.map(function(s, idx){
+    var gps = (typeof stopGps === 'function') ? stopGps(s) : clean(s.gps);
+    if(!gps) return null;
+    var ll = gpsToLatLng(gps);
+    if(!ll) return null;
+    var xy = clampXY(gpsXY(ll.lat, ll.lng));
+    return {x:xy.x, y:xy.y, name:s.name, order:idx+1};
+  }).filter(Boolean);
+
+  if(!pts.length){ wrap.style.display='none'; mapDiv.innerHTML=''; return; }
+
+  var mapImgEl = document.getElementById('mapImg');
+  var imgSrc = mapImgEl ? mapImgEl.src : '';
+  if(!imgSrc){ wrap.style.display='none'; mapDiv.innerHTML=''; return; }
+
+  var routeLine = pts.length > 1
+    ? '<polyline points="'+pts.map(function(p){ return p.x.toFixed(1)+','+p.y.toFixed(1); }).join(' ')+'" fill="none" stroke="#e65c00" stroke-width="3" stroke-dasharray="10,6" opacity="0.9"/>'
+    : '';
+  var svgPins = pts.map(function(p){
+    return '<g><title>'+p.order+'. '+esc(p.name)+'</title>'
+      +'<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="10" fill="#ffcc00" stroke="#333" stroke-width="1.5"/>'
+      +'<text x="'+p.x.toFixed(1)+'" y="'+(p.y+4).toFixed(1)+'" text-anchor="middle" font-size="10" font-weight="bold" fill="#333">'+p.order+'</text></g>';
+  }).join('');
+
+  mapDiv.innerHTML = '<div style="position:relative;width:100%;max-width:700px;margin:8px auto 0;">'
+    +'<img id="ovMapImg" src="'+imgSrc+'" style="width:100%;height:auto;display:block;border:1px solid #ccc;border-radius:6px;">'
+    +'<svg viewBox="0 0 950 570" style="position:absolute;top:0;left:0;width:100%;height:auto;">'+routeLine+svgPins+'</svg>'
+    +'</div>';
+  wrap.style.display = '';
+}
+
 // ── Overview ──────────────────────────────────────────
 function renderOverview(){
+  renderTourMapPreview();
   calcTourDays();
   var totalKm=0, totalCamp=0, totalFuel=0;
   tourStops.forEach(function(s){
@@ -6713,6 +6767,37 @@ function buildTourPrintArea(){
      + '<div class="tpr-stat"><div class="v">R '+totalFuel.toFixed(0)+'</div><div class="l">'+tr('tour.overview.statFuel')+'</div></div>'
      + '<div class="tpr-stat"><div class="v">R '+(totalCamp+totalFuel).toFixed(0)+'</div><div class="l">'+tr('tour.overview.statTotal')+'</div></div>'
      + '</div></div>';
+
+  // Map -- the exact same snapshot shown live on the Oorsig tab (same base
+  // image + projection as Kampeerterrein Soektog's map), so printing the
+  // Tour Plan gives a genuinely complete one-page document: schedule AND
+  // where it all actually is, without having to separately print Search.
+  (function(){
+    var mapImgEl = document.getElementById('mapImg');
+    var imgSrc = mapImgEl ? mapImgEl.src : '';
+    var pts = tourStops.map(function(s, idx){
+      var gps = (typeof stopGps === 'function') ? stopGps(s) : clean(s.gps);
+      if(!gps) return null;
+      var ll = gpsToLatLng(gps);
+      if(!ll) return null;
+      var xy = clampXY(gpsXY(ll.lat, ll.lng));
+      return {x:xy.x, y:xy.y, order:idx+1};
+    }).filter(Boolean);
+    if(imgSrc && pts.length){
+      var routeLine = pts.length > 1
+        ? '<polyline points="'+pts.map(function(p){ return p.x.toFixed(1)+','+p.y.toFixed(1); }).join(' ')+'" fill="none" stroke="#e65c00" stroke-width="3" stroke-dasharray="10,6" opacity="0.9"/>'
+        : '';
+      var svgPins = pts.map(function(p){
+        return '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="10" fill="#ffcc00" stroke="#333" stroke-width="1.5"/>'
+          +'<text x="'+p.x.toFixed(1)+'" y="'+(p.y+4).toFixed(1)+'" text-anchor="middle" font-size="10" font-weight="bold" fill="#333">'+p.order+'</text>';
+      }).join('');
+      h += '<div class="tpr-sec"><h2>'+tr('tour.overview.mapTitle')+'</h2>'
+        + '<div style="position:relative;width:100%;max-width:170mm;margin:0 auto;">'
+        + '<img src="'+imgSrc+'" style="width:100%;height:auto;display:block;border:1px solid #ccc;">'
+        + '<svg viewBox="0 0 950 570" style="position:absolute;top:0;left:0;width:100%;height:auto;">'+routeLine+svgPins+'</svg>'
+        + '</div></div>';
+    }
+  })();
 
   // Schedule
   h += '<div class="tpr-sec"><h2>'+tr('tour.tab.schedule')+'</h2>';
