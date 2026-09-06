@@ -4492,7 +4492,9 @@ Object.assign(I18N.af, {
   'tour.schedule.bookedYes': '✓ JA',
   'tour.schedule.bookedNo': '✗ NEE',
   'tour.schedule.routeLegBtn': '🗺️',
-  'tour.schedule.routeLegTitle': 'Wys roete vir hierdie dag se rit (vorige kampeerterrein → hierdie een)',
+  'tour.schedule.routeLegTitle': 'Wys roete vir hierdie dag se rit (vorige kampeerterrein → hierdie een) — OpenStreetMap',
+  'tour.schedule.routeLegGoogleBtn': '🚗',
+  'tour.schedule.routeLegGoogleTitle': 'Wys roete vir hierdie dag se rit — Google Maps (met GPS-navigasie op jou selfoon of tablet)',
   'tour.schedule.routeLegNoGps': 'Kan nie roete wys nie — een of albei kampeerterreine het geen GPS-koördinate nie.',
 
   'tour.gmaps.hdr': '🌐 OpenStreetMap Afstand (KM) Outomatiese Invul',
@@ -4773,7 +4775,9 @@ Object.assign(I18N.en, {
   'tour.schedule.bookedYes': '✓ YES',
   'tour.schedule.bookedNo': '✗ NO',
   'tour.schedule.routeLegBtn': '🗺️',
-  'tour.schedule.routeLegTitle': 'Show route for this day\'s drive (previous campsite → this one)',
+  'tour.schedule.routeLegTitle': 'Show route for this day\'s drive (previous campsite → this one) — OpenStreetMap',
+  'tour.schedule.routeLegGoogleBtn': '🚗',
+  'tour.schedule.routeLegGoogleTitle': 'Show route for this day\'s drive — Google Maps (with GPS navigation on your phone or tablet)',
   'tour.schedule.routeLegNoGps': 'Can\'t show route — one or both campsites has no GPS coordinates on record.',
 
   'tour.gmaps.hdr': '🌐 OpenStreetMap Distance (KM) Auto-Fill',
@@ -6014,6 +6018,7 @@ function renderSchedule(){
         +(s.kmSource==='straight' ? ' <span title="'+esc(tr('tour.gmaps.straightTooltip'))+'" style="color:#b26a00;font-weight:700;cursor:help;">~</span>' : '')
         +(s.kmSource==='osrm' ? ' <span title="'+esc(tr('tour.gmaps.googleTooltip'))+'" style="color:#2e7d32;font-weight:700;cursor:help;">✓</span>' : '')
         +(i>0 ? ' <button type="button" onclick="openTourLegRoute('+i+')" title="'+esc(tr('tour.schedule.routeLegTitle'))+'" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:.9rem;vertical-align:middle;touch-action:manipulation;">'+tr('tour.schedule.routeLegBtn')+'</button>' : '')
+        +(i>0 ? ' <button type="button" onclick="openTourLegRouteGoogle('+i+')" title="'+esc(tr('tour.schedule.routeLegGoogleTitle'))+'" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:.9rem;vertical-align:middle;touch-action:manipulation;">'+tr('tour.schedule.routeLegGoogleBtn')+'</button>' : '')
       +'</td>'
       +'<td>R <input type="number" min="0" value="'+((parseFloat(s.costPP)||0)*people).toFixed(0)+'" style="width:64px;text-align:center;padding:3px;border:1px solid #ccc;border-radius:4px;font-size:.78rem;" onchange="updateStopCostPerNight('+i+',this.value)"></td>'
       +'<td><strong>R '+campCost.toFixed(0)+'</strong></td>'
@@ -6269,6 +6274,33 @@ function openTourLegRoute(i){
   var url = 'https://www.openstreetmap.org/directions'
     + '?engine=fossgis_osrm_car'
     + '&route=' + [fromGps, toGps].map(encodeURIComponent).join(';');
+  openUrlWithFallback(url);
+}
+
+// Google Maps equivalent of openTourLegRoute() above, for the day's drive
+// FROM the previous stop TO stop i. A GPS/turn-by-turn navigation option
+// for members who prefer or already trust Google Maps on their phone over
+// OpenStreetMap -- separate from (and doesn't replace) the numeric KM
+// auto-fill, which stays on the free, keyless OSRM service. Uses Google's
+// plain "Directions URL" deep link -- NOT the Distance Matrix or Routes
+// JavaScript APIs that caused REQUEST_DENIED/billing headaches earlier in
+// this app's history. A plain directions link like this needs no API key,
+// no Google Cloud project and no billing at all -- it just opens Google
+// Maps (app or website) the same way tapping any Google Maps link on the
+// web would. This is the actual "GPS on the dashboard" use case: tap it
+// right before setting off for the day, and Google Maps takes over with
+// live turn-by-turn directions and its own moving position marker.
+function openTourLegRouteGoogle(i){
+  if(i<=0 || i>=tourStops.length) return; // first stop has no "previous" leg
+  var fromGps = stopGps(tourStops[i-1]), toGps = stopGps(tourStops[i]);
+  if(!fromGps || !toGps){
+    toast(tr('tour.schedule.routeLegNoGps'));
+    return;
+  }
+  var url = 'https://www.google.com/maps/dir/?api=1'
+    + '&origin=' + encodeURIComponent(fromGps)
+    + '&destination=' + encodeURIComponent(toGps)
+    + '&travelmode=driving';
   openUrlWithFallback(url);
 }
 
