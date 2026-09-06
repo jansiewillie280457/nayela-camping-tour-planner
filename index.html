@@ -4115,19 +4115,19 @@ if(window.matchMedia){
    white text invisible against the white page. Background tints below are
    a bonus if they do print, never required for legibility. */
 .tpr-hdr{border-bottom:3pt solid #1a4a1a;padding:0 0 4mm;margin-bottom:6mm;}
-.tpr-hdr h1{font-size:16pt;color:#1a4a1a;}
-.tpr-hdr .sub{font-size:9pt;color:#444;margin-top:2mm;}
+.tpr-hdr h1{font-size:22pt;color:#1a4a1a;}
+.tpr-hdr .sub{font-size:12pt;color:#444;margin-top:2mm;}
 .tpr-sec{margin-bottom:8mm;page-break-inside:avoid;}
-.tpr-sec h2{font-size:12pt;color:#1a4a1a;border-bottom:1.5pt solid #1a4a1a;padding-bottom:2mm;margin-bottom:3mm;}
+.tpr-sec h2{font-size:16pt;color:#1a4a1a;border-bottom:1.5pt solid #1a4a1a;padding-bottom:2mm;margin-bottom:3mm;}
 .tpr-stats{display:flex;flex-wrap:wrap;gap:4mm;margin-bottom:4mm;}
 .tpr-stat{border:1px solid #ccc;border-radius:2mm;padding:3mm 4mm;min-width:32mm;}
-.tpr-stat .v{font-size:12pt;font-weight:bold;color:#1a4a1a;}
-.tpr-stat .l{font-size:8pt;color:#666;}
-.tpr-table{width:100%;border-collapse:collapse;font-size:9pt;}
-.tpr-table th{background:#eef3ec;color:#1a4a1a;font-weight:bold;padding:1.5mm 2mm;text-align:left;border-bottom:1.5pt solid #1a4a1a;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-.tpr-table td{padding:1.5mm 2mm;border-bottom:.5pt solid #ddd;color:#111;}
+.tpr-stat .v{font-size:16pt;font-weight:bold;color:#1a4a1a;}
+.tpr-stat .l{font-size:10.5pt;color:#666;}
+.tpr-table{width:100%;border-collapse:collapse;font-size:11.5pt;}
+.tpr-table th{background:#eef3ec;color:#1a4a1a;font-weight:bold;padding:2.5mm 2.5mm;text-align:left;border-bottom:1.5pt solid #1a4a1a;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+.tpr-table td{padding:2.5mm 2.5mm;border-bottom:.5pt solid #ddd;color:#111;}
 .tpr-table tfoot td{font-weight:bold;border-top:1pt solid #1a4a1a;color:#111;}
-.tpr-empty{color:#999;font-size:9pt;font-style:italic;}
+.tpr-empty{color:#999;font-size:11.5pt;font-style:italic;}
 </style>
 
 <div class="page" id="pg-tour">
@@ -6820,8 +6820,8 @@ function buildTourPrintArea(){
       // jotted down while actually AT the campsite -- only take up space
       // on the printed sheet when there's actually something to show.
       if(clean(s.notes) || clean(s.highlight)){
-        h += '<tr><td></td><td colspan="10" style="font-size:8pt;color:#444;padding:2mm 3mm;background:#f7f5ef;text-align:left;white-space:pre-wrap;">'
-          +(clean(s.highlight) ? '<div style="font-size:9.5pt;font-weight:700;color:#8a6d1f;margin-bottom:1.5mm;">🌟 '+esc(s.highlight)+'</div>' : '')
+        h += '<tr><td></td><td colspan="10" style="font-size:10.5pt;color:#444;padding:2.5mm 3.5mm;background:#f7f5ef;text-align:left;white-space:pre-wrap;">'
+          +(clean(s.highlight) ? '<div style="font-size:12pt;font-weight:700;color:#8a6d1f;margin-bottom:2mm;">🌟 '+esc(s.highlight)+'</div>' : '')
           +(clean(s.notes) ? '<strong>'+tr('tour.schedule.notesLbl',{name:s.name})+':</strong> '+esc(s.notes).replace(/\n/g,'<br>') : '')
           +'</td></tr>';
       }
@@ -6848,7 +6848,7 @@ function buildTourPrintArea(){
   // Vehicle & Fuel
   var rates = getEffectiveFuelRates();
   h += '<div class="tpr-sec"><h2>'+tr('tour.print.vehicleHdr')+'</h2>'
-     + '<div style="font-size:9pt;margin-bottom:3mm;">'
+     + '<div style="font-size:11pt;margin-bottom:3mm;">'
      + (vehicleInfo.make ? tr('tour.print.vehicleLabel')+' '+esc(vehicleInfo.make)+(vehicleInfo.reg?' ('+esc(vehicleInfo.reg)+')':'')+' &bull; ' : '')
      + tr('tour.print.rateUsed',{kml:rates.kmL.toFixed(2), price:rates.fuelPrice.toFixed(2)})
      + (rates.fromLog ? tr('tour.print.fromLog') : tr('tour.print.manual'))
