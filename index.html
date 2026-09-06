@@ -8045,6 +8045,23 @@ function subscribeCampsites(){
 
     var arr = [];
     snap.forEach(function(d){ arr.push(Object.assign({_id:d.id}, d.data())); });
+    // Firestore's snapshot order isn't just unstable across live updates --
+    // it's not alphabetical or otherwise meaningful to begin with, so the
+    // list order could look different (and shuffle again) essentially any
+    // time anyone anywhere adds or edits a campsite. Sort it ourselves,
+    // consistently, every time -- province, then town, then name (the
+    // same order already used for the Excel export) -- so the list a
+    // person is looking at stays visually stable and predictable, on top
+    // of the selection-by-identity fix above (which keeps WHICH
+    // campsites are selected correct; this keeps WHERE they appear
+    // in the list correct/consistent too).
+    arr.sort(function(a,b){
+      var pa=(a.provinsie||'').toLowerCase(), pb=(b.provinsie||'').toLowerCase();
+      if(pa!==pb) return pa<pb?-1:1;
+      var ta=(a.dorp||'').toLowerCase(), tb=(b.dorp||'').toLowerCase();
+      if(ta!==tb) return ta<tb?-1:1;
+      return (a.naam||'').toLowerCase() < (b.naam||'').toLowerCase() ? -1 : 1;
+    });
     window.camps = arr;
 
     if(typeof sel !== 'undefined'){
