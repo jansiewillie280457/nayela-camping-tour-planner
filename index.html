@@ -4503,6 +4503,10 @@ Object.assign(I18N.af, {
   'tour.schedule.routeLegGoogleTitle': 'Wys roete vir hierdie dag se rit — Google Maps (met GPS-navigasie op jou selfoon of tablet)',
   'tour.schedule.routeLegNoGps': 'Kan nie roete wys nie — een of albei kampeerterreine het geen GPS-koördinate nie.',
   'tour.schedule.noGpsWarning': 'Afstand kan nie outomaties bereken word nie — hierdie of die vorige kampeerterrein het geen GPS-koördinate op rekord nie. Tik die afstand self in, of voeg GPS by die kampeerterrein in Kampeerterrein Soektog.',
+  'tour.schedule.gpsEditTitle': 'Wysig hierdie stop se GPS-koördinate direk (handig as die naam nie met enige kampeerterrein in die databasis ooreenstem nie)',
+  'tour.schedule.gpsPromptMsg': 'GPS-koördinate vir "{name}" (formaat: lat,lon — bv. -18.9715,14.8612). Los leeg om te verwyder.',
+  'tour.schedule.gpsSaved': 'GPS gestoor ✓',
+  'tour.schedule.gpsCleared': 'GPS verwyder',
 
   'tour.gmaps.hdr': '🌐 OpenStreetMap Afstand (KM) Outomatiese Invul',
   'tour.gmaps.desc': 'Die Skedule se KM-kolom vul outomaties in met werklike ryafstande vanaf OpenStreetMap se gratis roeteringsdiens — geen sleutel, rekening of fakturering nodig nie. As dit nie bereik kan word nie (bv. geen internet), val dit terug op \'n reguit-lyn GPS-beraming — gemerk met \'n ~ sodat jy weet watter een dit is.',
@@ -4788,6 +4792,10 @@ Object.assign(I18N.en, {
   'tour.schedule.routeLegGoogleTitle': 'Show route for this day\'s drive — Google Maps (with GPS navigation on your phone or tablet)',
   'tour.schedule.routeLegNoGps': 'Can\'t show route — one or both campsites has no GPS coordinates on record.',
   'tour.schedule.noGpsWarning': 'Distance can\'t be calculated automatically — this or the previous campsite has no GPS coordinates on record. Type the distance in yourself, or add GPS to the campsite in Kampeerterrein Soektog.',
+  'tour.schedule.gpsEditTitle': 'Edit this stop\'s GPS coordinates directly (handy when the name doesn\'t match any campsite in the database)',
+  'tour.schedule.gpsPromptMsg': 'GPS coordinates for "{name}" (format: lat,lon — e.g. -18.9715,14.8612). Leave blank to clear.',
+  'tour.schedule.gpsSaved': 'GPS saved ✓',
+  'tour.schedule.gpsCleared': 'GPS cleared',
 
   'tour.gmaps.hdr': '🌐 OpenStreetMap Distance (KM) Auto-Fill',
   'tour.gmaps.desc': 'The Schedule\'s KM column fills in automatically with real driving distances from OpenStreetMap\'s free routing service — no key, account, or billing needed. If it can\'t be reached (e.g. no internet), it falls back to a straight-line GPS estimate instead — marked with a ~ so you know which is which.',
@@ -5694,6 +5702,30 @@ function updateStopNights(i, val){
   setTimeout(function(){ renderSchedule(); renderOverview(); }, 0);
 }
 
+// Lets a stop's own GPS be set directly, independent of whether its name
+// happens to match anything in the campsite database. Needed for cases
+// like a stop named after a town (e.g. "Ruacana") that has no campsite
+// entry under that exact name -- the nearest real campsite there might
+// be registered under a completely different name (e.g. "Ongongo
+// waterval camp"), so name-based lookup alone can never find it, and the
+// leg's distance would otherwise be permanently stuck unable to
+// calculate with no way for the person to fix it themselves.
+function promptStopGps(i){
+  var s = tourStops[i];
+  if(!s) return;
+  var current = stopGps(s);
+  var val = prompt(tr('tour.schedule.gpsPromptMsg', {name:s.name}), current || '');
+  if(val === null) return; // cancelled
+  updateStopGps(i, val.trim());
+}
+function updateStopGps(i, val){
+  tourStops[i].gps = val;
+  try{localStorage.setItem('nayela_stops', JSON.stringify(tourStops));}catch(e){}
+  toast(tr(val ? 'tour.schedule.gpsSaved' : 'tour.schedule.gpsCleared'));
+  renderSchedule();
+  renderOverview();
+}
+
 function updateStopKm(i, val){
   var km = parseFloat(val)||0;
   if(km<0) km=0;
@@ -6067,7 +6099,9 @@ function renderSchedule(){
       +'<td>'+(i+1)+'</td>'
       +'<td><input type="date" value="'+dateStr+'" style="padding:3px;border:1px solid #ccc;border-radius:4px;font-size:.78rem;" onchange="updateStopDate('+i+',this.value)"></td>'
       +'<td><input type="date" value="'+endDateStr+'" style="padding:3px;border:1px solid #ccc;border-radius:4px;font-size:.78rem;" onchange="updateStopEndDate('+i+',this.value)"></td>'
-      +'<td><strong>'+esc(s.name)+'</strong>'+(s.isReturn?' <span style="background:var(--savanna,#2e7d32);color:#fff;font-size:.62rem;font-weight:700;padding:1px 6px;border-radius:8px;white-space:nowrap;">'+tr('tour.schedule.returnBadge')+'</span>':'')+'<br><span style="font-size:.68rem;color:#888;">'+esc(s.phone)+'</span></td>'
+      +'<td><strong>'+esc(s.name)+'</strong>'+(s.isReturn?' <span style="background:var(--savanna,#2e7d32);color:#fff;font-size:.62rem;font-weight:700;padding:1px 6px;border-radius:8px;white-space:nowrap;">'+tr('tour.schedule.returnBadge')+'</span>':'')
+        +' <button type="button" onclick="promptStopGps('+i+')" title="'+esc(tr('tour.schedule.gpsEditTitle'))+'" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:.85rem;vertical-align:middle;touch-action:manipulation;">📍</button>'
+        +'<br><span style="font-size:.68rem;color:#888;">'+esc(s.phone)+'</span></td>'
       +'<td>'+tr('tour.schedule.dayLabel',{n:rowDay})+'</td>'
       +'<td><input type="number" min="0" value="'+nightsHere+'" style="width:52px;text-align:center;padding:3px;border:1px solid #ccc;border-radius:4px;font-size:.78rem;" onchange="updateStopNights('+i+',this.value)"></td>'
       +'<td><input type="number" min="0" value="'+(parseFloat(s.km)||0)+'" style="width:64px;text-align:center;padding:3px;border:1px solid #ccc;border-radius:4px;font-size:.78rem;" onchange="updateStopKm('+i+',this.value)"> km'
@@ -6252,16 +6286,36 @@ function stopGps(stop){
 // "lat,lng" string -> {lat,lng} numbers.
 function gpsToLatLng(gps){
   if(!gps) return null;
+  var str = String(gps).trim();
   // GPS values get typed by hand sometimes -- accept ';' as well as ','
   // between lat/lng, and strip stray characters (degree symbols, N/S/E/W
   // letters, extra spaces) that would otherwise make parseFloat choke or
   // silently misread the number, breaking routing for that leg with no
   // obvious explanation.
-  var parts = String(gps).split(/[,;]/);
+  var parts = str.split(/[,;]/);
+  if(parts.length < 2){
+    // No comma/semicolon at all -- e.g. "17.0015°13.2441°", where the only
+    // thing separating the two numbers is a degree symbol sitting between
+    // them (not a proper separator, but recoverable: split right after
+    // the first ° and treat that as the boundary between lat and lng).
+    var degIdx = str.indexOf('°');
+    if(degIdx > -1 && degIdx < str.length - 1){
+      parts = [str.slice(0, degIdx+1), str.slice(degIdx+1)];
+    }
+  }
   if(parts.length < 2) return null;
   var lat = parseFloat(parts[0].replace(/[^0-9.\-]/g,''));
   var lng = parseFloat(parts[1].replace(/[^0-9.\-]/g,''));
   if(isNaN(lat) || isNaN(lng)) return null;
+  // Every place this app covers (South Africa, Namibia, Botswana,
+  // Mozambique, Zimbabwe, Zambia...) sits below the equator, so a
+  // genuinely positive latitude never legitimately occurs here -- it's
+  // always a missing minus sign from someone typing "17.00" instead of
+  // "-17.00" (a surprisingly common mistake when copying a coordinate
+  // that was originally shown as "17.00°S"). Auto-correcting this is
+  // safe specifically because of that geographic constraint; it would
+  // NOT be a safe assumption for an app covering the northern hemisphere.
+  if(lat > 0) lat = -lat;
   return {lat:lat, lng:lng};
 }
 
