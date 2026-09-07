@@ -6251,8 +6251,16 @@ function stopGps(stop){
 
 // "lat,lng" string -> {lat,lng} numbers.
 function gpsToLatLng(gps){
-  var parts = (gps||'').split(',');
-  var lat = parseFloat(parts[0]), lng = parseFloat(parts[1]);
+  if(!gps) return null;
+  // GPS values get typed by hand sometimes -- accept ';' as well as ','
+  // between lat/lng, and strip stray characters (degree symbols, N/S/E/W
+  // letters, extra spaces) that would otherwise make parseFloat choke or
+  // silently misread the number, breaking routing for that leg with no
+  // obvious explanation.
+  var parts = String(gps).split(/[,;]/);
+  if(parts.length < 2) return null;
+  var lat = parseFloat(parts[0].replace(/[^0-9.\-]/g,''));
+  var lng = parseFloat(parts[1].replace(/[^0-9.\-]/g,''));
   if(isNaN(lat) || isNaN(lng)) return null;
   return {lat:lat, lng:lng};
 }
