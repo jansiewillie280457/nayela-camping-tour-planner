@@ -2204,7 +2204,31 @@ function parseGPS(str){
   if(simpleParts.length>=2 && /^\s*-?\d+(?:\.\d+)?\s*$/.test(simpleParts[0]) && /^\s*-?\d+(?:\.\d+)?\s*$/.test(simpleParts[1])){
     var a=parseFloat(simpleParts[0]), b=parseFloat(simpleParts[1]);
     if((a>0 && b<0) || Math.abs(a)>90){ var t=a; a=b; b=t; }
+    // Every place this app covers sits below the equator, so a positive
+    // latitude here is always a missing minus sign, never a genuine
+    // northern-hemisphere location -- see gpsToLatLng() for the same fix.
+    if(a>0) a=-a;
     if(Math.abs(a)<=90) return {lat:a, lon:b};
+  }
+
+  // Degree-symbol-as-separator path: two plain decimals with NO comma at
+  // all between them, just a stray ° sitting where a comma should be
+  // (e.g. "17.0015°13.2441°"). This is NOT real DMS notation -- there's
+  // no minutes/seconds component, it's a typo'd separator -- but without
+  // handling it explicitly here first, the DMS tolerant path below would
+  // misread the second number as an arc-minutes value glued onto the
+  // first (e.g. "17°13.2441'"), silently producing one wrong coordinate
+  // instead of failing to parse two.
+  if(!/[,;]/.test(str)){
+    var degIdx = str.indexOf('°');
+    if(degIdx > -1 && degIdx < str.length-1){
+      var p1 = str.slice(0, degIdx), p2 = str.slice(degIdx+1).replace(/°/g,'');
+      if(/^\s*-?\d+(?:\.\d+)?\s*$/.test(p1) && /^\s*-?\d+(?:\.\d+)?\s*$/.test(p2)){
+        var la=parseFloat(p1), lo=parseFloat(p2);
+        if(la>0) la=-la;
+        if(Math.abs(la)<=90) return {lat:la, lon:lo};
+      }
+    }
   }
 
   // Tolerant path: DMS / degree-decimal-minute / hemisphere-letter notation.
@@ -2222,6 +2246,7 @@ function parseGPS(str){
   if(isNaN(lat)||isNaN(lon)) return null;
   if(Math.abs(lat)>90){ var t2=lat; lat=lon; lon=t2; }
   if(Math.abs(lat)>90 || Math.abs(lon)>180) return null;
+  if(lat>0) lat=-lat; // same southern-hemisphere-only correction as above
   return {lat:lat, lon:lon};
 }
 
