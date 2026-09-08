@@ -4370,6 +4370,7 @@ if(window.matchMedia){
 
   <!-- ── TAB 6: DEPOSITS ── -->
   <div class="tab-pane" id="tb-deposits">
+    <button class="btn-tp btn-add" onclick="pullStopsToDeposits()" data-i18n="tour.deposits.pullBtn" style="margin-bottom:12px;">↓ Trek Kampeerterreine vanaf Skedule</button>
     <div class="tp-form">
       <h3 data-i18n="tour.deposits.addHdr">+ Voeg Deposito Rekord By</h3>
       <div class="fg">
@@ -4626,6 +4627,10 @@ Object.assign(I18N.af, {
   'tour.emergency.none': 'Nog geen noodkontakte bygevoeg nie.',
 
   'tour.deposits.addHdr': '+ Voeg Deposito Rekord By',
+  'tour.deposits.pullBtn': '↓ Trek Kampeerterreine vanaf Skedule',
+  'tour.deposits.noStopsToPull': 'Geen stops in die Skedule om te trek nie.',
+  'tour.deposits.allAlreadyPulled': 'Al die Skedule se kampeerterreine is reeds hier.',
+  'tour.deposits.pulled': '{n} kampeerterrein(e) vanaf Skedule bygevoeg',
   'tour.deposits.lblCamp': 'Kampeerterrein',
   'tour.deposits.campPh': 'Kampeerterrein naam',
   'tour.deposits.lblEmail': 'E-pos',
@@ -4920,6 +4925,10 @@ Object.assign(I18N.en, {
   'tour.emergency.none': 'No emergency contacts added.',
 
   'tour.deposits.addHdr': '+ Add Deposit Record',
+  'tour.deposits.pullBtn': '↓ Pull Campsites from Schedule',
+  'tour.deposits.noStopsToPull': 'No stops in the Schedule to pull.',
+  'tour.deposits.allAlreadyPulled': 'All the Schedule\'s campsites are already here.',
+  'tour.deposits.pulled': '{n} campsite(s) added from Schedule',
   'tour.deposits.lblCamp': 'Campsite',
   'tour.deposits.campPh': 'Campsite name',
   'tour.deposits.lblEmail': 'Email',
@@ -5571,8 +5580,15 @@ function showNameSuggestions(val){
     return c.naam && c.naam.toLowerCase().indexOf(query) !== -1;
   }).sort(function(a,b){
     return (a.naam||'').toLowerCase() < (b.naam||'').toLowerCase() ? -1 : 1;
-  }).slice(0, 40); // capped so the dropdown is always fast and never
-                    // tries to render hundreds of rows at once
+  }).slice(0, 300); // was capped at 40, which silently cut off matches
+                     // partway through the alphabet for any broad search
+                     // term (e.g. "kamp"/"camp" appears in hundreds of
+                     // names) -- looked exactly like a broken scrollbar,
+                     // but the entries past the cap were never in the
+                     // DOM at all. 300 is comfortably above the realistic
+                     // worst case for this ~700-entry database, and the
+                     // dropdown's own scroll (not this cap) is what
+                     // should be doing the limiting from here on.
   if(!matches.length){ box.style.display='none'; box.innerHTML=''; return; }
   box.innerHTML = matches.map(function(c){
     var label = c.naam + (c.dorp ? ' ('+c.dorp+')' : '');
@@ -6713,6 +6729,36 @@ function renderEmergency(){
 }
 
 // ── Deposits ──────────────────────────────────────────
+// Pulls every Schedule stop into the Deposito's list that isn't already
+// there (matched by campsite name, case-insensitive) -- pre-fills camp
+// name, email and phone straight from the stop so there's no need to
+// retype what's already in the Schedule. Amount and Paid? are left at
+// 0/NO for the person to fill in themselves, since only they know what
+// deposit (if any) was actually requested and paid for each stop.
+function pullStopsToDeposits(){
+  if(!tourStops.length){ toast(tr('tour.deposits.noStopsToPull')); return; }
+  var existingNames = depositList.map(function(d){ return (d.camp||'').trim().toLowerCase(); });
+  var added = 0;
+  tourStops.forEach(function(s){
+    var key = (s.name||'').trim().toLowerCase();
+    if(!key || existingNames.indexOf(key) !== -1) return; // already in the list, skip
+    depositList.push({
+      camp: s.name,
+      email: s.email || '',
+      tel: s.phone || '',
+      code: '',
+      amount: 0,
+      paid: 'NO'
+    });
+    existingNames.push(key);
+    added++;
+  });
+  if(!added){ toast(tr('tour.deposits.allAlreadyPulled')); return; }
+  try{localStorage.setItem('nayela_deposits', JSON.stringify(depositList));}catch(e){}
+  renderDeposits();
+  toast(tr('tour.deposits.pulled', {n: added}));
+}
+
 function addDeposit(){
   var c=document.getElementById('dCamp').value.trim();
   if(!c){toast(tr('tour.deposits.enterCamp')); return;}
