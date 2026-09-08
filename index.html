@@ -4232,7 +4232,7 @@ if(window.matchMedia){
     <div class="tp-form">
       <h3 data-i18n="tour.schedule.addStopHdr">+ Voeg Stop By</h3>
       <div class="fg">
-        <div style="position:relative;"><label data-i18n="tour.schedule.lblName">Kampeerterrein Naam</label><input id="sName" type="text" placeholder="Naam of soek..." data-i18n-ph="tour.schedule.namePh" style="font-size:16px;" autocomplete="off" oninput="showNameSuggestions(this.value)" onfocus="showNameSuggestions(this.value)"><div id="sNameSuggest" style="display:none;position:absolute;z-index:50;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.18);max-height:220px;overflow-y:auto;margin-top:2px;"></div><datalist id="csSearchList"></datalist></div>
+        <div style="position:relative;"><label data-i18n="tour.schedule.lblName">Kampeerterrein Naam</label><input id="sName" type="text" placeholder="Klik om te blaai, of tik om te soek..." data-i18n-ph="tour.schedule.namePh" style="font-size:16px;" autocomplete="off" oninput="showNameSuggestions(this.value)" onfocus="showNameSuggestions(this.value)"><div id="sNameSuggest" style="display:none;position:absolute;z-index:50;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.18);max-height:320px;overflow-y:auto;margin-top:2px;"></div><datalist id="csSearchList"></datalist></div>
         <div><label data-i18n="tour.schedule.lblDate">Datum (opsioneel)</label><input id="sDate" type="date"><div style="font-size:.68rem;color:#888;margin-top:2px;" data-i18n="tour.schedule.dateHint">Leeg = volg outomaties na die vorige stop</div></div>
         <div><label data-i18n="tour.schedule.lblKm">Afstand vanaf Vorige (km)</label><input id="sKm" type="number" min="0" placeholder="bv. 320" data-i18n-ph="tour.schedule.kmPh"></div>
         <div><label data-i18n="tour.schedule.lblGps">GPS Koördinate</label><input id="sGps" type="text" placeholder="bv. -18.9715,14.8612" data-i18n-ph="tour.schedule.gpsPh" style="font-size:16px;"><div style="font-size:.68rem;color:#888;margin-top:2px;" data-i18n="tour.schedule.gpsHint">Leeg = probeer eers by die kampeerterrein-databasis pas</div></div>
@@ -4471,7 +4471,7 @@ Object.assign(I18N.af, {
   'tour.schedule.pullHint': 'Kies eers kampeerterreine in Kampeerterrein Soektog (merk die blokkies), trek dit dan in jou skedule in.',
   'tour.schedule.addStopHdr': '+ Voeg Stop By',
   'tour.schedule.lblName': 'Kampeerterrein Naam',
-  'tour.schedule.namePh': 'Naam of soek...',
+  'tour.schedule.namePh': 'Klik om te blaai, of tik om te soek...',
   'tour.schedule.lblDate': 'Datum (opsioneel)',
   'tour.schedule.dateHint': 'Leeg = volg outomaties na die vorige stop',
   'tour.schedule.lblKm': 'Afstand vanaf Vorige (km)',
@@ -4769,7 +4769,7 @@ Object.assign(I18N.en, {
   'tour.schedule.pullHint': 'First select campsites in Campsite Search (tick the checkboxes), then pull them into your schedule.',
   'tour.schedule.addStopHdr': '+ Add Stop',
   'tour.schedule.lblName': 'Campsite Name',
-  'tour.schedule.namePh': 'Name or search...',
+  'tour.schedule.namePh': 'Click to browse, or type to search...',
   'tour.schedule.lblDate': 'Date (optional)',
   'tour.schedule.dateHint': 'Leave blank = follows on automatically from the previous stop',
   'tour.schedule.lblKm': 'Distance from Prev (km)',
@@ -5574,21 +5574,26 @@ function renderOverview(){
 function showNameSuggestions(val){
   var box = document.getElementById('sNameSuggest');
   if(!box) return;
+  if(typeof camps === 'undefined'){ box.style.display='none'; box.innerHTML=''; return; }
   var query = (val||'').trim().toLowerCase();
-  if(!query || typeof camps === 'undefined'){ box.style.display='none'; box.innerHTML=''; return; }
-  var matches = camps.filter(function(c){
-    return c.naam && c.naam.toLowerCase().indexOf(query) !== -1;
-  }).sort(function(a,b){
+  // Empty query (just clicked/focused the field, nothing typed yet) --
+  // show the FULL A-Z list to browse, not nothing. A person shouldn't
+  // have to already know they need to start typing before anything
+  // appears; clicking the field should immediately show what's available,
+  // same as any normal dropdown/picker would.
+  var pool = query
+    ? camps.filter(function(c){ return c.naam && c.naam.toLowerCase().indexOf(query) !== -1; })
+    : camps.slice();
+  var matches = pool.sort(function(a,b){
     return (a.naam||'').toLowerCase() < (b.naam||'').toLowerCase() ? -1 : 1;
-  }).slice(0, 300); // was capped at 40, which silently cut off matches
-                     // partway through the alphabet for any broad search
-                     // term (e.g. "kamp"/"camp" appears in hundreds of
-                     // names) -- looked exactly like a broken scrollbar,
-                     // but the entries past the cap were never in the
-                     // DOM at all. 300 is comfortably above the realistic
-                     // worst case for this ~700-entry database, and the
-                     // dropdown's own scroll (not this cap) is what
-                     // should be doing the limiting from here on.
+  });
+  // No count cap here -- the earlier 40-item and then 300-item caps both
+  // ended up silently truncating the list part-way through the alphabet
+  // (first for broad search terms, then for browsing the full ~685-entry
+  // database with nothing typed yet). A plain scrollable list of a few
+  // hundred simple rows costs nothing noticeable to render; the
+  // dropdown's own max-height + overflow-y:auto is what should be
+  // limiting what's ON SCREEN at once, not how many exist to scroll to.
   if(!matches.length){ box.style.display='none'; box.innerHTML=''; return; }
   box.innerHTML = matches.map(function(c){
     var label = c.naam + (c.dorp ? ' ('+c.dorp+')' : '');
