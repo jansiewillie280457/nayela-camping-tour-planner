@@ -4087,6 +4087,9 @@ if(window.matchMedia){
 
 /* ── Forms ── */
 .tp-form{background:#fff;border-radius:10px;box-shadow:0 1px 8px rgba(0,0,0,.1);padding:16px;margin-bottom:16px;}
+.sname-sugg{padding:9px 12px;cursor:pointer;border-bottom:1px solid #eee;font-size:.85rem;color:#222;}
+.sname-sugg:last-child{border-bottom:none;}
+.sname-sugg:hover{background:#f0f4ec;}
 .tp-form h3{font-size:.9rem;font-weight:700;color:var(--earth);margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #eee;}
 .fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:10px;}
 .fg label{display:block;font-size:.72rem;font-weight:600;color:var(--bark);margin-bottom:3px;text-transform:uppercase;letter-spacing:.3px;}
@@ -4229,7 +4232,7 @@ if(window.matchMedia){
     <div class="tp-form">
       <h3 data-i18n="tour.schedule.addStopHdr">+ Voeg Stop By</h3>
       <div class="fg">
-        <div><label data-i18n="tour.schedule.lblName">Kampeerterrein Naam</label><input id="sName" type="text" placeholder="Naam of soek..." data-i18n-ph="tour.schedule.namePh" style="font-size:16px;" list="csSearchList"><datalist id="csSearchList"></datalist></div>
+        <div style="position:relative;"><label data-i18n="tour.schedule.lblName">Kampeerterrein Naam</label><input id="sName" type="text" placeholder="Naam of soek..." data-i18n-ph="tour.schedule.namePh" style="font-size:16px;" autocomplete="off" oninput="showNameSuggestions(this.value)" onfocus="showNameSuggestions(this.value)"><div id="sNameSuggest" style="display:none;position:absolute;z-index:50;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.18);max-height:220px;overflow-y:auto;margin-top:2px;"></div><datalist id="csSearchList"></datalist></div>
         <div><label data-i18n="tour.schedule.lblDate">Datum (opsioneel)</label><input id="sDate" type="date"><div style="font-size:.68rem;color:#888;margin-top:2px;" data-i18n="tour.schedule.dateHint">Leeg = volg outomaties na die vorige stop</div></div>
         <div><label data-i18n="tour.schedule.lblKm">Afstand vanaf Vorige (km)</label><input id="sKm" type="number" min="0" placeholder="bv. 320" data-i18n-ph="tour.schedule.kmPh"></div>
         <div><label data-i18n="tour.schedule.lblGps">GPS Koördinate</label><input id="sGps" type="text" placeholder="bv. -18.9715,14.8612" data-i18n-ph="tour.schedule.gpsPh" style="font-size:16px;"><div style="font-size:.68rem;color:#888;margin-top:2px;" data-i18n="tour.schedule.gpsHint">Leeg = probeer eers by die kampeerterrein-databasis pas</div></div>
@@ -5551,6 +5554,53 @@ function renderOverview(){
 }
 
 // ── Schedule ──────────────────────────────────────────
+// ── Custom campsite-name suggestion dropdown ──────────────
+// Replaces the browser's native <datalist> for "Kampeerterrein Naam" --
+// datalist rendering (height, scroll behaviour, how many rows show at
+// once) is entirely up to the browser and NOT stylable, and with ~700
+// campsites in the database, several browsers cut the list off partway
+// through instead of scrolling smoothly. This is a plain, fully
+// JS-controlled dropdown instead: filtered live as you type, capped at
+// a sane number of results, and genuinely scrollable everywhere.
+function showNameSuggestions(val){
+  var box = document.getElementById('sNameSuggest');
+  if(!box) return;
+  var query = (val||'').trim().toLowerCase();
+  if(!query || typeof camps === 'undefined'){ box.style.display='none'; box.innerHTML=''; return; }
+  var matches = camps.filter(function(c){
+    return c.naam && c.naam.toLowerCase().indexOf(query) !== -1;
+  }).sort(function(a,b){
+    return (a.naam||'').toLowerCase() < (b.naam||'').toLowerCase() ? -1 : 1;
+  }).slice(0, 40); // capped so the dropdown is always fast and never
+                    // tries to render hundreds of rows at once
+  if(!matches.length){ box.style.display='none'; box.innerHTML=''; return; }
+  box.innerHTML = matches.map(function(c){
+    var label = c.naam + (c.dorp ? ' ('+c.dorp+')' : '');
+    // data-name (not an inline onclick with the name baked into a JS
+    // string) so campsite names containing apostrophes -- e.g. "Actupo
+    // Camping Ponta d'Orra" -- can never break the generated HTML.
+    return '<div class="sname-sugg" data-name="'+esc(c.naam)+'">'+esc(label)+'</div>';
+  }).join('');
+  box.style.display='block';
+}
+// Single delegated listener handles both selecting a suggestion (click
+// lands on a .sname-sugg row) and closing the dropdown (click anywhere
+// else) -- added once, not re-added every time the list re-renders.
+document.addEventListener('click', function(e){
+  var box = document.getElementById('sNameSuggest');
+  var input = document.getElementById('sName');
+  if(!box) return;
+  if(e.target.classList && e.target.classList.contains('sname-sugg')){
+    if(input) input.value = e.target.getAttribute('data-name');
+    box.style.display='none';
+    box.innerHTML='';
+    return;
+  }
+  if(input && e.target!==input && !box.contains(e.target)){
+    box.style.display='none';
+  }
+});
+
 function populateCSDatalist(){
   // Populate campsite autocomplete from embedded CS data
   if(typeof camps !== 'undefined'){
