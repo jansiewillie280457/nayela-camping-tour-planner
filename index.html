@@ -4232,6 +4232,7 @@ if(window.matchMedia){
         <div><label data-i18n="tour.schedule.lblName">Kampeerterrein Naam</label><input id="sName" type="text" placeholder="Naam of soek..." data-i18n-ph="tour.schedule.namePh" style="font-size:16px;" list="csSearchList"><datalist id="csSearchList"></datalist></div>
         <div><label data-i18n="tour.schedule.lblDate">Datum (opsioneel)</label><input id="sDate" type="date"><div style="font-size:.68rem;color:#888;margin-top:2px;" data-i18n="tour.schedule.dateHint">Leeg = volg outomaties na die vorige stop</div></div>
         <div><label data-i18n="tour.schedule.lblKm">Afstand vanaf Vorige (km)</label><input id="sKm" type="number" min="0" placeholder="bv. 320" data-i18n-ph="tour.schedule.kmPh"></div>
+        <div><label data-i18n="tour.schedule.lblGps">GPS Koördinate</label><input id="sGps" type="text" placeholder="bv. -18.9715,14.8612" data-i18n-ph="tour.schedule.gpsPh" style="font-size:16px;"><div style="font-size:.68rem;color:#888;margin-top:2px;" data-i18n="tour.schedule.gpsHint">Leeg = probeer eers by die kampeerterrein-databasis pas</div></div>
         <div><label data-i18n="tour.schedule.lblNights">Nagte</label><input id="sNights" type="number" min="0" value="1"></div>
         <div><label data-i18n="tour.schedule.lblCostPP">Koste per Nag (R)</label><input id="sCostPP" type="number" min="0" placeholder="bv. 400" data-i18n-ph="tour.schedule.costPPPh"></div>
         <div><label data-i18n="tour.schedule.lblEmail">E-pos / Kontak</label><input id="sEmail" type="text" placeholder="e-pos of webwerf" data-i18n-ph="tour.schedule.emailPh" style="font-size:16px;"></div>
@@ -4471,6 +4472,9 @@ Object.assign(I18N.af, {
   'tour.schedule.dateHint': 'Leeg = volg outomaties na die vorige stop',
   'tour.schedule.lblKm': 'Afstand vanaf Vorige (km)',
   'tour.schedule.kmPh': 'bv. 320',
+  'tour.schedule.lblGps': 'GPS Koördinate',
+  'tour.schedule.gpsPh': 'bv. -18.9715,14.8612',
+  'tour.schedule.gpsHint': 'Leeg = probeer eers by die kampeerterrein-databasis pas',
   'tour.schedule.lblNights': 'Nagte',
   'tour.schedule.lblCostPP': 'Koste per Nag (R)',
   'tour.schedule.costPPPh': 'bv. 400',
@@ -4529,6 +4533,8 @@ Object.assign(I18N.af, {
   'tour.schedule.routeLegNoGps': 'Kan nie roete wys nie — een of albei kampeerterreine het geen GPS-koördinate nie.',
   'tour.schedule.noGpsWarning': 'Afstand kan nie outomaties bereken word nie — hierdie of die vorige kampeerterrein het geen GPS-koördinate op rekord nie. Tik die afstand self in, of voeg GPS by die kampeerterrein in Kampeerterrein Soektog.',
   'tour.schedule.gpsEditTitle': 'Wysig hierdie stop se GPS-koördinate direk (handig as die naam nie met enige kampeerterrein in die databasis ooreenstem nie)',
+  'tour.schedule.moveUpTitle': 'Skuif hierdie stop op',
+  'tour.schedule.moveDownTitle': 'Skuif hierdie stop af',
   'tour.schedule.gpsPromptMsg': 'GPS-koördinate vir "{name}" (formaat: lat,lon — bv. -18.9715,14.8612). Los leeg om te verwyder.',
   'tour.schedule.gpsSaved': 'GPS gestoor ✓',
   'tour.schedule.gpsCleared': 'GPS verwyder',
@@ -4760,6 +4766,9 @@ Object.assign(I18N.en, {
   'tour.schedule.dateHint': 'Leave blank = follows on automatically from the previous stop',
   'tour.schedule.lblKm': 'Distance from Prev (km)',
   'tour.schedule.kmPh': 'e.g. 320',
+  'tour.schedule.lblGps': 'GPS Coordinates',
+  'tour.schedule.gpsPh': 'e.g. -18.9715,14.8612',
+  'tour.schedule.gpsHint': 'Blank = try to match the campsite database first',
   'tour.schedule.lblNights': 'Nights',
   'tour.schedule.lblCostPP': 'Cost per Night (R)',
   'tour.schedule.costPPPh': 'e.g. 400',
@@ -4818,6 +4827,8 @@ Object.assign(I18N.en, {
   'tour.schedule.routeLegNoGps': 'Can\'t show route — one or both campsites has no GPS coordinates on record.',
   'tour.schedule.noGpsWarning': 'Distance can\'t be calculated automatically — this or the previous campsite has no GPS coordinates on record. Type the distance in yourself, or add GPS to the campsite in Kampeerterrein Soektog.',
   'tour.schedule.gpsEditTitle': 'Edit this stop\'s GPS coordinates directly (handy when the name doesn\'t match any campsite in the database)',
+  'tour.schedule.moveUpTitle': 'Move this stop up',
+  'tour.schedule.moveDownTitle': 'Move this stop down',
   'tour.schedule.gpsPromptMsg': 'GPS coordinates for "{name}" (format: lat,lon — e.g. -18.9715,14.8612). Leave blank to clear.',
   'tour.schedule.gpsSaved': 'GPS saved ✓',
   'tour.schedule.gpsCleared': 'GPS cleared',
@@ -5552,7 +5563,14 @@ function populateCSDatalist(){
                       // thousands of stale DOM nodes) the more you moved
                       // between pages in a session.
     var seen = {};
-    camps.forEach(function(c){
+    // Sort purely by name here (not province → town → name like the main
+    // list) -- when someone's typing a campsite name to search for it,
+    // an A-Z list of names is what's actually quick to scan; grouping by
+    // province first would scatter alphabetically-close names apart.
+    var sortedCamps = camps.slice().sort(function(a,b){
+      return (a.naam||'').toLowerCase() < (b.naam||'').toLowerCase() ? -1 : 1;
+    });
+    sortedCamps.forEach(function(c){
       if(c.naam && !seen[c.naam]){
         seen[c.naam]=true;
         var opt=document.createElement('option');
@@ -5606,6 +5624,13 @@ function addStop(){
     if(!phone && match.tel) phone = match.tel;
     matchGps = clean(match.gps);
   }
+  // Manually-typed GPS in the form wins over whatever the database
+  // lookup found -- covers exactly the "Ruacana" kind of case where the
+  // stop's name doesn't match any campsite record at all, so there'd
+  // otherwise be no GPS (and therefore no distance) for this leg from
+  // the moment it's added, requiring a separate edit afterward.
+  var manualGpsInput = clean(document.getElementById('sGps').value);
+  if(manualGpsInput) matchGps = manualGpsInput;
 
   // Auto-calc fuel cost — prefers real rates from the Fuel Calculator log
   var rates = getEffectiveFuelRates();
@@ -5650,6 +5675,7 @@ function addStop(){
   document.getElementById('sName').value='';
   document.getElementById('sDate').value='';
   document.getElementById('sKm').value='';
+  document.getElementById('sGps').value='';
   document.getElementById('sNights').value='1';
   document.getElementById('sCostPP').value='';
   document.getElementById('sEmail').value='';
@@ -5710,6 +5736,29 @@ function deleteStop(i){
     renderSchedule(); recalcFuel(); renderOverview();
     toast(tr('tour.schedule.stopRemoved'));
   });
+}
+
+// Swaps a stop with its immediate neighbour (direction -1 = up, +1 =
+// down) -- the ▲▼ arrows next to each stop's number. Dates get fully
+// recalculated afterwards (cascading forward from the tour's start date
+// through the new order) rather than travelling WITH the stop, since a
+// stop's date only ever made sense relative to its position in the
+// sequence -- carrying an old date into a new position would just
+// produce a nonsensical, out-of-order schedule. KM/fuel per leg stay
+// attached to the stop itself and are left for the person to recheck,
+// since "distance from previous" only makes sense once you know what
+// the new previous stop actually is.
+function moveStop(i, direction){
+  var j = i + direction;
+  if(j<0 || j>=tourStops.length) return;
+  var tmp = tourStops[i];
+  tourStops[i] = tourStops[j];
+  tourStops[j] = tmp;
+  recalcAllStopDates();
+  try{localStorage.setItem('nayela_stops', JSON.stringify(tourStops));}catch(e){}
+  renderSchedule();
+  recalcFuel();
+  renderOverview();
 }
 
 function toggleBooked(i){
@@ -6121,7 +6170,12 @@ function renderSchedule(){
     var dateStr = s.date ? s.date : '';
     var endDateStr = calcStopEndDate(s.date, s.nights);
     return '<tr>'
-      +'<td>'+(i+1)+'</td>'
+      +'<td>'+(i+1)
+        +'<br><span style="white-space:nowrap;">'
+        +(i>0 ? '<button type="button" onclick="moveStop('+i+',-1)" title="'+esc(tr('tour.schedule.moveUpTitle'))+'" style="background:none;border:none;cursor:pointer;padding:0 1px;font-size:.8rem;touch-action:manipulation;">▲</button>' : '')
+        +(i<tourStops.length-1 ? '<button type="button" onclick="moveStop('+i+',1)" title="'+esc(tr('tour.schedule.moveDownTitle'))+'" style="background:none;border:none;cursor:pointer;padding:0 1px;font-size:.8rem;touch-action:manipulation;">▼</button>' : '')
+        +'</span>'
+      +'</td>'
       +'<td><input type="date" value="'+dateStr+'" style="padding:3px;border:1px solid #ccc;border-radius:4px;font-size:.78rem;" onchange="updateStopDate('+i+',this.value)"></td>'
       +'<td><input type="date" value="'+endDateStr+'" style="padding:3px;border:1px solid #ccc;border-radius:4px;font-size:.78rem;" onchange="updateStopEndDate('+i+',this.value)"></td>'
       +'<td><strong>'+esc(s.name)+'</strong>'+(s.isReturn?' <span style="background:var(--savanna,#2e7d32);color:#fff;font-size:.62rem;font-weight:700;padding:1px 6px;border-radius:8px;white-space:nowrap;">'+tr('tour.schedule.returnBadge')+'</span>':'')
