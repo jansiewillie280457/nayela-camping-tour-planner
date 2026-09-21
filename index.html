@@ -245,7 +245,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(180deg,#
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v2.6 (21 Sep AI Toer)</div>
+  <div class="hdr-ver">v2.7 (21 Sep AI Toer)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -6972,6 +6972,25 @@ function applyAiPlanToTour(mode){
     localStorage.setItem('nayela_tourinfo', JSON.stringify(tourInfo));
   }catch(e){}
 
+  // Also tick these campsites in Kampeerterrein Soektog's own selection,
+  // so its list/map shows them as chosen too -- not just the Tour Planner
+  // schedule. Added on top of whatever's already ticked there (never
+  // clears an existing selection), matched by name since that's the same
+  // robust approach saveSel()/restoreSel() already use elsewhere.
+  if(typeof sel !== 'undefined' && typeof camps !== 'undefined'){
+    aiPlanState.stops.forEach(function(s){
+      var idx = camps.findIndex(function(c){ return c && c.naam === s.naam; });
+      if(idx>=0 && sel.indexOf(idx)<0) sel.push(idx);
+    });
+    if(typeof saveSel === 'function') saveSel();
+    // If Campsite Search's own badge counters exist in the DOM right now
+    // (i.e. this tab has been opened at some point this session), keep
+    // them in sync immediately rather than leaving a stale count.
+    var selCntEl=document.getElementById('selCnt'), panCntEl=document.getElementById('panCnt');
+    if(selCntEl) selCntEl.textContent=sel.length;
+    if(panCntEl) panCntEl.textContent=sel.length;
+  }
+
   toast(tr(mode==='new' ? 'aiplan.appliedNew' : 'aiplan.appliedAppend', {n:newStops.length}));
   aiPlanState.stops = [];
   showPage('pg-tour');
@@ -8645,7 +8664,7 @@ applyLanguage();
 <div id="fbGate" class="hide">
   <div class="fb-card">
     <h2>🏕 NAYELA Camping</h2>
-    <p style="font-size:.7rem;color:#aaa;margin:-14px 0 12px;">Build: 2026-08-15-photos</p>
+    <p style="font-size:.7rem;color:#aaa;margin:-14px 0 12px;">Build: 2026-09-21-member-delete</p>
     <p>Meld aan om die gedeelde kampplek-databasis te gebruik.</p>
     <input id="fbEmail" type="email" placeholder="E-pos" autocomplete="username">
     <input id="fbPw" type="password" placeholder="Wagwoord" autocomplete="current-password">
@@ -8659,7 +8678,7 @@ applyLanguage();
 <div class="gc-bg" id="fbMemBg" style="z-index:2100;">
   <div class="fb-card" style="max-width:420px;max-height:80vh;overflow-y:auto;">
     <h2>👥 Lede</h2>
-    <p>Voeg lede by of skakel toegang af. Verwyder = onmiddellike toegangverbod, sonder om ander lede te raak.</p>
+    <p>Voeg lede by of verwyder hulle. Verwyder = permanent geskrap (geen herstel-knoppie nie). Om 'n lid terug te bring, voeg hom van voor af by.</p>
     <input id="fbNewMemEmail" type="email" placeholder="Nuwe lid se e-pos">
     <button id="fbAddMemBtn" style="margin-bottom:14px;">➕ Voeg lid by</button>
     <div id="fbMemList" style="text-align:left;"></div>
@@ -8925,14 +8944,31 @@ async function renderMembers(){
         +'<span class="fb-mem-email">'+d.id+(m.role==='admin'?' 👑':'')+'</span>'
         +usageLine
       +'</span>'+
-      '<span class="fb-mem-badge'+(m.active?'':' inactive')+'">'+(m.active?'aktief':'verwyder')+'</span>';
+      '<span class="fb-mem-badge'+(m.active?'':' inactive')+'">'+(m.active?'aktief':'gedeaktiveer')+'</span>';
+    // PERMANENT DELETE: "Verwyder" deletes the member's document from
+    // Firestore entirely (deleteDoc). There is intentionally NO "Herstel"
+    // (reinstate) button any more -- a removed member only comes back if the
+    // admin re-adds him from scratch with "Voeg lid by" (fresh record, login
+    // counter starts at zero). Legacy rows that were merely deactivated under
+    // the old behaviour get this delete button too, so they can be cleaned out.
     var btn = document.createElement('button');
-    btn.textContent = m.active ? 'Verwyder' : 'Herstel';
-    btn.style.background = m.active ? '#c62828' : '#2e7d32';
+    btn.textContent = 'Verwyder';
+    btn.style.background = '#c62828';
     btn.addEventListener('click', async function(){
+      var err = document.getElementById('fbMemErr'); err.textContent='';
       if(d.id===currentMember.email){ alert('Jy kan nie jouself verwyder nie.'); return; }
-      await setDoc(doc(db,'members', d.id), Object.assign({}, m, {active: !m.active}), {merge:true});
-      renderMembers();
+      if(!confirm('Verwyder '+d.id+' PERMANENT?\n\nDit kan nie ongedaan gemaak word nie. Om hom terug te bring moet jy hom van voor af bygevoeg.')) return;
+      btn.disabled = true;
+      try{
+        await deleteDoc(doc(db,'members', d.id));
+        await renderMembers();
+        err.style.color = '#2e7d32';
+        err.textContent = d.id+' is heeltemal verwyder. Vergeet nie om sy aanmelding ook in Firebase Console \u2192 Authentication \u2192 Users te skrap nie.';
+      }catch(e){
+        btn.disabled = false;
+        err.style.color = '#c62828';
+        err.textContent = 'Kon nie verwyder nie: '+e.message;
+      }
     });
     row.appendChild(btn);
     wrap.appendChild(row);
@@ -8940,11 +8976,12 @@ async function renderMembers(){
 }
 document.getElementById('fbAddMemBtn').addEventListener('click', async function(){
   var email = document.getElementById('fbNewMemEmail').value.trim().toLowerCase();
-  var err = document.getElementById('fbMemErr'); err.textContent='';
+  var err = document.getElementById('fbMemErr'); err.textContent=''; err.style.color='#c62828';
   if(!email || email.indexOf('@')<0){ err.textContent='Gee \'n geldige e-posadres.'; return; }
   try{
     await setDoc(doc(db,'members', email), {active:true, role:'member'}, {merge:true});
     document.getElementById('fbNewMemEmail').value='';
+    err.style.color='#2e7d32';
     err.textContent = 'Bygevoeg. Skep nou hierdie persoon se aanmelding in Firebase Console \u2192 Authentication \u2192 Users, en gee hulle die wagwoord.';
     renderMembers();
   }catch(e){ err.textContent = 'Kon nie byvoeg nie: '+e.message; }
