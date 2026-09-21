@@ -245,7 +245,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(180deg,#
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v2.5 (6 Sep)</div>
+  <div class="hdr-ver">v2.6 (21 Sep AI Toer)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -302,6 +302,16 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(180deg,#
           <h3 data-i18n="menu.tour.title">Toer Beplanner</h3>
           <p data-i18n="menu.tour.desc">Beplan jou roete, hou kampeerterrein-koste, brandstof, deposito's en toerlede dop.</p>
           <span class="mc-badge badge-new" data-i18n="menu.tour.badge">★ Fase 3 — Nuut</span>
+        </div>
+      </div>
+
+      <!-- AI Tour Planner -->
+      <div class="menu-card" onclick="showPage(&#39;pg-aiplan&#39;)">
+        <div class="mc-icon" style="background:#1976d2;">🤖</div>
+        <div class="mc-body">
+          <h3 data-i18n="menu.aiplan.title">AI Toer Beplanner</h3>
+          <p data-i18n="menu.aiplan.desc">Gee vir AI \'n paar dorpe of areas, en \'n voorstel vir jou roete kom kant-en-klaar — jy hou volle beheer om dit te verander of te verwerp.</p>
+          <span class="mc-badge badge-new" data-i18n="menu.aiplan.badge">★ Nuut</span>
         </div>
       </div>
 
@@ -583,6 +593,43 @@ Object.assign(I18N.af, {
   'menu.tour.title': 'Toer Beplanner',
   'menu.tour.desc': 'Beplan jou roete, hou kampeerterrein-koste, brandstof, deposito\'s en toerlede dop.',
   'menu.tour.badge': '★ Fase 3 — Nuut',
+  'menu.aiplan.title': 'AI Toer Beplanner',
+  'menu.aiplan.desc': 'Gee vir AI \'n paar dorpe of areas, en \'n voorstel vir jou roete kom kant-en-klaar — jy hou volle beheer om dit te verander of te verwerp.',
+  'menu.aiplan.badge': '★ Nuut',
+  'aiplan.hdrTitle': '🤖 AI Toer Beplanner',
+  'aiplan.intro': 'Gee vir AI \'n toernaam en \'n paar dorpe of areas wat jy wil besoek. AI stel \'n roete voor, met kampeerterreine wat reeds in die program se databasis is — jy kan enigiets daaraan verander, of dit heeltemal verwerp en self beplan. Niks word aan \'n bestaande toer verander totdat JY sê dit moet nie.',
+  'aiplan.lblName': 'Toernaam',
+  'aiplan.namePh': 'bv. Blomme Toer Sept 2027',
+  'aiplan.lblTowns': 'Dorpe / Areas om te besoek (een per reël)',
+  'aiplan.townsPh': 'bv.\nSpringbok\nKamieskroon\nNieuwoudtville\nCalvinia',
+  'aiplan.lblMaxKm': 'Maksimum km per dag tussen kampeerterreine',
+  'aiplan.generateBtn': '🤖 Genereer Toer Voorstel',
+  'aiplan.generating': '⏳ Besig om roete te beplan...',
+  'aiplan.needName': 'Gee asseblief \'n toernaam',
+  'aiplan.needTowns': 'Gee asseblief ten minste een dorp of area',
+  'aiplan.loginRequired': 'Meld asseblief aan om die AI Toer Beplanner te gebruik.',
+  'aiplan.noCandidatesAnyTown': 'Geen kampeerterreine in ons databasis is naby enige van die dorpe wat jy gegee het nie. Probeer ander of meer algemene dorpname.',
+  'aiplan.townNoMatch': '⚠️ Geen kampeerterrein naby "{town}" gevind nie — oorgeslaan.',
+  'aiplan.aiError': 'Kon nie \'n roete-voorstel kry nie: {err}',
+  'aiplan.emptyOrder': 'AI kon nie \'n roete uit hierdie kampeerterreine saamstel nie. Probeer ander dorpe.',
+  'aiplan.calcDistances': '⏳ Besig om ware ry-afstande te bereken...',
+  'aiplan.legWarning': '⚠️ Kon nie \'n kampeerterrein vind om hierdie afstand onder {max}km te hou nie — {km}km',
+  'aiplan.resultsTitle': 'Voorgestelde Roete',
+  'aiplan.legKm': '{km} km vanaf vorige stop',
+  'aiplan.firstStop': 'Eerste stop',
+  'aiplan.removeStop': 'Verwyder hierdie stop',
+  'aiplan.addManualPh': 'Voeg nog \'n kampeerterrein by (tik om te soek)...',
+  'aiplan.addManualBtn': '+ Voeg By',
+  'aiplan.addNotFound': 'Kon nie \'n kampeerterrein met daardie naam kry nie',
+  'aiplan.useThisTour': '✅ Gebruik Hierdie Toer',
+  'aiplan.discard': '🗑 Verwerp en Begin Oor',
+  'aiplan.discardConfirm': 'Verwerp hierdie voorgestelde roete? Dit sal nie enige bestaande toer raak nie — dit gooi net hierdie voorstel weg.',
+  'aiplan.useChoiceMsg': 'Hoe wil jy hierdie roete gebruik?',
+  'aiplan.useNew': 'Begin \'n Nuwe Toer',
+  'aiplan.useAppend': 'Voeg by My Huidige Toer',
+  'aiplan.useCancel': 'Wag, moet nog nie',
+  'aiplan.appliedNew': 'Nuwe toer geskep met {n} stops ✓',
+  'aiplan.appliedAppend': '{n} stops by jou huidige toer gevoeg ✓',
   'menu.recipes.title': 'Kampeer Resepte',
   'menu.recipes.desc': 'Voeg jou gunsteling kampeerresepte vir die toer by en blaai daardeur.',
   'menu.recipes.badge': '★ Fase 4 — Nuut',
@@ -660,6 +707,43 @@ Object.assign(I18N.en, {
   'menu.tour.title': 'Tour Planner',
   'menu.tour.desc': 'Plan your route, track campsite costs, fuel, deposits and tour members.',
   'menu.tour.badge': '★ Phase 3 — New',
+  'menu.aiplan.title': 'AI Tour Planner',
+  'menu.aiplan.desc': 'Give AI a few towns or areas, and a route suggestion comes ready-made — you stay in full control to change or discard it.',
+  'menu.aiplan.badge': '★ New',
+  'aiplan.hdrTitle': '🤖 AI Tour Planner',
+  'aiplan.intro': 'Give AI a tour name and a few towns or areas you want to visit. AI suggests a route using campsites already in the app\'s database — you can change anything about it, or discard it entirely and plan your own. Nothing changes about an existing tour until YOU say so.',
+  'aiplan.lblName': 'Tour Name',
+  'aiplan.namePh': 'e.g. Flower Tour Sept 2027',
+  'aiplan.lblTowns': 'Towns / Areas to visit (one per line)',
+  'aiplan.townsPh': 'e.g.\nSpringbok\nKamieskroon\nNieuwoudtville\nCalvinia',
+  'aiplan.lblMaxKm': 'Maximum km per day between campsites',
+  'aiplan.generateBtn': '🤖 Generate Tour Suggestion',
+  'aiplan.generating': '⏳ Planning route...',
+  'aiplan.needName': 'Please give a tour name',
+  'aiplan.needTowns': 'Please give at least one town or area',
+  'aiplan.loginRequired': 'Please log in to use the AI Tour Planner.',
+  'aiplan.noCandidatesAnyTown': 'No campsites in our database are near any of the towns you gave. Try different or more general town names.',
+  'aiplan.townNoMatch': '⚠️ No campsite found near "{town}" — skipped.',
+  'aiplan.aiError': 'Could not get a route suggestion: {err}',
+  'aiplan.emptyOrder': 'AI could not put together a route from these campsites. Try different towns.',
+  'aiplan.calcDistances': '⏳ Calculating real driving distances...',
+  'aiplan.legWarning': '⚠️ Could not find a campsite to keep this leg under {max}km — {km}km',
+  'aiplan.resultsTitle': 'Suggested Route',
+  'aiplan.legKm': '{km} km from previous stop',
+  'aiplan.firstStop': 'First stop',
+  'aiplan.removeStop': 'Remove this stop',
+  'aiplan.addManualPh': 'Add another campsite (type to search)...',
+  'aiplan.addManualBtn': '+ Add',
+  'aiplan.addNotFound': 'Could not find a campsite with that name',
+  'aiplan.useThisTour': '✅ Use This Tour',
+  'aiplan.discard': '🗑 Discard and Start Over',
+  'aiplan.discardConfirm': 'Discard this suggested route? This won\'t affect any existing tour — it just throws away this suggestion.',
+  'aiplan.useChoiceMsg': 'How would you like to use this route?',
+  'aiplan.useNew': 'Start a New Tour',
+  'aiplan.useAppend': 'Add to My Current Tour',
+  'aiplan.useCancel': 'Wait, not yet',
+  'aiplan.appliedNew': 'New tour created with {n} stops ✓',
+  'aiplan.appliedAppend': '{n} stops added to your current tour ✓',
   'menu.recipes.title': 'Camping Recipes',
   'menu.recipes.desc': 'Add and browse your favourite camping recipes for the trip.',
   'menu.recipes.badge': '★ Phase 4 — New',
@@ -6530,6 +6614,326 @@ function osrmStatusHint(code){
   return tr('tour.gmaps.rawCode', {code: code || '?'});
 }
 
+// ════════════════════════════════════════════════════════════
+// AI Tour Planner ("pg-aiplan")
+// A self-contained, non-destructive planning tool: it only ever writes to
+// tourStops/tourInfo (the REAL tour) at the single explicit moment the
+// person clicks "Gebruik Hierdie Toer" and confirms a choice. Everything
+// before that lives in aiPlanState below, completely separate from the
+// user's actual tour -- so leaving this tab, generating ten different
+// drafts, or never touching it again can never change anything about a
+// tour someone's already planning by hand.
+// ════════════════════════════════════════════════════════════
+var aiPlanState = { stops: [] }; // {naam,dorp,provinsie,gps,legKm|null,warning|null}
+
+// Scores how well a campsite matches a free-typed town/area name -- exact
+// town match ranks above the town name merely appearing in the campsite's
+// own name, which ranks above a province-level match (broad, last resort).
+function scoreCampForTown(camp, townLower){
+  if(!camp) return 0;
+  var dorp = (camp.dorp||'').toLowerCase();
+  var naam = (camp.naam||'').toLowerCase();
+  var prov = (camp.provinsie||'').toLowerCase();
+  if(dorp === townLower) return 100;
+  if(dorp.indexOf(townLower)===0) return 90;
+  if(dorp.indexOf(townLower)!==-1) return 70;
+  if(naam.indexOf(townLower)!==-1) return 50;
+  if(prov.indexOf(townLower)!==-1) return 20;
+  return 0;
+}
+
+// Returns up to `limit` campsites from the live `camps` array that best
+// match a given town/area name, best match first. Empty array if truly
+// nothing in the database is anywhere near it.
+function findTownCandidates(town, limit){
+  var townLower = (town||'').trim().toLowerCase();
+  if(!townLower) return [];
+  var scored = camps
+    .map(function(c){ return {c:c, score:scoreCampForTown(c, townLower)}; })
+    .filter(function(x){ return x.score>0 && x.c.naam; });
+  scored.sort(function(a,b){ return b.score-a.score; });
+  var out = [], seenNames = {};
+  for(var i=0;i<scored.length && out.length<(limit||6); i++){
+    var naam = scored[i].c.naam;
+    if(seenNames[naam]) continue; // camps can carry duplicate-name entries; keep the route list clean
+    seenNames[naam]=true;
+    out.push(scored[i].c);
+  }
+  return out;
+}
+
+// Great-circle midpoint between two GPS points (used only to pick a
+// reasonable search centre for splitting an over-long leg -- the ACTUAL
+// distances used to decide whether a leg is too long always come from
+// real OSRM driving distance, never straight-line, since a straight line
+// routinely underestimates real road distance by a large margin here.
+function midpointLL(a, b){
+  var lat1=a.lat*Math.PI/180, lng1=a.lng*Math.PI/180;
+  var lat2=b.lat*Math.PI/180, lng2=b.lng*Math.PI/180;
+  var dLng = lng2-lng1;
+  var Bx = Math.cos(lat2)*Math.cos(dLng), By = Math.cos(lat2)*Math.sin(dLng);
+  var lat3 = Math.atan2(Math.sin(lat1)+Math.sin(lat2), Math.sqrt((Math.cos(lat1)+Bx)*(Math.cos(lat1)+Bx)+By*By));
+  var lng3 = lng1 + Math.atan2(By, Math.cos(lat1)+Bx);
+  return { lat: lat3*180/Math.PI, lng: lng3*180/Math.PI };
+}
+
+// Nearest not-already-used campsite (anywhere in the full database, not
+// just the town candidates) to a given point -- used to insert a
+// realistic overnight stop when two chosen anchor stops are further apart
+// than the traveller's chosen daily limit.
+function nearestUnusedCamp(point, usedNames){
+  var best = null, bestDist = Infinity;
+  for(var i=0;i<camps.length;i++){
+    var c = camps[i];
+    if(!c.naam || usedNames[c.naam]) continue;
+    var ll = gpsToLatLng(c.gps);
+    if(!ll) continue;
+    var d = haversineKmLL(point, ll);
+    if(d!=null && d<bestDist){ bestDist=d; best=c; }
+  }
+  return best;
+}
+
+async function planTourAiOrder(towns, candidates){
+  var user = window.fbAuth && window.fbAuth.currentUser;
+  if(!user) throw new Error(tr('aiplan.loginRequired'));
+  var idToken = await user.getIdToken();
+  var lang = (typeof LANG!=='undefined' && LANG==='en') ? 'en' : 'af';
+  var res = await fetch('/.netlify/functions/plan-tour', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+idToken },
+    body: JSON.stringify({
+      towns: towns,
+      candidates: candidates.map(function(c){ return {naam:c.naam, dorp:c.dorp||'', provinsie:c.provinsie||''}; }),
+      lang: lang
+    })
+  });
+  var data = await res.json();
+  if(!res.ok || !data || !Array.isArray(data.order)){
+    throw new Error((data && (data.error||data.detail)) || 'AI error');
+  }
+  return data.order;
+}
+
+async function runAiTourPlanner(){
+  var name = document.getElementById('aiPlanName').value.trim();
+  var townsRaw = document.getElementById('aiPlanTowns').value;
+  var maxKm = parseInt(document.getElementById('aiPlanMaxKm').value) || 600;
+  var status = document.getElementById('aiPlanStatus');
+  var genBtn = document.getElementById('aiPlanGenBtn');
+
+  if(!name){ toast(tr('aiplan.needName')); return; }
+  var towns = townsRaw.split(/[\n,]/).map(function(s){return s.trim();}).filter(Boolean);
+  if(!towns.length){ toast(tr('aiplan.needTowns')); return; }
+
+  var user = window.fbAuth && window.fbAuth.currentUser;
+  if(!user){ toast(tr('aiplan.loginRequired')); if(status) status.textContent = tr('aiplan.loginRequired'); return; }
+
+  genBtn.disabled = true;
+  if(status) status.textContent = tr('aiplan.generating');
+  document.getElementById('aiPlanResults').style.display = 'none';
+
+  try{
+    // Gather candidates per town, and warn (but continue) for any town
+    // with genuinely nothing nearby in our database -- matches "campsites
+    // that are on the program" as the actual constraint, honestly.
+    var allCandidates = [], seenCandNames = {}, anyMatched = false;
+    var skippedTowns = [];
+    towns.forEach(function(t){
+      var found = findTownCandidates(t, 6);
+      if(!found.length){ skippedTowns.push(t); return; }
+      anyMatched = true;
+      found.forEach(function(c){
+        if(!seenCandNames[c.naam]){ seenCandNames[c.naam]=true; allCandidates.push(c); }
+      });
+    });
+    if(!anyMatched){ toast(tr('aiplan.noCandidatesAnyTown')); if(status) status.textContent=''; genBtn.disabled=false; return; }
+    skippedTowns.forEach(function(t){ toast(tr('aiplan.townNoMatch',{town:t})); });
+
+    var orderNames = await planTourAiOrder(towns, allCandidates);
+    if(!orderNames.length){ toast(tr('aiplan.emptyOrder')); if(status) status.textContent=''; genBtn.disabled=false; return; }
+
+    var byName = {};
+    allCandidates.forEach(function(c){ byName[c.naam]=c; });
+    var anchors = orderNames.map(function(n){ return byName[n]; }).filter(Boolean);
+
+    if(status) status.textContent = tr('aiplan.calcDistances');
+
+    // Insert intermediate overnight stops wherever an anchor-to-anchor
+    // leg exceeds the traveller's chosen daily cap, using REAL OSRM
+    // driving distance (never straight-line) to decide. Bounded so a
+    // genuinely unreachable/uncovered stretch reports a warning instead
+    // of looping forever.
+    var finalStops = [anchors[0]];
+    var usedNames = {}; anchors.forEach(function(a){ usedNames[a.naam]=true; });
+    for(var i=1;i<anchors.length;i++){
+      await insertLegRespectingCap(finalStops, anchors[i], maxKm, usedNames, 0);
+    }
+
+    aiPlanState.stops = finalStops.map(function(c,i){ return {naam:c.naam, dorp:c.dorp||'', provinsie:c.provinsie||'', gps:c.gps||'', legKm:null, warning:null, _idx:i}; });
+    // legKm gets filled in as part of insertLegRespectingCap's own OSRM
+    // calls above -- re-attach those computed distances now.
+    for(var j=0;j<finalStops.length;j++){
+      aiPlanState.stops[j].legKm = finalStops[j]._legKm!=null ? finalStops[j]._legKm : null;
+      aiPlanState.stops[j].warning = finalStops[j]._warning || null;
+    }
+
+    renderAiPlanPreview();
+    document.getElementById('aiPlanResults').style.display = 'block';
+  }catch(err){
+    toast(tr('aiplan.aiError',{err: err.message||String(err)}));
+  }finally{
+    genBtn.disabled = false;
+    if(status) status.textContent = '';
+  }
+}
+
+// Appends `nextAnchor` onto `stopsSoFar`, splitting the leg with real
+// intermediate campsites as many times as needed to keep every resulting
+// leg under maxKm. Tags each pushed stop with its OWN _legKm (distance
+// from the stop immediately before it) so the caller can read it straight
+// off afterward instead of recomputing.
+// `depth` bounds how many times a SINGLE original anchor-to-anchor leg can
+// be split (not total stops in the tour) -- without this, a leg through a
+// genuinely camp-sparse stretch (or any unexpected OSRM/data weirdness)
+// could recurse through the entire database one campsite at a time before
+// ever finishing, exactly what happened in testing with a stubbed
+// always-too-far distance. 6 splits means up to 7 days for what was meant
+// to be one long drive, which is already an unreasonable answer to hand
+// back -- past that point this stops trying and flags it instead.
+var MAX_LEG_SPLITS = 6;
+async function insertLegRespectingCap(stopsSoFar, nextAnchor, maxKm, usedNames, depth){
+  var from = stopsSoFar[stopsSoFar.length-1];
+  var fromLL = gpsToLatLng(from.gps), toLL = gpsToLatLng(nextAnchor.gps);
+  if(!fromLL || !toLL){
+    nextAnchor._legKm = null;
+    nextAnchor._warning = tr('aiplan.legWarning',{max:maxKm, km:'?'});
+    stopsSoFar.push(nextAnchor);
+    return;
+  }
+  var km;
+  try{ km = (await osrmDistanceMeters(fromLL, toLL))/1000; }
+  catch(e){ km = haversineKmLL(fromLL, toLL); } // fall back to straight-line only if OSRM itself is unreachable
+
+  if(km <= maxKm || depth >= MAX_LEG_SPLITS){
+    nextAnchor._legKm = Math.round(km);
+    if(km > maxKm) nextAnchor._warning = tr('aiplan.legWarning',{max:maxKm, km:Math.round(km)});
+    stopsSoFar.push(nextAnchor);
+    return;
+  }
+
+  // Too far for one day -- find a real campsite near the midpoint to
+  // split it, then recurse on both new (shorter) halves.
+  var mid = midpointLL(fromLL, toLL);
+  var splitCamp = nearestUnusedCamp(mid, usedNames);
+  if(!splitCamp){
+    nextAnchor._legKm = Math.round(km);
+    nextAnchor._warning = tr('aiplan.legWarning',{max:maxKm, km:Math.round(km)});
+    stopsSoFar.push(nextAnchor);
+    return;
+  }
+  usedNames[splitCamp.naam] = true;
+  await insertLegRespectingCap(stopsSoFar, splitCamp, maxKm, usedNames, depth+1);
+  await insertLegRespectingCap(stopsSoFar, nextAnchor, maxKm, usedNames, depth+1);
+}
+
+function renderAiPlanPreview(){
+  var list = document.getElementById('aiPlanList');
+  list.innerHTML = aiPlanState.stops.map(function(s, i){
+    var legText = (i===0) ? tr('aiplan.firstStop') : (s.legKm!=null ? tr('aiplan.legKm',{km:s.legKm}) : '?');
+    var warnHtml = s.warning ? '<div style="color:#b00;font-size:.72rem;margin-top:2px;">'+esc(s.warning)+'</div>' : '';
+    return '<div style="display:flex;align-items:center;gap:10px;background:#f7f5ef;border:1px solid #e2ddc9;border-radius:8px;padding:8px 10px;margin-bottom:6px;">'
+      +'<div style="width:24px;height:24px;border-radius:50%;background:var(--savanna,#2e7d32);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;">'+(i+1)+'</div>'
+      +'<div style="flex:1;min-width:0;">'
+        +'<div style="font-weight:700;color:#5D3A1A;font-size:.86rem;">'+esc(s.naam)+(s.dorp?' <span style="font-weight:400;color:#888;">('+esc(s.dorp)+')</span>':'')+'</div>'
+        +'<div style="font-size:.74rem;color:#777;">'+esc(legText)+'</div>'
+        +warnHtml
+      +'</div>'
+      +'<button type="button" onclick="removeAiPlanStop('+i+')" title="'+esc(tr('aiplan.removeStop'))+'" style="background:none;border:none;color:#c00;font-size:1.1rem;cursor:pointer;padding:2px 6px;flex-shrink:0;">✕</button>'
+    +'</div>';
+  }).join('');
+}
+
+function removeAiPlanStop(i){
+  aiPlanState.stops.splice(i,1);
+  renderAiPlanPreview();
+}
+
+function addAiPlanStopManual(){
+  var input = document.getElementById('aiPlanAddInput');
+  var name = input.value.trim();
+  if(!name) return;
+  var match = findCampsiteMatch(name) || findCampByName(name);
+  if(!match){ toast(tr('aiplan.addNotFound')); return; }
+  aiPlanState.stops.push({naam:match.naam, dorp:match.dorp||'', provinsie:match.provinsie||'', gps:match.gps||'', legKm:null, warning:null});
+  input.value = '';
+  renderAiPlanPreview();
+}
+
+function discardAiPlan(){
+  gConfirm(tr('aiplan.discardConfirm'), function(){
+    aiPlanState.stops = [];
+    document.getElementById('aiPlanResults').style.display = 'none';
+    document.getElementById('aiPlanName').value = '';
+    document.getElementById('aiPlanTowns').value = '';
+  });
+}
+
+// The one and only place this whole feature ever touches the real tour --
+// deliberately gated behind an explicit choice the person makes here, not
+// anything automatic. "Wait, not yet" (or just closing this) leaves the
+// existing tour completely untouched, same as never opening this tab.
+function promptApplyAiPlan(){
+  if(!aiPlanState.stops.length) return;
+  var msg = tr('aiplan.useChoiceMsg');
+  var choiceBox = document.getElementById('gcBg');
+  // Three-way choice doesn't fit the plain yes/no gConfirm dialog, so this
+  // builds a small one-off version of the same confirm-dialog markup with
+  // three buttons instead of two.
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  wrap.innerHTML = '<div style="background:#fff;border-radius:12px;padding:20px;max-width:360px;width:100%;">'
+    +'<div style="font-size:.92rem;color:#5D3A1A;margin-bottom:16px;">'+esc(msg)+'</div>'
+    +'<button type="button" id="aiApplyNewBtn" style="width:100%;background:var(--savanna,#2e7d32);color:#fff;border:none;border-radius:8px;padding:10px;font-size:.85rem;font-weight:700;cursor:pointer;margin-bottom:8px;">'+esc(tr('aiplan.useNew'))+'</button>'
+    +'<button type="button" id="aiApplyAppendBtn" style="width:100%;background:#1976d2;color:#fff;border:none;border-radius:8px;padding:10px;font-size:.85rem;font-weight:700;cursor:pointer;margin-bottom:8px;">'+esc(tr('aiplan.useAppend'))+'</button>'
+    +'<button type="button" id="aiApplyCancelBtn" style="width:100%;background:#eee;color:#333;border:none;border-radius:8px;padding:10px;font-size:.85rem;cursor:pointer;">'+esc(tr('aiplan.useCancel'))+'</button>'
+  +'</div>';
+  document.body.appendChild(wrap);
+  function cleanup(){ document.body.removeChild(wrap); }
+  document.getElementById('aiApplyNewBtn').onclick = function(){ cleanup(); applyAiPlanToTour('new'); };
+  document.getElementById('aiApplyAppendBtn').onclick = function(){ cleanup(); applyAiPlanToTour('append'); };
+  document.getElementById('aiApplyCancelBtn').onclick = cleanup;
+}
+
+function applyAiPlanToTour(mode){
+  var rates = getEffectiveFuelRates();
+  var newStops = aiPlanState.stops.map(function(s){
+    var km = s.legKm || 0;
+    return {
+      name: s.naam, km: km, nights: 1, costPP: 0,
+      email:'', phone:'', booked:'NO',
+      fuelCost: km>0 ? (km/rates.kmL)*rates.fuelPrice : 0,
+      date:'', gps: s.gps||'', notes:'', highlight:''
+    };
+  });
+  var tourName = document.getElementById('aiPlanName').value.trim();
+
+  if(mode==='new'){
+    tourStops = newStops;
+    tourInfo = { name: tourName, start:'', end:'', people: tourInfo.people||2, caravan: tourInfo.caravan||1 };
+  } else {
+    tourStops = tourStops.concat(newStops);
+  }
+  try{
+    localStorage.setItem('nayela_stops', JSON.stringify(tourStops));
+    localStorage.setItem('nayela_tourinfo', JSON.stringify(tourInfo));
+  }catch(e){}
+
+  toast(tr(mode==='new' ? 'aiplan.appliedNew' : 'aiplan.appliedAppend', {n:newStops.length}));
+  aiPlanState.stops = [];
+  showPage('pg-tour');
+}
+
 // Opens OpenStreetMap driving directions for one specific day's travel leg
 // — the drive FROM the previous stop TO the stop at index i — so the user
 // can pick exactly which day they're moving camp and see that day's route,
@@ -7223,6 +7627,50 @@ I18N_REFRESH.push(function(){
 .recipe-del{background:#c00;color:#fff;}
 .no-recipes{text-align:center;color:#aaa;padding:30px;font-size:.85rem;}
 </style>
+
+<div class="page" id="pg-aiplan">
+  <div class="page-hdr">
+    <button class="back-btn" onclick="showPage('pg-menu')" data-i18n="nav.backMenu">← Kieslys</button>
+    <h2 data-i18n="aiplan.hdrTitle" style="flex:1;">🤖 AI Toer Beplanner</h2>
+  </div>
+
+  <div style="padding:12px;max-width:640px;margin:0 auto;">
+    <p style="font-size:.85rem;color:#5D3A1A;line-height:1.5;margin-bottom:14px;" data-i18n="aiplan.intro">Gee vir AI 'n toernaam en 'n paar dorpe of areas wat jy wil besoek...</p>
+
+    <div class="tp-form">
+      <div style="margin-bottom:10px;">
+        <label data-i18n="aiplan.lblName" style="display:block;font-size:.8rem;font-weight:700;color:#5D3A1A;margin-bottom:4px;">Toernaam</label>
+        <input id="aiPlanName" type="text" placeholder="bv. Blomme Toer Sept 2027" data-i18n-ph="aiplan.namePh" style="width:100%;font-size:16px;padding:8px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom:10px;">
+        <label data-i18n="aiplan.lblTowns" style="display:block;font-size:.8rem;font-weight:700;color:#5D3A1A;margin-bottom:4px;">Dorpe / Areas om te besoek (een per reël)</label>
+        <textarea id="aiPlanTowns" rows="5" placeholder="bv.&#10;Springbok&#10;Kamieskroon&#10;Nieuwoudtville&#10;Calvinia" data-i18n-ph="aiplan.townsPh" style="width:100%;font-size:.85rem;padding:8px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;font-family:inherit;resize:vertical;"></textarea>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label data-i18n="aiplan.lblMaxKm" style="display:block;font-size:.8rem;font-weight:700;color:#5D3A1A;margin-bottom:4px;">Maksimum km per dag tussen kampeerterreine</label>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <input id="aiPlanMaxKm" type="range" min="150" max="600" step="10" value="600" style="flex:1;" oninput="document.getElementById('aiPlanMaxKmVal').textContent=this.value">
+          <span id="aiPlanMaxKmVal" style="font-weight:700;color:#5D3A1A;min-width:60px;text-align:right;">600 km</span>
+        </div>
+      </div>
+      <button type="button" id="aiPlanGenBtn" onclick="runAiTourPlanner()" data-i18n="aiplan.generateBtn" style="width:100%;background:#1976d2;color:#fff;border:none;border-radius:8px;padding:12px;font-size:.9rem;font-weight:700;cursor:pointer;touch-action:manipulation;">🤖 Genereer Toer Voorstel</button>
+      <div id="aiPlanStatus" style="text-align:center;font-size:.8rem;color:#5D3A1A;margin-top:8px;min-height:1.2em;"></div>
+    </div>
+
+    <div id="aiPlanResults" style="display:none;">
+      <h3 data-i18n="aiplan.resultsTitle" style="font-size:.95rem;color:#5D3A1A;margin:18px 0 8px;">Voorgestelde Roete</h3>
+      <div id="aiPlanList"></div>
+      <div style="display:flex;gap:6px;margin:10px 0;position:relative;">
+        <input id="aiPlanAddInput" type="text" autocomplete="off" placeholder="Voeg nog 'n kampeerterrein by (tik om te soek)..." data-i18n-ph="aiplan.addManualPh" style="flex:1;font-size:16px;padding:8px;border:1px solid #ccc;border-radius:6px;" list="csSearchList">
+        <button type="button" onclick="addAiPlanStopManual()" data-i18n="aiplan.addManualBtn" style="background:#eef0e6;border:1px solid #c8cdb8;border-radius:6px;padding:8px 12px;font-size:.8rem;cursor:pointer;white-space:nowrap;">+ Voeg By</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button type="button" onclick="promptApplyAiPlan()" data-i18n="aiplan.useThisTour" style="flex:1;background:var(--savanna,#2e7d32);color:#fff;border:none;border-radius:8px;padding:12px;font-size:.88rem;font-weight:700;cursor:pointer;">✅ Gebruik Hierdie Toer</button>
+        <button type="button" onclick="discardAiPlan()" data-i18n="aiplan.discard" style="background:#c00;color:#fff;border:none;border-radius:8px;padding:12px;font-size:.85rem;cursor:pointer;">🗑 Verwerp en Begin Oor</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="page" id="pg-recipes">
   <div class="page-hdr">
