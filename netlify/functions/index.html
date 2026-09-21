@@ -245,7 +245,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(180deg,#
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v2.3 (26 Aug data)</div>
+  <div class="hdr-ver">v2.6 (21 Sep AI Toer)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -302,6 +302,16 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(180deg,#
           <h3 data-i18n="menu.tour.title">Toer Beplanner</h3>
           <p data-i18n="menu.tour.desc">Beplan jou roete, hou kampeerterrein-koste, brandstof, deposito's en toerlede dop.</p>
           <span class="mc-badge badge-new" data-i18n="menu.tour.badge">★ Fase 3 — Nuut</span>
+        </div>
+      </div>
+
+      <!-- AI Tour Planner -->
+      <div class="menu-card" onclick="showPage(&#39;pg-aiplan&#39;)">
+        <div class="mc-icon" style="background:#1976d2;">🤖</div>
+        <div class="mc-body">
+          <h3 data-i18n="menu.aiplan.title">AI Toer Beplanner</h3>
+          <p data-i18n="menu.aiplan.desc">Gee vir AI \'n paar dorpe of areas, en \'n voorstel vir jou roete kom kant-en-klaar — jy hou volle beheer om dit te verander of te verwerp.</p>
+          <span class="mc-badge badge-new" data-i18n="menu.aiplan.badge">★ Nuut</span>
         </div>
       </div>
 
@@ -583,6 +593,43 @@ Object.assign(I18N.af, {
   'menu.tour.title': 'Toer Beplanner',
   'menu.tour.desc': 'Beplan jou roete, hou kampeerterrein-koste, brandstof, deposito\'s en toerlede dop.',
   'menu.tour.badge': '★ Fase 3 — Nuut',
+  'menu.aiplan.title': 'AI Toer Beplanner',
+  'menu.aiplan.desc': 'Gee vir AI \'n paar dorpe of areas, en \'n voorstel vir jou roete kom kant-en-klaar — jy hou volle beheer om dit te verander of te verwerp.',
+  'menu.aiplan.badge': '★ Nuut',
+  'aiplan.hdrTitle': '🤖 AI Toer Beplanner',
+  'aiplan.intro': 'Gee vir AI \'n toernaam en \'n paar dorpe of areas wat jy wil besoek. AI stel \'n roete voor, met kampeerterreine wat reeds in die program se databasis is — jy kan enigiets daaraan verander, of dit heeltemal verwerp en self beplan. Niks word aan \'n bestaande toer verander totdat JY sê dit moet nie.',
+  'aiplan.lblName': 'Toernaam',
+  'aiplan.namePh': 'bv. Blomme Toer Sept 2027',
+  'aiplan.lblTowns': 'Dorpe / Areas om te besoek (een per reël)',
+  'aiplan.townsPh': 'bv.\nSpringbok\nKamieskroon\nNieuwoudtville\nCalvinia',
+  'aiplan.lblMaxKm': 'Maksimum km per dag tussen kampeerterreine',
+  'aiplan.generateBtn': '🤖 Genereer Toer Voorstel',
+  'aiplan.generating': '⏳ Besig om roete te beplan...',
+  'aiplan.needName': 'Gee asseblief \'n toernaam',
+  'aiplan.needTowns': 'Gee asseblief ten minste een dorp of area',
+  'aiplan.loginRequired': 'Meld asseblief aan om die AI Toer Beplanner te gebruik.',
+  'aiplan.noCandidatesAnyTown': 'Geen kampeerterreine in ons databasis is naby enige van die dorpe wat jy gegee het nie. Probeer ander of meer algemene dorpname.',
+  'aiplan.townNoMatch': '⚠️ Geen kampeerterrein naby "{town}" gevind nie — oorgeslaan.',
+  'aiplan.aiError': 'Kon nie \'n roete-voorstel kry nie: {err}',
+  'aiplan.emptyOrder': 'AI kon nie \'n roete uit hierdie kampeerterreine saamstel nie. Probeer ander dorpe.',
+  'aiplan.calcDistances': '⏳ Besig om ware ry-afstande te bereken...',
+  'aiplan.legWarning': '⚠️ Kon nie \'n kampeerterrein vind om hierdie afstand onder {max}km te hou nie — {km}km',
+  'aiplan.resultsTitle': 'Voorgestelde Roete',
+  'aiplan.legKm': '{km} km vanaf vorige stop',
+  'aiplan.firstStop': 'Eerste stop',
+  'aiplan.removeStop': 'Verwyder hierdie stop',
+  'aiplan.addManualPh': 'Voeg nog \'n kampeerterrein by (tik om te soek)...',
+  'aiplan.addManualBtn': '+ Voeg By',
+  'aiplan.addNotFound': 'Kon nie \'n kampeerterrein met daardie naam kry nie',
+  'aiplan.useThisTour': '✅ Gebruik Hierdie Toer',
+  'aiplan.discard': '🗑 Verwerp en Begin Oor',
+  'aiplan.discardConfirm': 'Verwerp hierdie voorgestelde roete? Dit sal nie enige bestaande toer raak nie — dit gooi net hierdie voorstel weg.',
+  'aiplan.useChoiceMsg': 'Hoe wil jy hierdie roete gebruik?',
+  'aiplan.useNew': 'Begin \'n Nuwe Toer',
+  'aiplan.useAppend': 'Voeg by My Huidige Toer',
+  'aiplan.useCancel': 'Wag, moet nog nie',
+  'aiplan.appliedNew': 'Nuwe toer geskep met {n} stops ✓',
+  'aiplan.appliedAppend': '{n} stops by jou huidige toer gevoeg ✓',
   'menu.recipes.title': 'Kampeer Resepte',
   'menu.recipes.desc': 'Voeg jou gunsteling kampeerresepte vir die toer by en blaai daardeur.',
   'menu.recipes.badge': '★ Fase 4 — Nuut',
@@ -660,6 +707,43 @@ Object.assign(I18N.en, {
   'menu.tour.title': 'Tour Planner',
   'menu.tour.desc': 'Plan your route, track campsite costs, fuel, deposits and tour members.',
   'menu.tour.badge': '★ Phase 3 — New',
+  'menu.aiplan.title': 'AI Tour Planner',
+  'menu.aiplan.desc': 'Give AI a few towns or areas, and a route suggestion comes ready-made — you stay in full control to change or discard it.',
+  'menu.aiplan.badge': '★ New',
+  'aiplan.hdrTitle': '🤖 AI Tour Planner',
+  'aiplan.intro': 'Give AI a tour name and a few towns or areas you want to visit. AI suggests a route using campsites already in the app\'s database — you can change anything about it, or discard it entirely and plan your own. Nothing changes about an existing tour until YOU say so.',
+  'aiplan.lblName': 'Tour Name',
+  'aiplan.namePh': 'e.g. Flower Tour Sept 2027',
+  'aiplan.lblTowns': 'Towns / Areas to visit (one per line)',
+  'aiplan.townsPh': 'e.g.\nSpringbok\nKamieskroon\nNieuwoudtville\nCalvinia',
+  'aiplan.lblMaxKm': 'Maximum km per day between campsites',
+  'aiplan.generateBtn': '🤖 Generate Tour Suggestion',
+  'aiplan.generating': '⏳ Planning route...',
+  'aiplan.needName': 'Please give a tour name',
+  'aiplan.needTowns': 'Please give at least one town or area',
+  'aiplan.loginRequired': 'Please log in to use the AI Tour Planner.',
+  'aiplan.noCandidatesAnyTown': 'No campsites in our database are near any of the towns you gave. Try different or more general town names.',
+  'aiplan.townNoMatch': '⚠️ No campsite found near "{town}" — skipped.',
+  'aiplan.aiError': 'Could not get a route suggestion: {err}',
+  'aiplan.emptyOrder': 'AI could not put together a route from these campsites. Try different towns.',
+  'aiplan.calcDistances': '⏳ Calculating real driving distances...',
+  'aiplan.legWarning': '⚠️ Could not find a campsite to keep this leg under {max}km — {km}km',
+  'aiplan.resultsTitle': 'Suggested Route',
+  'aiplan.legKm': '{km} km from previous stop',
+  'aiplan.firstStop': 'First stop',
+  'aiplan.removeStop': 'Remove this stop',
+  'aiplan.addManualPh': 'Add another campsite (type to search)...',
+  'aiplan.addManualBtn': '+ Add',
+  'aiplan.addNotFound': 'Could not find a campsite with that name',
+  'aiplan.useThisTour': '✅ Use This Tour',
+  'aiplan.discard': '🗑 Discard and Start Over',
+  'aiplan.discardConfirm': 'Discard this suggested route? This won\'t affect any existing tour — it just throws away this suggestion.',
+  'aiplan.useChoiceMsg': 'How would you like to use this route?',
+  'aiplan.useNew': 'Start a New Tour',
+  'aiplan.useAppend': 'Add to My Current Tour',
+  'aiplan.useCancel': 'Wait, not yet',
+  'aiplan.appliedNew': 'New tour created with {n} stops ✓',
+  'aiplan.appliedAppend': '{n} stops added to your current tour ✓',
   'menu.recipes.title': 'Camping Recipes',
   'menu.recipes.desc': 'Add and browse your favourite camping recipes for the trip.',
   'menu.recipes.badge': '★ Phase 4 — New',
@@ -1217,22 +1301,18 @@ I18N_REFRESH.push(function(){
 }
 #cs-overlay.open{display:flex;flex-direction:column;}
 #cs-back-btn{
-  position:fixed;
-  top:10px;
-  left:12px;
-  z-index:1001;
-  background:linear-gradient(135deg,#1b5e20,#2e7d32);
+  background:rgba(255,255,255,.22);
   color:#fff;
-  border:none;
+  border:1px solid rgba(255,255,255,.5);
   border-radius:20px;
-  padding:9px 20px;
-  font-size:1.05rem;
+  padding:11px 24px;
+  font-size:1.2rem;
   font-weight:700;
   cursor:pointer;
-  box-shadow:0 2px 8px rgba(0,0,0,.3);
-  display:none;
+  box-shadow:0 2px 8px rgba(0,0,0,.25);
+  flex-shrink:0;
+  white-space:nowrap;
 }
-#cs-back-btn.open{display:block;}
 
   #cs-overlay * {box-sizing:border-box;margin:0;padding:0}
 
@@ -1301,7 +1381,7 @@ I18N_REFRESH.push(function(){
   #cs-overlay .pdot circle {cursor:pointer;}
   #cs-overlay .mhint {position:absolute;bottom:5px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);color:#fff;border-radius:10px;padding:2px 10px;font-size:.65rem;pointer-events:none;white-space:nowrap;z-index:4;}
   #cs-overlay .mview-toggle {position:absolute;top:8px;right:8px;z-index:6;display:flex;gap:4px;background:rgba(255,255,255,.9);border-radius:8px;padding:3px;box-shadow:0 2px 8px rgba(0,0,0,.3);}
-  #cs-overlay .mview-btn {border:none;background:transparent;padding:5px 9px;border-radius:6px;font-size:.72rem;font-weight:700;cursor:pointer;color:#555;white-space:nowrap;touch-action:manipulation;}
+  #cs-overlay .mview-btn {border:none;background:transparent;padding:8px 13px;border-radius:6px;font-size:.95rem;font-weight:700;cursor:pointer;color:#555;white-space:nowrap;touch-action:manipulation;}
   #cs-overlay .mview-btn.active {background:var(--savanna,#2e7d32);color:#fff;}
 
 /* DETAIL */
@@ -1465,7 +1545,6 @@ I18N_REFRESH.push(function(){
 
 </style>
 
-<button id="cs-back-btn" onclick="closeCampsite()" data-i18n="nav.backMenu">← Kieslys</button>
 <div id="cs-overlay">
 
 
@@ -1476,17 +1555,18 @@ I18N_REFRESH.push(function(){
     <h1 data-i18n="cs.title">NAYELA Kampeerterrein Soektog</h1>
     <p data-i18n="cs.subtitle">SA &amp; Buurlande — 687 kampeerplekke</p>
   </div>
+  <button id="cs-back-btn" onclick="closeCampsite()" data-i18n="nav.backMenu">← Kieslys</button>
   <div class="hbadge" id="selBadge"><span data-i18n="cs.selBadge">☰ Keuse:</span> <span id="selCnt">2</span></div>
   <div class="lang-switch" id="langSwitch2">
     <button type="button" class="lang-btn active" id="langBtnAf2" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn2" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <button style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:5px;padding:5px 10px;cursor:pointer;font-size:.78rem;flex-shrink:0;white-space:nowrap;" id="addBtn" data-i18n="cs.addBtn">+ Voeg Toe</button>
-  <button style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:5px;padding:5px 10px;cursor:pointer;font-size:.78rem;flex-shrink:0;white-space:nowrap;" id="resetCampsBtn" data-i18n="cs.resetBtn" data-i18n-title="cs.resetTitle" title="Wis enige plaaslik-gestoorde kampeerdata en gebruik weer die jongste ingeboude databasis (behalwe jou eie bygevoegde plekke)">🔄 Herstel Data</button>
-  <button style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:5px;padding:5px 10px;cursor:pointer;font-size:.78rem;flex-shrink:0;white-space:nowrap;" id="exportCampsBtn" data-i18n="cs.exportBtn" data-i18n-title="cs.exportTitle" title="Laai 'n Excel/CSV-lys af van al jou kampeerplekke (provinsie, dorp, naam, GPS, foon, webwerf)">📊 Voer uit na Excel</button>
-  <label style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:5px;padding:5px 10px;cursor:pointer;font-size:.78rem;flex-shrink:0;white-space:nowrap;display:inline-block;touch-action:manipulation;" for="importCampsFile" id="importCampsBtn" data-i18n="cs.importBtn" data-i18n-title="cs.importTitle" title="Voer 'n Excel/CSV-lys van kampeerplekke in — vervang AL die huidige data hiermee (herstelfunksie as iets verkeerd geloop het)">📥 Voer Data In</label>
+  <button style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:1rem;font-weight:600;flex-shrink:0;white-space:nowrap;" id="addBtn" data-i18n="cs.addBtn">+ Voeg Toe</button>
+  <button style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:1rem;font-weight:600;flex-shrink:0;white-space:nowrap;" id="resetCampsBtn" data-i18n="cs.resetBtn" data-i18n-title="cs.resetTitle" title="Wis enige plaaslik-gestoorde kampeerdata en gebruik weer die jongste ingeboude databasis (behalwe jou eie bygevoegde plekke)">🔄 Herstel Data</button>
+  <button style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:1rem;font-weight:600;flex-shrink:0;white-space:nowrap;" id="exportCampsBtn" data-i18n="cs.exportBtn" data-i18n-title="cs.exportTitle" title="Laai 'n Excel/CSV-lys af van al jou kampeerplekke (provinsie, dorp, naam, GPS, foon, webwerf)">📊 Voer uit na Excel</button>
+  <label style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:1rem;font-weight:600;flex-shrink:0;white-space:nowrap;display:inline-block;touch-action:manipulation;" for="importCampsFile" id="importCampsBtn" data-i18n="cs.importBtn" data-i18n-title="cs.importTitle" title="Voer 'n Excel/CSV-lys van kampeerplekke in — vervang AL die huidige data hiermee (herstelfunksie as iets verkeerd geloop het)">📥 Voer Data In</label>
   <input type="file" id="importCampsFile" accept=".csv,text/csv" style="display:none">
-  <button style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:5px;padding:5px 10px;cursor:pointer;font-size:.78rem;flex-shrink:0;white-space:nowrap;" onclick="window.openMembersPanel &amp;&amp; window.openMembersPanel()" title="Bestuur wie toegang het (net vir admin)">👥 Lede</button>
+  <button style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:1rem;font-weight:600;flex-shrink:0;white-space:nowrap;" onclick="window.openMembersPanel &amp;&amp; window.openMembersPanel()" title="Bestuur wie toegang het (net vir admin)">👥 Lede</button>
 </div>
 
 <div class="app">
@@ -1624,6 +1704,7 @@ I18N_REFRESH.push(function(){
     <div style="font-size:16pt;font-weight:bold;letter-spacing:1px;color:#1a4a1a;">NAYELA Campsite Search</div>
     <div id="pDate" style="font-size:9pt;color:#444;margin-top:2mm;"></div>
   </div>
+  <div id="pMap" style="margin-bottom:6mm;"></div>
   <div id="pItems"></div>
 </div>
 
@@ -1872,6 +1953,16 @@ Object.assign(I18N.af, {
   'cs.exportBtn': '📊 Voer uit na Excel',
   'cs.exportTitle': 'Laai \'n Excel/CSV-lys af van al jou kampeerplekke (provinsie, dorp, naam, GPS, foon, webwerf) — geskik om gereeld op te dateer',
   'cs.exported': 'kampeerplekke uitgevoer na CSV ✓',
+  'cs.searchExportBtn': '💾 Stoor Soektog',
+  'cs.searchExportTitle': 'Laai net jou huidige gefilterde soektog-resultate af as \'n CSV (nie die hele databasis nie) — handig om \'n kortlys vir \'n toer te bewaar',
+  'cs.searchExported': 'soektog-resultate uitgevoer na CSV ✓',
+  'cs.searchExportEmpty': 'Geen resultate om te stoor nie — pas eers jou soektog aan.',
+  'cs.searchImportBtn': '📤 Laai Soektog',
+  'cs.searchImportTitle': 'Laai \'n vroeër gestoorde soektog-lys weer in — kies weer daardie kampeerplekke, sonder om die databasis te verander',
+  'cs.searchImported': '{n} kampeerplekke uit die lêer gekies ✓',
+  'cs.searchImportedMissing': '({n} kon nie in die huidige databasis gevind word nie — moontlik hernoem of verwyder)',
+  'cs.searchImportEmpty': 'Geen geldige rye in die lêer gevind nie.',
+  'cs.searchImportError': 'Kon nie lêer lees nie: {err}',
   'cs.importBtn': '📥 Voer Data In',
   'cs.importTitle': 'Voer \'n Excel/CSV-lys van kampeerplekke in — vervang AL die huidige data hiermee (herstelfunksie as iets verkeerd geloop het)',
   'cs.importParseError': 'Kon nie die lêer lees nie: {err}. Maak seker dit is dieselfde CSV-formaat as "Voer uit na Excel".',
@@ -1990,6 +2081,16 @@ Object.assign(I18N.en, {
   'cs.exportBtn': '📊 Export to Excel',
   'cs.exportTitle': 'Download an Excel/CSV list of all your campsites (province, town, name, GPS, phone, website) — handy for regular updates',
   'cs.exported': 'campsites exported to CSV ✓',
+  'cs.searchExportBtn': '💾 Save Search',
+  'cs.searchExportTitle': 'Download only your current filtered search results as a CSV (not the whole database) — handy for keeping a shortlist for a trip',
+  'cs.searchExported': 'search results exported to CSV ✓',
+  'cs.searchExportEmpty': 'No results to save — adjust your search first.',
+  'cs.searchImportBtn': '📤 Load Search',
+  'cs.searchImportTitle': 'Load a previously saved search list back in — re-selects those campsites, without changing the database',
+  'cs.searchImported': '{n} campsites selected from the file ✓',
+  'cs.searchImportedMissing': '({n} could not be found in the current database — possibly renamed or removed)',
+  'cs.searchImportEmpty': 'No valid rows found in the file.',
+  'cs.searchImportError': 'Could not read the file: {err}',
   'cs.importBtn': '📥 Import Data',
   'cs.importTitle': 'Import an Excel/CSV list of campsites — this REPLACES all current data (recovery tool if something went wrong)',
   'cs.importParseError': 'Could not read that file: {err}. Make sure it\'s the same CSV format as "Export to Excel".',
@@ -2187,7 +2288,31 @@ function parseGPS(str){
   if(simpleParts.length>=2 && /^\s*-?\d+(?:\.\d+)?\s*$/.test(simpleParts[0]) && /^\s*-?\d+(?:\.\d+)?\s*$/.test(simpleParts[1])){
     var a=parseFloat(simpleParts[0]), b=parseFloat(simpleParts[1]);
     if((a>0 && b<0) || Math.abs(a)>90){ var t=a; a=b; b=t; }
+    // Every place this app covers sits below the equator, so a positive
+    // latitude here is always a missing minus sign, never a genuine
+    // northern-hemisphere location -- see gpsToLatLng() for the same fix.
+    if(a>0) a=-a;
     if(Math.abs(a)<=90) return {lat:a, lon:b};
+  }
+
+  // Degree-symbol-as-separator path: two plain decimals with NO comma at
+  // all between them, just a stray ° sitting where a comma should be
+  // (e.g. "17.0015°13.2441°"). This is NOT real DMS notation -- there's
+  // no minutes/seconds component, it's a typo'd separator -- but without
+  // handling it explicitly here first, the DMS tolerant path below would
+  // misread the second number as an arc-minutes value glued onto the
+  // first (e.g. "17°13.2441'"), silently producing one wrong coordinate
+  // instead of failing to parse two.
+  if(!/[,;]/.test(str)){
+    var degIdx = str.indexOf('°');
+    if(degIdx > -1 && degIdx < str.length-1){
+      var p1 = str.slice(0, degIdx), p2 = str.slice(degIdx+1).replace(/°/g,'');
+      if(/^\s*-?\d+(?:\.\d+)?\s*$/.test(p1) && /^\s*-?\d+(?:\.\d+)?\s*$/.test(p2)){
+        var la=parseFloat(p1), lo=parseFloat(p2);
+        if(la>0) la=-la;
+        if(Math.abs(la)<=90) return {lat:la, lon:lo};
+      }
+    }
   }
 
   // Tolerant path: DMS / degree-decimal-minute / hemisphere-letter notation.
@@ -2205,6 +2330,7 @@ function parseGPS(str){
   if(isNaN(lat)||isNaN(lon)) return null;
   if(Math.abs(lat)>90){ var t2=lat; lat=lon; lon=t2; }
   if(Math.abs(lat)>90 || Math.abs(lon)>180) return null;
+  if(lat>0) lat=-lat; // same southern-hemisphere-only correction as above
   return {lat:lat, lon:lon};
 }
 
@@ -2263,6 +2389,80 @@ function findCampsiteMatch(name){
     return cn.length > 6 && (target.indexOf(cn) !== -1 || cn.indexOf(target) !== -1);
   }) || null;
 }
+
+// ── Kampeerterrein Soektog snapshot (used by Stoor Huidige Toer / Voer
+// Toerplan In, so a saved tour also remembers which campsites were picked
+// out in the search, not just the Tour Planner schedule itself) ─────────
+// Stored by name+town, not raw `sel` indices -- indices point at whatever
+// happens to be at that position in `camps` RIGHT NOW, which silently
+// breaks the moment the database is reordered/updated (a real risk since
+// this file might get reloaded on a different day, or a different
+// device, with a different campsite list already synced).
+function getCsSelectionSnapshot(){
+  try{
+    if(typeof sel === 'undefined' || typeof camps === 'undefined') return [];
+    return sel.map(function(i){
+      var c = camps[i];
+      return c ? {naam:c.naam, dorp:c.dorp||''} : null;
+    }).filter(Boolean);
+  }catch(e){ return []; }
+}
+function getCsFilterSnapshot(){
+  try{
+    var provEl = document.getElementById('fprov');
+    var townEl = document.getElementById('ftown');
+    var nameEl = document.getElementById('fname');
+    return {
+      prov: provEl ? provEl.value : '',
+      town: townEl ? townEl.value : '',
+      name: nameEl ? nameEl.value : ''
+    };
+  }catch(e){ return {prov:'', town:'', name:''}; }
+}
+// Restores a snapshot taken by the two functions above -- re-ticks the
+// same campsites (matched by name via findCampsiteMatch, same as "Laai
+// Soektog" does) and reapplies the province/town/name filter, WITHOUT
+// touching the shared database. Safe to call even if Kampeerterrein
+// Soektog has never been opened this session, since its filter/search
+// elements already exist in the page regardless of overlay visibility.
+function restoreCsSnapshot(csSelection, csFilter){
+  try{
+    if(typeof sel === 'undefined' || typeof camps === 'undefined') return;
+    if(csFilter){
+      var provEl = document.getElementById('fprov');
+      var townEl = document.getElementById('ftown');
+      var nameEl = document.getElementById('fname');
+      if(provEl && csFilter.prov !== undefined) provEl.value = csFilter.prov;
+      if(townEl && typeof buildTownDrop === 'function') buildTownDrop(csFilter.prov||'');
+      if(townEl && csFilter.town !== undefined) townEl.value = csFilter.town;
+      if(nameEl && csFilter.name !== undefined) nameEl.value = csFilter.name;
+      if(typeof doFilter === 'function') doFilter();
+    }
+    if(csSelection && csSelection.length){
+      sel.length = 0;
+      csSelection.forEach(function(row){
+        var match = findCampsiteMatch(row.naam);
+        if(match){
+          var idx = camps.indexOf(match);
+          if(idx >= 0 && sel.indexOf(idx) < 0) sel.push(idx);
+        }
+      });
+      var selCntEl = document.getElementById('selCnt');
+      if(selCntEl) selCntEl.textContent = sel.length;
+      // Both need to run AFTER `sel` is actually restored above, not
+      // before -- renderList() alone doesn't touch the map at all, and
+      // plotDots() draws its pins/route line from whatever `sel` holds
+      // at the moment it's called. Calling doFilter() earlier (for the
+      // csFilter branch) runs plotDots() too, but at that point `sel`
+      // is still the OLD selection -- that's exactly why the map's
+      // numbered pins and route line weren't showing up after loading
+      // a saved tour, even though the list/count looked right.
+      if(typeof renderList === 'function') renderList();
+      if(typeof plotDots === 'function') plotDots();
+    }
+  }catch(e){ console.error('restoreCsSnapshot failed:', e); }
+}
+
 function csToast(msg,ms){
   var t=document.getElementById('cs-toast');
   t.textContent=msg; t.classList.add('show');
@@ -3351,6 +3551,31 @@ function doPrint(){
   if(!sel.length){csToast('Kies eers kampeerplekke!');return;}
   var d=new Date().toLocaleDateString('af-ZA',{day:'numeric',month:'long',year:'numeric'});
   document.getElementById('pDate').textContent='Datum: '+d+' | Plekke: '+sel.length;
+
+  // Snapshot the map exactly as it's currently shown -- whichever of the
+  // 2D/3D base images is active, plus the SVG overlay (route line +
+  // numbered pins), which are both already just plain DOM (an <img> and
+  // an <svg>, not a canvas or WebGL map), so a straight clone of their
+  // current markup is a real, in-sync snapshot -- no screenshot library
+  // needed. Falls back to nothing if the map hasn't been opened/rendered
+  // yet in this session (mapImg missing), so printing never breaks over
+  // an optional visual.
+  var pMap = document.getElementById('pMap');
+  if(pMap){
+    var mwrap = document.getElementById('mwrap');
+    var is3d = mwrap && mwrap.classList.contains('view-3d');
+    var mapImgEl = document.getElementById(is3d ? 'mapImg3d' : 'mapImg');
+    var msvgEl = document.getElementById('msvg');
+    if(mapImgEl && msvgEl){
+      pMap.innerHTML = '<div style="position:relative;width:100%;max-width:170mm;margin:0 auto;">'
+        +'<img src="'+mapImgEl.src+'" style="width:100%;height:auto;display:block;border:1px solid #ccc;">'
+        +'<svg viewBox="0 0 950 570" style="position:absolute;top:0;left:0;width:100%;height:auto;">'+msvgEl.innerHTML+'</svg>'
+        +'</div>';
+    } else {
+      pMap.innerHTML = '';
+    }
+  }
+
   var h='';
   sel.forEach(function(i,n){
     var c=camps[i];
@@ -3364,7 +3589,16 @@ function doPrint(){
     if(c.url)h+='<tr><td style="color:#5D3A1A;font-weight:bold;">Webtuiste:</td><td colspan="3">'+esc(c.url)+'</td></tr>';
     if(c.info)h+='<tr><td style="color:#5D3A1A;font-weight:bold;">Info:</td><td colspan="3">'+esc(c.info)+'</td></tr>';
     if(c.gps)h+='<tr><td style="color:#5D3A1A;font-weight:bold;">GPS:</td><td colspan="3">'+esc(c.gps)+'</td></tr>';
-    h+='</table></div></div>';
+    h+='</table>';
+    // Aantekeninge (facility notes, incl. AI-generated ones from Wysig) --
+    // this print function used to leave them out entirely even when a
+    // campsite had them saved.
+    if(clean(c.notes)){
+      h+='<div style="margin-top:5pt;padding:5pt 7pt;background:#f7f5ef;border-radius:4pt;font-size:8.5pt;">'
+        +'<strong style="color:#5D3A1A;">Aantekeninge:</strong> '+esc(c.notes).replace(/\n/g,'<br>')
+        +'</div>';
+    }
+    h+='</div></div>';
   });
   document.getElementById('pItems').innerHTML=h;
   document.getElementById('selPanel').classList.remove('open');
@@ -3937,6 +4171,9 @@ if(window.matchMedia){
 
 /* ── Forms ── */
 .tp-form{background:#fff;border-radius:10px;box-shadow:0 1px 8px rgba(0,0,0,.1);padding:16px;margin-bottom:16px;}
+.sname-sugg{padding:9px 12px;cursor:pointer;border-bottom:1px solid #eee;font-size:.85rem;color:#222;}
+.sname-sugg:last-child{border-bottom:none;}
+.sname-sugg:hover{background:#f0f4ec;}
 .tp-form h3{font-size:.9rem;font-weight:700;color:var(--earth);margin-bottom:12px;padding-bottom:6px;border-bottom:1px solid #eee;}
 .fg{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin-bottom:10px;}
 .fg label{display:block;font-size:.72rem;font-weight:600;color:var(--bark);margin-bottom:3px;text-transform:uppercase;letter-spacing:.3px;}
@@ -3990,19 +4227,19 @@ if(window.matchMedia){
    white text invisible against the white page. Background tints below are
    a bonus if they do print, never required for legibility. */
 .tpr-hdr{border-bottom:3pt solid #1a4a1a;padding:0 0 4mm;margin-bottom:6mm;}
-.tpr-hdr h1{font-size:16pt;color:#1a4a1a;}
-.tpr-hdr .sub{font-size:9pt;color:#444;margin-top:2mm;}
+.tpr-hdr h1{font-size:22pt;color:#1a4a1a;}
+.tpr-hdr .sub{font-size:12pt;color:#444;margin-top:2mm;}
 .tpr-sec{margin-bottom:8mm;page-break-inside:avoid;}
-.tpr-sec h2{font-size:12pt;color:#1a4a1a;border-bottom:1.5pt solid #1a4a1a;padding-bottom:2mm;margin-bottom:3mm;}
+.tpr-sec h2{font-size:16pt;color:#1a4a1a;border-bottom:1.5pt solid #1a4a1a;padding-bottom:2mm;margin-bottom:3mm;}
 .tpr-stats{display:flex;flex-wrap:wrap;gap:4mm;margin-bottom:4mm;}
 .tpr-stat{border:1px solid #ccc;border-radius:2mm;padding:3mm 4mm;min-width:32mm;}
-.tpr-stat .v{font-size:12pt;font-weight:bold;color:#1a4a1a;}
-.tpr-stat .l{font-size:8pt;color:#666;}
-.tpr-table{width:100%;border-collapse:collapse;font-size:9pt;}
-.tpr-table th{background:#eef3ec;color:#1a4a1a;font-weight:bold;padding:1.5mm 2mm;text-align:left;border-bottom:1.5pt solid #1a4a1a;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-.tpr-table td{padding:1.5mm 2mm;border-bottom:.5pt solid #ddd;color:#111;}
+.tpr-stat .v{font-size:16pt;font-weight:bold;color:#1a4a1a;}
+.tpr-stat .l{font-size:10.5pt;color:#666;}
+.tpr-table{width:100%;border-collapse:collapse;font-size:11.5pt;}
+.tpr-table th{background:#eef3ec;color:#1a4a1a;font-weight:bold;padding:2.5mm 2.5mm;text-align:left;border-bottom:1.5pt solid #1a4a1a;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+.tpr-table td{padding:2.5mm 2.5mm;border-bottom:.5pt solid #ddd;color:#111;}
 .tpr-table tfoot td{font-weight:bold;border-top:1pt solid #1a4a1a;color:#111;}
-.tpr-empty{color:#999;font-size:9pt;font-style:italic;}
+.tpr-empty{color:#999;font-size:11.5pt;font-style:italic;}
 </style>
 
 <div class="page" id="pg-tour">
@@ -4056,6 +4293,11 @@ if(window.matchMedia){
       <div class="ov-stat"><div class="val" id="ovTotal">R 15546</div><div class="lbl" data-i18n="tour.overview.statTotal">Grootste Totaal</div></div>
     </div>
 
+    <div class="tp-form" id="ovMapWrap" style="display:none;">
+      <h3 data-i18n="tour.overview.mapTitle">🗺️ Toer Kaart</h3>
+      <div id="ovMap"></div>
+    </div>
+
     <!-- Tour Members summary -->
     <div class="tp-form">
       <h3><span data-i18n="tour.overview.membersHdr">👥 Toerlede</span> (<span id="memberCount">0</span>)</h3>
@@ -4074,9 +4316,10 @@ if(window.matchMedia){
     <div class="tp-form">
       <h3 data-i18n="tour.schedule.addStopHdr">+ Voeg Stop By</h3>
       <div class="fg">
-        <div><label data-i18n="tour.schedule.lblName">Kampeerterrein Naam</label><input id="sName" type="text" placeholder="Naam of soek..." data-i18n-ph="tour.schedule.namePh" style="font-size:16px;" list="csSearchList"><datalist id="csSearchList"></datalist></div>
+        <div style="position:relative;"><label data-i18n="tour.schedule.lblName">Kampeerterrein Naam</label><input id="sName" type="text" placeholder="Klik om te blaai, of tik om te soek..." data-i18n-ph="tour.schedule.namePh" style="font-size:16px;" autocomplete="off" oninput="showNameSuggestions(this.value)" onfocus="showNameSuggestions(this.value)"><div id="sNameSuggest" style="display:none;position:absolute;z-index:50;left:0;right:0;background:#fff;border:1px solid #ccc;border-radius:6px;box-shadow:0 4px 12px rgba(0,0,0,.18);max-height:320px;overflow-y:auto;margin-top:2px;"></div><datalist id="csSearchList"></datalist></div>
         <div><label data-i18n="tour.schedule.lblDate">Datum (opsioneel)</label><input id="sDate" type="date"><div style="font-size:.68rem;color:#888;margin-top:2px;" data-i18n="tour.schedule.dateHint">Leeg = volg outomaties na die vorige stop</div></div>
         <div><label data-i18n="tour.schedule.lblKm">Afstand vanaf Vorige (km)</label><input id="sKm" type="number" min="0" placeholder="bv. 320" data-i18n-ph="tour.schedule.kmPh"></div>
+        <div><label data-i18n="tour.schedule.lblGps">GPS Koördinate</label><input id="sGps" type="text" placeholder="bv. -18.9715,14.8612" data-i18n-ph="tour.schedule.gpsPh" style="font-size:16px;"><div style="font-size:.68rem;color:#888;margin-top:2px;" data-i18n="tour.schedule.gpsHint">Leeg = probeer eers by die kampeerterrein-databasis pas</div></div>
         <div><label data-i18n="tour.schedule.lblNights">Nagte</label><input id="sNights" type="number" min="0" value="1"></div>
         <div><label data-i18n="tour.schedule.lblCostPP">Koste per Nag (R)</label><input id="sCostPP" type="number" min="0" placeholder="bv. 400" data-i18n-ph="tour.schedule.costPPPh"></div>
         <div><label data-i18n="tour.schedule.lblEmail">E-pos / Kontak</label><input id="sEmail" type="text" placeholder="e-pos of webwerf" data-i18n-ph="tour.schedule.emailPh" style="font-size:16px;"></div>
@@ -4211,6 +4454,7 @@ if(window.matchMedia){
 
   <!-- ── TAB 6: DEPOSITS ── -->
   <div class="tab-pane" id="tb-deposits">
+    <button class="btn-tp btn-add" onclick="pullStopsToDeposits()" data-i18n="tour.deposits.pullBtn" style="margin-bottom:12px;">↓ Trek Kampeerterreine vanaf Skedule</button>
     <div class="tp-form">
       <h3 data-i18n="tour.deposits.addHdr">+ Voeg Deposito Rekord By</h3>
       <div class="fg">
@@ -4299,6 +4543,7 @@ Object.assign(I18N.af, {
   'tour.overview.statCamp': 'Kampkoste',
   'tour.overview.statFuel': 'Brandstofkoste',
   'tour.overview.statTotal': 'Grootste Totaal',
+  'tour.overview.mapTitle': '🗺️ Toer Kaart',
   'tour.overview.membersHdr': '👥 Toerlede',
   'tour.overview.noMembers': 'Nog geen lede bygevoeg nie — gaan na die Lede-oortjie.',
   'tour.overview.clearConfirm': 'Maak Reisbesonderhede skoon (toernaam, datums, mense, karavane)? Dit raak nie jou Skedule, Lede of ander oortjies nie.',
@@ -4310,11 +4555,14 @@ Object.assign(I18N.af, {
   'tour.schedule.pullHint': 'Kies eers kampeerterreine in Kampeerterrein Soektog (merk die blokkies), trek dit dan in jou skedule in.',
   'tour.schedule.addStopHdr': '+ Voeg Stop By',
   'tour.schedule.lblName': 'Kampeerterrein Naam',
-  'tour.schedule.namePh': 'Naam of soek...',
+  'tour.schedule.namePh': 'Klik om te blaai, of tik om te soek...',
   'tour.schedule.lblDate': 'Datum (opsioneel)',
   'tour.schedule.dateHint': 'Leeg = volg outomaties na die vorige stop',
   'tour.schedule.lblKm': 'Afstand vanaf Vorige (km)',
   'tour.schedule.kmPh': 'bv. 320',
+  'tour.schedule.lblGps': 'GPS Koördinate',
+  'tour.schedule.gpsPh': 'bv. -18.9715,14.8612',
+  'tour.schedule.gpsHint': 'Leeg = probeer eers by die kampeerterrein-databasis pas',
   'tour.schedule.lblNights': 'Nagte',
   'tour.schedule.lblCostPP': 'Koste per Nag (R)',
   'tour.schedule.costPPPh': 'bv. 400',
@@ -4367,8 +4615,17 @@ Object.assign(I18N.af, {
   'tour.schedule.bookedYes': '✓ JA',
   'tour.schedule.bookedNo': '✗ NEE',
   'tour.schedule.routeLegBtn': '🗺️',
-  'tour.schedule.routeLegTitle': 'Wys roete vir hierdie dag se rit (vorige kampeerterrein → hierdie een)',
+  'tour.schedule.routeLegTitle': 'Wys roete vir hierdie dag se rit (vorige kampeerterrein → hierdie een) — OpenStreetMap',
+  'tour.schedule.routeLegGoogleBtn': '🚗',
+  'tour.schedule.routeLegGoogleTitle': 'Wys roete vir hierdie dag se rit — Google Maps (met GPS-navigasie op jou selfoon of tablet)',
   'tour.schedule.routeLegNoGps': 'Kan nie roete wys nie — een of albei kampeerterreine het geen GPS-koördinate nie.',
+  'tour.schedule.noGpsWarning': 'Afstand kan nie outomaties bereken word nie — hierdie of die vorige kampeerterrein het geen GPS-koördinate op rekord nie. Tik die afstand self in, of voeg GPS by die kampeerterrein in Kampeerterrein Soektog.',
+  'tour.schedule.gpsEditTitle': 'Wysig hierdie stop se GPS-koördinate direk (handig as die naam nie met enige kampeerterrein in die databasis ooreenstem nie)',
+  'tour.schedule.moveUpTitle': 'Skuif hierdie stop op',
+  'tour.schedule.moveDownTitle': 'Skuif hierdie stop af',
+  'tour.schedule.gpsPromptMsg': 'GPS-koördinate vir "{name}" (formaat: lat,lon — bv. -18.9715,14.8612). Los leeg om te verwyder.',
+  'tour.schedule.gpsSaved': 'GPS gestoor ✓',
+  'tour.schedule.gpsCleared': 'GPS verwyder',
 
   'tour.gmaps.hdr': '🌐 OpenStreetMap Afstand (KM) Outomatiese Invul',
   'tour.gmaps.desc': 'Die Skedule se KM-kolom vul outomaties in met werklike ryafstande vanaf OpenStreetMap se gratis roeteringsdiens — geen sleutel, rekening of fakturering nodig nie. As dit nie bereik kan word nie (bv. geen internet), val dit terug op \'n reguit-lyn GPS-beraming — gemerk met \'n ~ sodat jy weet watter een dit is.',
@@ -4454,6 +4711,10 @@ Object.assign(I18N.af, {
   'tour.emergency.none': 'Nog geen noodkontakte bygevoeg nie.',
 
   'tour.deposits.addHdr': '+ Voeg Deposito Rekord By',
+  'tour.deposits.pullBtn': '↓ Trek Kampeerterreine vanaf Skedule',
+  'tour.deposits.noStopsToPull': 'Geen stops in die Skedule om te trek nie.',
+  'tour.deposits.allAlreadyPulled': 'Al die Skedule se kampeerterreine is reeds hier.',
+  'tour.deposits.pulled': '{n} kampeerterrein(e) vanaf Skedule bygevoeg',
   'tour.deposits.lblCamp': 'Kampeerterrein',
   'tour.deposits.campPh': 'Kampeerterrein naam',
   'tour.deposits.lblEmail': 'E-pos',
@@ -4580,6 +4841,7 @@ Object.assign(I18N.en, {
   'tour.overview.statCamp': 'Camp Cost',
   'tour.overview.statFuel': 'Fuel Cost',
   'tour.overview.statTotal': 'Grand Total',
+  'tour.overview.mapTitle': '🗺️ Trip Map',
   'tour.overview.membersHdr': '👥 Tour Members',
   'tour.overview.noMembers': 'No members added yet — go to Members tab.',
   'tour.overview.clearConfirm': 'Clear Trip Details (tour name, dates, people, caravans)? This does not touch your Schedule, Members or other tabs.',
@@ -4591,11 +4853,14 @@ Object.assign(I18N.en, {
   'tour.schedule.pullHint': 'First select campsites in Campsite Search (tick the checkboxes), then pull them into your schedule.',
   'tour.schedule.addStopHdr': '+ Add Stop',
   'tour.schedule.lblName': 'Campsite Name',
-  'tour.schedule.namePh': 'Name or search...',
+  'tour.schedule.namePh': 'Click to browse, or type to search...',
   'tour.schedule.lblDate': 'Date (optional)',
   'tour.schedule.dateHint': 'Leave blank = follows on automatically from the previous stop',
   'tour.schedule.lblKm': 'Distance from Prev (km)',
   'tour.schedule.kmPh': 'e.g. 320',
+  'tour.schedule.lblGps': 'GPS Coordinates',
+  'tour.schedule.gpsPh': 'e.g. -18.9715,14.8612',
+  'tour.schedule.gpsHint': 'Blank = try to match the campsite database first',
   'tour.schedule.lblNights': 'Nights',
   'tour.schedule.lblCostPP': 'Cost per Night (R)',
   'tour.schedule.costPPPh': 'e.g. 400',
@@ -4648,8 +4913,17 @@ Object.assign(I18N.en, {
   'tour.schedule.bookedYes': '✓ YES',
   'tour.schedule.bookedNo': '✗ NO',
   'tour.schedule.routeLegBtn': '🗺️',
-  'tour.schedule.routeLegTitle': 'Show route for this day\'s drive (previous campsite → this one)',
+  'tour.schedule.routeLegTitle': 'Show route for this day\'s drive (previous campsite → this one) — OpenStreetMap',
+  'tour.schedule.routeLegGoogleBtn': '🚗',
+  'tour.schedule.routeLegGoogleTitle': 'Show route for this day\'s drive — Google Maps (with GPS navigation on your phone or tablet)',
   'tour.schedule.routeLegNoGps': 'Can\'t show route — one or both campsites has no GPS coordinates on record.',
+  'tour.schedule.noGpsWarning': 'Distance can\'t be calculated automatically — this or the previous campsite has no GPS coordinates on record. Type the distance in yourself, or add GPS to the campsite in Kampeerterrein Soektog.',
+  'tour.schedule.gpsEditTitle': 'Edit this stop\'s GPS coordinates directly (handy when the name doesn\'t match any campsite in the database)',
+  'tour.schedule.moveUpTitle': 'Move this stop up',
+  'tour.schedule.moveDownTitle': 'Move this stop down',
+  'tour.schedule.gpsPromptMsg': 'GPS coordinates for "{name}" (format: lat,lon — e.g. -18.9715,14.8612). Leave blank to clear.',
+  'tour.schedule.gpsSaved': 'GPS saved ✓',
+  'tour.schedule.gpsCleared': 'GPS cleared',
 
   'tour.gmaps.hdr': '🌐 OpenStreetMap Distance (KM) Auto-Fill',
   'tour.gmaps.desc': 'The Schedule\'s KM column fills in automatically with real driving distances from OpenStreetMap\'s free routing service — no key, account, or billing needed. If it can\'t be reached (e.g. no internet), it falls back to a straight-line GPS estimate instead — marked with a ~ so you know which is which.',
@@ -4735,6 +5009,10 @@ Object.assign(I18N.en, {
   'tour.emergency.none': 'No emergency contacts added.',
 
   'tour.deposits.addHdr': '+ Add Deposit Record',
+  'tour.deposits.pullBtn': '↓ Pull Campsites from Schedule',
+  'tour.deposits.noStopsToPull': 'No stops in the Schedule to pull.',
+  'tour.deposits.allAlreadyPulled': 'All the Schedule\'s campsites are already here.',
+  'tour.deposits.pulled': '{n} campsite(s) added from Schedule',
   'tour.deposits.lblCamp': 'Campsite',
   'tour.deposits.campPh': 'Campsite name',
   'tour.deposits.lblEmail': 'Email',
@@ -4941,7 +5219,13 @@ async function saveCurrentTourAs(){
       emergencyList: emergencyList,
       depositList: depositList,
       packData: packData,
-      packCustomItems: packCustomItems
+      packCustomItems: packCustomItems,
+      // Kampeerterrein Soektog: saved by name+town (not raw array indices,
+      // which would silently point at the wrong campsite if the database
+      // has since been re-ordered or updated) so it can be matched back up
+      // reliably on restore, even on a different device/session.
+      csSelection: getCsSelectionSnapshot(),
+      csFilter: getCsFilterSnapshot()
     }
   };
   // Keep a copy inside the app too (so it shows up under "Gestoorde Toere"
@@ -4979,6 +5263,7 @@ function loadSavedTour(id){
     try{localStorage.setItem('nayela_deposits', JSON.stringify(depositList));}catch(e){}
     try{localStorage.setItem('nayela_pack', JSON.stringify(packData));}catch(e){}
     try{localStorage.setItem('nayela_pack_custom', JSON.stringify(packCustomItems));}catch(e){}
+    restoreCsSnapshot(d.csSelection, d.csFilter);
     showPage('pg-tour');
     toast('"' + t.name + '" ' + tr('menu.saved.loaded'));
   });
@@ -5210,7 +5495,9 @@ function importTourFile(inputEl){
         emergencyList: data.emergencyList || [],
         depositList: data.depositList || [],
         packData: data.packData || {},
-        packCustomItems: data.packCustomItems || {}
+        packCustomItems: data.packCustomItems || {},
+        csSelection: data.csSelection || [],
+        csFilter: data.csFilter || {prov:'', town:'', name:''}
       }
     });
     // Only claim success, and only refresh the list, if the write actually
@@ -5284,8 +5571,55 @@ function scheduleSpanDays(){
   return days>0 ? days : 0;
 }
 
+// ── Overview map preview ────────────────────────────────
+// Plots every Schedule stop with usable GPS onto the SAME base map image
+// used in Kampeerterrein Soektog -- reuses gpsXY()/clampXY() (the exact
+// projection that draws the Search page's dots) so a stop lands in
+// precisely the same spot on both pages. Deliberately draws from
+// `tourStops` directly (each stop's own captured GPS), NOT from Campsite
+// Search's `sel` selection -- those two lists can easily diverge (stops
+// added manually, a search selection changed after pulling, etc.), and
+// the Tour Plan's own map should always show the actual schedule, not
+// whatever happens to be ticked in Search at that moment.
+function renderTourMapPreview(){
+  var wrap = document.getElementById('ovMapWrap');
+  var mapDiv = document.getElementById('ovMap');
+  if(!wrap || !mapDiv) return;
+
+  var pts = tourStops.map(function(s, idx){
+    var gps = (typeof stopGps === 'function') ? stopGps(s) : clean(s.gps);
+    if(!gps) return null;
+    var ll = gpsToLatLng(gps);
+    if(!ll) return null;
+    var xy = clampXY(gpsXY(ll.lat, ll.lng));
+    return {x:xy.x, y:xy.y, name:s.name, order:idx+1};
+  }).filter(Boolean);
+
+  if(!pts.length){ wrap.style.display='none'; mapDiv.innerHTML=''; return; }
+
+  var mapImgEl = document.getElementById('mapImg');
+  var imgSrc = mapImgEl ? mapImgEl.src : '';
+  if(!imgSrc){ wrap.style.display='none'; mapDiv.innerHTML=''; return; }
+
+  var routeLine = pts.length > 1
+    ? '<polyline points="'+pts.map(function(p){ return p.x.toFixed(1)+','+p.y.toFixed(1); }).join(' ')+'" fill="none" stroke="#e65c00" stroke-width="3" stroke-dasharray="10,6" opacity="0.9"/>'
+    : '';
+  var svgPins = pts.map(function(p){
+    return '<g><title>'+p.order+'. '+esc(p.name)+'</title>'
+      +'<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="10" fill="#ffcc00" stroke="#333" stroke-width="1.5"/>'
+      +'<text x="'+p.x.toFixed(1)+'" y="'+(p.y+4).toFixed(1)+'" text-anchor="middle" font-size="10" font-weight="bold" fill="#333">'+p.order+'</text></g>';
+  }).join('');
+
+  mapDiv.innerHTML = '<div style="position:relative;width:100%;max-width:700px;margin:8px auto 0;">'
+    +'<img id="ovMapImg" src="'+imgSrc+'" style="width:100%;height:auto;display:block;border:1px solid #ccc;border-radius:6px;">'
+    +'<svg viewBox="0 0 950 570" style="position:absolute;top:0;left:0;width:100%;height:auto;">'+routeLine+svgPins+'</svg>'
+    +'</div>';
+  wrap.style.display = '';
+}
+
 // ── Overview ──────────────────────────────────────────
 function renderOverview(){
+  renderTourMapPreview();
   calcTourDays();
   var totalKm=0, totalCamp=0, totalFuel=0;
   tourStops.forEach(function(s){
@@ -5313,6 +5647,65 @@ function renderOverview(){
 }
 
 // ── Schedule ──────────────────────────────────────────
+// ── Custom campsite-name suggestion dropdown ──────────────
+// Replaces the browser's native <datalist> for "Kampeerterrein Naam" --
+// datalist rendering (height, scroll behaviour, how many rows show at
+// once) is entirely up to the browser and NOT stylable, and with ~700
+// campsites in the database, several browsers cut the list off partway
+// through instead of scrolling smoothly. This is a plain, fully
+// JS-controlled dropdown instead: filtered live as you type, capped at
+// a sane number of results, and genuinely scrollable everywhere.
+function showNameSuggestions(val){
+  var box = document.getElementById('sNameSuggest');
+  if(!box) return;
+  if(typeof camps === 'undefined'){ box.style.display='none'; box.innerHTML=''; return; }
+  var query = (val||'').trim().toLowerCase();
+  // Empty query (just clicked/focused the field, nothing typed yet) --
+  // show the FULL A-Z list to browse, not nothing. A person shouldn't
+  // have to already know they need to start typing before anything
+  // appears; clicking the field should immediately show what's available,
+  // same as any normal dropdown/picker would.
+  var pool = query
+    ? camps.filter(function(c){ return c.naam && c.naam.toLowerCase().indexOf(query) !== -1; })
+    : camps.slice();
+  var matches = pool.sort(function(a,b){
+    return (a.naam||'').toLowerCase() < (b.naam||'').toLowerCase() ? -1 : 1;
+  });
+  // No count cap here -- the earlier 40-item and then 300-item caps both
+  // ended up silently truncating the list part-way through the alphabet
+  // (first for broad search terms, then for browsing the full ~685-entry
+  // database with nothing typed yet). A plain scrollable list of a few
+  // hundred simple rows costs nothing noticeable to render; the
+  // dropdown's own max-height + overflow-y:auto is what should be
+  // limiting what's ON SCREEN at once, not how many exist to scroll to.
+  if(!matches.length){ box.style.display='none'; box.innerHTML=''; return; }
+  box.innerHTML = matches.map(function(c){
+    var label = c.naam + (c.dorp ? ' ('+c.dorp+')' : '');
+    // data-name (not an inline onclick with the name baked into a JS
+    // string) so campsite names containing apostrophes -- e.g. "Actupo
+    // Camping Ponta d'Orra" -- can never break the generated HTML.
+    return '<div class="sname-sugg" data-name="'+esc(c.naam)+'">'+esc(label)+'</div>';
+  }).join('');
+  box.style.display='block';
+}
+// Single delegated listener handles both selecting a suggestion (click
+// lands on a .sname-sugg row) and closing the dropdown (click anywhere
+// else) -- added once, not re-added every time the list re-renders.
+document.addEventListener('click', function(e){
+  var box = document.getElementById('sNameSuggest');
+  var input = document.getElementById('sName');
+  if(!box) return;
+  if(e.target.classList && e.target.classList.contains('sname-sugg')){
+    if(input) input.value = e.target.getAttribute('data-name');
+    box.style.display='none';
+    box.innerHTML='';
+    return;
+  }
+  if(input && e.target!==input && !box.contains(e.target)){
+    box.style.display='none';
+  }
+});
+
 function populateCSDatalist(){
   // Populate campsite autocomplete from embedded CS data
   if(typeof camps !== 'undefined'){
@@ -5325,7 +5718,14 @@ function populateCSDatalist(){
                       // thousands of stale DOM nodes) the more you moved
                       // between pages in a session.
     var seen = {};
-    camps.forEach(function(c){
+    // Sort purely by name here (not province → town → name like the main
+    // list) -- when someone's typing a campsite name to search for it,
+    // an A-Z list of names is what's actually quick to scan; grouping by
+    // province first would scatter alphabetically-close names apart.
+    var sortedCamps = camps.slice().sort(function(a,b){
+      return (a.naam||'').toLowerCase() < (b.naam||'').toLowerCase() ? -1 : 1;
+    });
+    sortedCamps.forEach(function(c){
       if(c.naam && !seen[c.naam]){
         seen[c.naam]=true;
         var opt=document.createElement('option');
@@ -5379,6 +5779,13 @@ function addStop(){
     if(!phone && match.tel) phone = match.tel;
     matchGps = clean(match.gps);
   }
+  // Manually-typed GPS in the form wins over whatever the database
+  // lookup found -- covers exactly the "Ruacana" kind of case where the
+  // stop's name doesn't match any campsite record at all, so there'd
+  // otherwise be no GPS (and therefore no distance) for this leg from
+  // the moment it's added, requiring a separate edit afterward.
+  var manualGpsInput = clean(document.getElementById('sGps').value);
+  if(manualGpsInput) matchGps = manualGpsInput;
 
   // Auto-calc fuel cost — prefers real rates from the Fuel Calculator log
   var rates = getEffectiveFuelRates();
@@ -5423,6 +5830,7 @@ function addStop(){
   document.getElementById('sName').value='';
   document.getElementById('sDate').value='';
   document.getElementById('sKm').value='';
+  document.getElementById('sGps').value='';
   document.getElementById('sNights').value='1';
   document.getElementById('sCostPP').value='';
   document.getElementById('sEmail').value='';
@@ -5485,6 +5893,29 @@ function deleteStop(i){
   });
 }
 
+// Swaps a stop with its immediate neighbour (direction -1 = up, +1 =
+// down) -- the ▲▼ arrows next to each stop's number. Dates get fully
+// recalculated afterwards (cascading forward from the tour's start date
+// through the new order) rather than travelling WITH the stop, since a
+// stop's date only ever made sense relative to its position in the
+// sequence -- carrying an old date into a new position would just
+// produce a nonsensical, out-of-order schedule. KM/fuel per leg stay
+// attached to the stop itself and are left for the person to recheck,
+// since "distance from previous" only makes sense once you know what
+// the new previous stop actually is.
+function moveStop(i, direction){
+  var j = i + direction;
+  if(j<0 || j>=tourStops.length) return;
+  var tmp = tourStops[i];
+  tourStops[i] = tourStops[j];
+  tourStops[j] = tmp;
+  recalcAllStopDates();
+  try{localStorage.setItem('nayela_stops', JSON.stringify(tourStops));}catch(e){}
+  renderSchedule();
+  recalcFuel();
+  renderOverview();
+}
+
 function toggleBooked(i){
   tourStops[i].booked = tourStops[i].booked==='YES' ? 'NO' : 'YES';
   try{localStorage.setItem('nayela_stops', JSON.stringify(tourStops));}catch(e){}
@@ -5498,6 +5929,30 @@ function updateStopNights(i, val){
   cascadeStopDatesForward(i);
   try{localStorage.setItem('nayela_stops', JSON.stringify(tourStops));}catch(e){}
   setTimeout(function(){ renderSchedule(); renderOverview(); }, 0);
+}
+
+// Lets a stop's own GPS be set directly, independent of whether its name
+// happens to match anything in the campsite database. Needed for cases
+// like a stop named after a town (e.g. "Ruacana") that has no campsite
+// entry under that exact name -- the nearest real campsite there might
+// be registered under a completely different name (e.g. "Ongongo
+// waterval camp"), so name-based lookup alone can never find it, and the
+// leg's distance would otherwise be permanently stuck unable to
+// calculate with no way for the person to fix it themselves.
+function promptStopGps(i){
+  var s = tourStops[i];
+  if(!s) return;
+  var current = stopGps(s);
+  var val = prompt(tr('tour.schedule.gpsPromptMsg', {name:s.name}), current || '');
+  if(val === null) return; // cancelled
+  updateStopGps(i, val.trim());
+}
+function updateStopGps(i, val){
+  tourStops[i].gps = val;
+  try{localStorage.setItem('nayela_stops', JSON.stringify(tourStops));}catch(e){}
+  toast(tr(val ? 'tour.schedule.gpsSaved' : 'tour.schedule.gpsCleared'));
+  renderSchedule();
+  renderOverview();
 }
 
 function updateStopKm(i, val){
@@ -5870,16 +6325,25 @@ function renderSchedule(){
     var dateStr = s.date ? s.date : '';
     var endDateStr = calcStopEndDate(s.date, s.nights);
     return '<tr>'
-      +'<td>'+(i+1)+'</td>'
+      +'<td>'+(i+1)
+        +'<br><span style="white-space:nowrap;">'
+        +(i>0 ? '<button type="button" onclick="moveStop('+i+',-1)" title="'+esc(tr('tour.schedule.moveUpTitle'))+'" style="background:none;border:none;cursor:pointer;padding:0 1px;font-size:.8rem;touch-action:manipulation;">▲</button>' : '')
+        +(i<tourStops.length-1 ? '<button type="button" onclick="moveStop('+i+',1)" title="'+esc(tr('tour.schedule.moveDownTitle'))+'" style="background:none;border:none;cursor:pointer;padding:0 1px;font-size:.8rem;touch-action:manipulation;">▼</button>' : '')
+        +'</span>'
+      +'</td>'
       +'<td><input type="date" value="'+dateStr+'" style="padding:3px;border:1px solid #ccc;border-radius:4px;font-size:.78rem;" onchange="updateStopDate('+i+',this.value)"></td>'
       +'<td><input type="date" value="'+endDateStr+'" style="padding:3px;border:1px solid #ccc;border-radius:4px;font-size:.78rem;" onchange="updateStopEndDate('+i+',this.value)"></td>'
-      +'<td><strong>'+esc(s.name)+'</strong>'+(s.isReturn?' <span style="background:var(--savanna,#2e7d32);color:#fff;font-size:.62rem;font-weight:700;padding:1px 6px;border-radius:8px;white-space:nowrap;">'+tr('tour.schedule.returnBadge')+'</span>':'')+'<br><span style="font-size:.68rem;color:#888;">'+esc(s.phone)+'</span></td>'
+      +'<td><strong>'+esc(s.name)+'</strong>'+(s.isReturn?' <span style="background:var(--savanna,#2e7d32);color:#fff;font-size:.62rem;font-weight:700;padding:1px 6px;border-radius:8px;white-space:nowrap;">'+tr('tour.schedule.returnBadge')+'</span>':'')
+        +' <button type="button" onclick="promptStopGps('+i+')" title="'+esc(tr('tour.schedule.gpsEditTitle'))+'" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:.85rem;vertical-align:middle;touch-action:manipulation;">📍</button>'
+        +'<br><span style="font-size:.68rem;color:#888;">'+esc(s.phone)+'</span></td>'
       +'<td>'+tr('tour.schedule.dayLabel',{n:rowDay})+'</td>'
       +'<td><input type="number" min="0" value="'+nightsHere+'" style="width:52px;text-align:center;padding:3px;border:1px solid #ccc;border-radius:4px;font-size:.78rem;" onchange="updateStopNights('+i+',this.value)"></td>'
       +'<td><input type="number" min="0" value="'+(parseFloat(s.km)||0)+'" style="width:64px;text-align:center;padding:3px;border:1px solid #ccc;border-radius:4px;font-size:.78rem;" onchange="updateStopKm('+i+',this.value)"> km'
         +(s.kmSource==='straight' ? ' <span title="'+esc(tr('tour.gmaps.straightTooltip'))+'" style="color:#b26a00;font-weight:700;cursor:help;">~</span>' : '')
         +(s.kmSource==='osrm' ? ' <span title="'+esc(tr('tour.gmaps.googleTooltip'))+'" style="color:#2e7d32;font-weight:700;cursor:help;">✓</span>' : '')
+        +(i>0 && (!stopGps(tourStops[i-1]) || !stopGps(s)) ? ' <span title="'+esc(tr('tour.schedule.noGpsWarning'))+'" style="color:#c62828;font-weight:700;cursor:help;">⚠</span>' : '')
         +(i>0 ? ' <button type="button" onclick="openTourLegRoute('+i+')" title="'+esc(tr('tour.schedule.routeLegTitle'))+'" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:.9rem;vertical-align:middle;touch-action:manipulation;">'+tr('tour.schedule.routeLegBtn')+'</button>' : '')
+        +(i>0 ? ' <button type="button" onclick="openTourLegRouteGoogle('+i+')" title="'+esc(tr('tour.schedule.routeLegGoogleTitle'))+'" style="background:none;border:none;cursor:pointer;padding:0 2px;font-size:.9rem;vertical-align:middle;touch-action:manipulation;">'+tr('tour.schedule.routeLegGoogleBtn')+'</button>' : '')
       +'</td>'
       +'<td>R <input type="number" min="0" value="'+((parseFloat(s.costPP)||0)*people).toFixed(0)+'" style="width:64px;text-align:center;padding:3px;border:1px solid #ccc;border-radius:4px;font-size:.78rem;" onchange="updateStopCostPerNight('+i+',this.value)"></td>'
       +'<td><strong>R '+campCost.toFixed(0)+'</strong></td>'
@@ -6039,20 +6503,53 @@ function findCampByName(name){
 }
 
 // Prefer the GPS captured on the stop itself (set when it was pulled/added);
-// fall back to looking the campsite up by name in the current Campsite
-// Search data, for stops saved before this feature existed.
+// fall back to looking the campsite up in the current Campsite Search
+// data, for stops saved before this feature existed. Uses
+// findCampsiteMatch() (exact name match first, full-name substring only
+// as a safe fallback) rather than a strict exact-string match -- a stop
+// typed slightly differently than the database entry (extra space,
+// different capitalisation, etc.) used to silently get no GPS and
+// therefore no distance at all; this recovers those cases too.
 function stopGps(stop){
   if(!stop) return '';
   if(clean(stop.gps)) return stop.gps.trim();
-  var c = findCampByName(stop.name);
+  var c = (typeof findCampsiteMatch === 'function') ? findCampsiteMatch(stop.name) : findCampByName(stop.name);
   return c && clean(c.gps) ? c.gps.trim() : '';
 }
 
 // "lat,lng" string -> {lat,lng} numbers.
 function gpsToLatLng(gps){
-  var parts = (gps||'').split(',');
-  var lat = parseFloat(parts[0]), lng = parseFloat(parts[1]);
+  if(!gps) return null;
+  var str = String(gps).trim();
+  // GPS values get typed by hand sometimes -- accept ';' as well as ','
+  // between lat/lng, and strip stray characters (degree symbols, N/S/E/W
+  // letters, extra spaces) that would otherwise make parseFloat choke or
+  // silently misread the number, breaking routing for that leg with no
+  // obvious explanation.
+  var parts = str.split(/[,;]/);
+  if(parts.length < 2){
+    // No comma/semicolon at all -- e.g. "17.0015°13.2441°", where the only
+    // thing separating the two numbers is a degree symbol sitting between
+    // them (not a proper separator, but recoverable: split right after
+    // the first ° and treat that as the boundary between lat and lng).
+    var degIdx = str.indexOf('°');
+    if(degIdx > -1 && degIdx < str.length - 1){
+      parts = [str.slice(0, degIdx+1), str.slice(degIdx+1)];
+    }
+  }
+  if(parts.length < 2) return null;
+  var lat = parseFloat(parts[0].replace(/[^0-9.\-]/g,''));
+  var lng = parseFloat(parts[1].replace(/[^0-9.\-]/g,''));
   if(isNaN(lat) || isNaN(lng)) return null;
+  // Every place this app covers (South Africa, Namibia, Botswana,
+  // Mozambique, Zimbabwe, Zambia...) sits below the equator, so a
+  // genuinely positive latitude never legitimately occurs here -- it's
+  // always a missing minus sign from someone typing "17.00" instead of
+  // "-17.00" (a surprisingly common mistake when copying a coordinate
+  // that was originally shown as "17.00°S"). Auto-correcting this is
+  // safe specifically because of that geographic constraint; it would
+  // NOT be a safe assumption for an app covering the northern hemisphere.
+  if(lat > 0) lat = -lat;
   return {lat:lat, lng:lng};
 }
 
@@ -6117,6 +6614,326 @@ function osrmStatusHint(code){
   return tr('tour.gmaps.rawCode', {code: code || '?'});
 }
 
+// ════════════════════════════════════════════════════════════
+// AI Tour Planner ("pg-aiplan")
+// A self-contained, non-destructive planning tool: it only ever writes to
+// tourStops/tourInfo (the REAL tour) at the single explicit moment the
+// person clicks "Gebruik Hierdie Toer" and confirms a choice. Everything
+// before that lives in aiPlanState below, completely separate from the
+// user's actual tour -- so leaving this tab, generating ten different
+// drafts, or never touching it again can never change anything about a
+// tour someone's already planning by hand.
+// ════════════════════════════════════════════════════════════
+var aiPlanState = { stops: [] }; // {naam,dorp,provinsie,gps,legKm|null,warning|null}
+
+// Scores how well a campsite matches a free-typed town/area name -- exact
+// town match ranks above the town name merely appearing in the campsite's
+// own name, which ranks above a province-level match (broad, last resort).
+function scoreCampForTown(camp, townLower){
+  if(!camp) return 0;
+  var dorp = (camp.dorp||'').toLowerCase();
+  var naam = (camp.naam||'').toLowerCase();
+  var prov = (camp.provinsie||'').toLowerCase();
+  if(dorp === townLower) return 100;
+  if(dorp.indexOf(townLower)===0) return 90;
+  if(dorp.indexOf(townLower)!==-1) return 70;
+  if(naam.indexOf(townLower)!==-1) return 50;
+  if(prov.indexOf(townLower)!==-1) return 20;
+  return 0;
+}
+
+// Returns up to `limit` campsites from the live `camps` array that best
+// match a given town/area name, best match first. Empty array if truly
+// nothing in the database is anywhere near it.
+function findTownCandidates(town, limit){
+  var townLower = (town||'').trim().toLowerCase();
+  if(!townLower) return [];
+  var scored = camps
+    .map(function(c){ return {c:c, score:scoreCampForTown(c, townLower)}; })
+    .filter(function(x){ return x.score>0 && x.c.naam; });
+  scored.sort(function(a,b){ return b.score-a.score; });
+  var out = [], seenNames = {};
+  for(var i=0;i<scored.length && out.length<(limit||6); i++){
+    var naam = scored[i].c.naam;
+    if(seenNames[naam]) continue; // camps can carry duplicate-name entries; keep the route list clean
+    seenNames[naam]=true;
+    out.push(scored[i].c);
+  }
+  return out;
+}
+
+// Great-circle midpoint between two GPS points (used only to pick a
+// reasonable search centre for splitting an over-long leg -- the ACTUAL
+// distances used to decide whether a leg is too long always come from
+// real OSRM driving distance, never straight-line, since a straight line
+// routinely underestimates real road distance by a large margin here.
+function midpointLL(a, b){
+  var lat1=a.lat*Math.PI/180, lng1=a.lng*Math.PI/180;
+  var lat2=b.lat*Math.PI/180, lng2=b.lng*Math.PI/180;
+  var dLng = lng2-lng1;
+  var Bx = Math.cos(lat2)*Math.cos(dLng), By = Math.cos(lat2)*Math.sin(dLng);
+  var lat3 = Math.atan2(Math.sin(lat1)+Math.sin(lat2), Math.sqrt((Math.cos(lat1)+Bx)*(Math.cos(lat1)+Bx)+By*By));
+  var lng3 = lng1 + Math.atan2(By, Math.cos(lat1)+Bx);
+  return { lat: lat3*180/Math.PI, lng: lng3*180/Math.PI };
+}
+
+// Nearest not-already-used campsite (anywhere in the full database, not
+// just the town candidates) to a given point -- used to insert a
+// realistic overnight stop when two chosen anchor stops are further apart
+// than the traveller's chosen daily limit.
+function nearestUnusedCamp(point, usedNames){
+  var best = null, bestDist = Infinity;
+  for(var i=0;i<camps.length;i++){
+    var c = camps[i];
+    if(!c.naam || usedNames[c.naam]) continue;
+    var ll = gpsToLatLng(c.gps);
+    if(!ll) continue;
+    var d = haversineKmLL(point, ll);
+    if(d!=null && d<bestDist){ bestDist=d; best=c; }
+  }
+  return best;
+}
+
+async function planTourAiOrder(towns, candidates){
+  var user = window.fbAuth && window.fbAuth.currentUser;
+  if(!user) throw new Error(tr('aiplan.loginRequired'));
+  var idToken = await user.getIdToken();
+  var lang = (typeof LANG!=='undefined' && LANG==='en') ? 'en' : 'af';
+  var res = await fetch('/.netlify/functions/plan-tour', {
+    method:'POST',
+    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+idToken },
+    body: JSON.stringify({
+      towns: towns,
+      candidates: candidates.map(function(c){ return {naam:c.naam, dorp:c.dorp||'', provinsie:c.provinsie||''}; }),
+      lang: lang
+    })
+  });
+  var data = await res.json();
+  if(!res.ok || !data || !Array.isArray(data.order)){
+    throw new Error((data && (data.error||data.detail)) || 'AI error');
+  }
+  return data.order;
+}
+
+async function runAiTourPlanner(){
+  var name = document.getElementById('aiPlanName').value.trim();
+  var townsRaw = document.getElementById('aiPlanTowns').value;
+  var maxKm = parseInt(document.getElementById('aiPlanMaxKm').value) || 600;
+  var status = document.getElementById('aiPlanStatus');
+  var genBtn = document.getElementById('aiPlanGenBtn');
+
+  if(!name){ toast(tr('aiplan.needName')); return; }
+  var towns = townsRaw.split(/[\n,]/).map(function(s){return s.trim();}).filter(Boolean);
+  if(!towns.length){ toast(tr('aiplan.needTowns')); return; }
+
+  var user = window.fbAuth && window.fbAuth.currentUser;
+  if(!user){ toast(tr('aiplan.loginRequired')); if(status) status.textContent = tr('aiplan.loginRequired'); return; }
+
+  genBtn.disabled = true;
+  if(status) status.textContent = tr('aiplan.generating');
+  document.getElementById('aiPlanResults').style.display = 'none';
+
+  try{
+    // Gather candidates per town, and warn (but continue) for any town
+    // with genuinely nothing nearby in our database -- matches "campsites
+    // that are on the program" as the actual constraint, honestly.
+    var allCandidates = [], seenCandNames = {}, anyMatched = false;
+    var skippedTowns = [];
+    towns.forEach(function(t){
+      var found = findTownCandidates(t, 6);
+      if(!found.length){ skippedTowns.push(t); return; }
+      anyMatched = true;
+      found.forEach(function(c){
+        if(!seenCandNames[c.naam]){ seenCandNames[c.naam]=true; allCandidates.push(c); }
+      });
+    });
+    if(!anyMatched){ toast(tr('aiplan.noCandidatesAnyTown')); if(status) status.textContent=''; genBtn.disabled=false; return; }
+    skippedTowns.forEach(function(t){ toast(tr('aiplan.townNoMatch',{town:t})); });
+
+    var orderNames = await planTourAiOrder(towns, allCandidates);
+    if(!orderNames.length){ toast(tr('aiplan.emptyOrder')); if(status) status.textContent=''; genBtn.disabled=false; return; }
+
+    var byName = {};
+    allCandidates.forEach(function(c){ byName[c.naam]=c; });
+    var anchors = orderNames.map(function(n){ return byName[n]; }).filter(Boolean);
+
+    if(status) status.textContent = tr('aiplan.calcDistances');
+
+    // Insert intermediate overnight stops wherever an anchor-to-anchor
+    // leg exceeds the traveller's chosen daily cap, using REAL OSRM
+    // driving distance (never straight-line) to decide. Bounded so a
+    // genuinely unreachable/uncovered stretch reports a warning instead
+    // of looping forever.
+    var finalStops = [anchors[0]];
+    var usedNames = {}; anchors.forEach(function(a){ usedNames[a.naam]=true; });
+    for(var i=1;i<anchors.length;i++){
+      await insertLegRespectingCap(finalStops, anchors[i], maxKm, usedNames, 0);
+    }
+
+    aiPlanState.stops = finalStops.map(function(c,i){ return {naam:c.naam, dorp:c.dorp||'', provinsie:c.provinsie||'', gps:c.gps||'', legKm:null, warning:null, _idx:i}; });
+    // legKm gets filled in as part of insertLegRespectingCap's own OSRM
+    // calls above -- re-attach those computed distances now.
+    for(var j=0;j<finalStops.length;j++){
+      aiPlanState.stops[j].legKm = finalStops[j]._legKm!=null ? finalStops[j]._legKm : null;
+      aiPlanState.stops[j].warning = finalStops[j]._warning || null;
+    }
+
+    renderAiPlanPreview();
+    document.getElementById('aiPlanResults').style.display = 'block';
+  }catch(err){
+    toast(tr('aiplan.aiError',{err: err.message||String(err)}));
+  }finally{
+    genBtn.disabled = false;
+    if(status) status.textContent = '';
+  }
+}
+
+// Appends `nextAnchor` onto `stopsSoFar`, splitting the leg with real
+// intermediate campsites as many times as needed to keep every resulting
+// leg under maxKm. Tags each pushed stop with its OWN _legKm (distance
+// from the stop immediately before it) so the caller can read it straight
+// off afterward instead of recomputing.
+// `depth` bounds how many times a SINGLE original anchor-to-anchor leg can
+// be split (not total stops in the tour) -- without this, a leg through a
+// genuinely camp-sparse stretch (or any unexpected OSRM/data weirdness)
+// could recurse through the entire database one campsite at a time before
+// ever finishing, exactly what happened in testing with a stubbed
+// always-too-far distance. 6 splits means up to 7 days for what was meant
+// to be one long drive, which is already an unreasonable answer to hand
+// back -- past that point this stops trying and flags it instead.
+var MAX_LEG_SPLITS = 6;
+async function insertLegRespectingCap(stopsSoFar, nextAnchor, maxKm, usedNames, depth){
+  var from = stopsSoFar[stopsSoFar.length-1];
+  var fromLL = gpsToLatLng(from.gps), toLL = gpsToLatLng(nextAnchor.gps);
+  if(!fromLL || !toLL){
+    nextAnchor._legKm = null;
+    nextAnchor._warning = tr('aiplan.legWarning',{max:maxKm, km:'?'});
+    stopsSoFar.push(nextAnchor);
+    return;
+  }
+  var km;
+  try{ km = (await osrmDistanceMeters(fromLL, toLL))/1000; }
+  catch(e){ km = haversineKmLL(fromLL, toLL); } // fall back to straight-line only if OSRM itself is unreachable
+
+  if(km <= maxKm || depth >= MAX_LEG_SPLITS){
+    nextAnchor._legKm = Math.round(km);
+    if(km > maxKm) nextAnchor._warning = tr('aiplan.legWarning',{max:maxKm, km:Math.round(km)});
+    stopsSoFar.push(nextAnchor);
+    return;
+  }
+
+  // Too far for one day -- find a real campsite near the midpoint to
+  // split it, then recurse on both new (shorter) halves.
+  var mid = midpointLL(fromLL, toLL);
+  var splitCamp = nearestUnusedCamp(mid, usedNames);
+  if(!splitCamp){
+    nextAnchor._legKm = Math.round(km);
+    nextAnchor._warning = tr('aiplan.legWarning',{max:maxKm, km:Math.round(km)});
+    stopsSoFar.push(nextAnchor);
+    return;
+  }
+  usedNames[splitCamp.naam] = true;
+  await insertLegRespectingCap(stopsSoFar, splitCamp, maxKm, usedNames, depth+1);
+  await insertLegRespectingCap(stopsSoFar, nextAnchor, maxKm, usedNames, depth+1);
+}
+
+function renderAiPlanPreview(){
+  var list = document.getElementById('aiPlanList');
+  list.innerHTML = aiPlanState.stops.map(function(s, i){
+    var legText = (i===0) ? tr('aiplan.firstStop') : (s.legKm!=null ? tr('aiplan.legKm',{km:s.legKm}) : '?');
+    var warnHtml = s.warning ? '<div style="color:#b00;font-size:.72rem;margin-top:2px;">'+esc(s.warning)+'</div>' : '';
+    return '<div style="display:flex;align-items:center;gap:10px;background:#f7f5ef;border:1px solid #e2ddc9;border-radius:8px;padding:8px 10px;margin-bottom:6px;">'
+      +'<div style="width:24px;height:24px;border-radius:50%;background:var(--savanna,#2e7d32);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;">'+(i+1)+'</div>'
+      +'<div style="flex:1;min-width:0;">'
+        +'<div style="font-weight:700;color:#5D3A1A;font-size:.86rem;">'+esc(s.naam)+(s.dorp?' <span style="font-weight:400;color:#888;">('+esc(s.dorp)+')</span>':'')+'</div>'
+        +'<div style="font-size:.74rem;color:#777;">'+esc(legText)+'</div>'
+        +warnHtml
+      +'</div>'
+      +'<button type="button" onclick="removeAiPlanStop('+i+')" title="'+esc(tr('aiplan.removeStop'))+'" style="background:none;border:none;color:#c00;font-size:1.1rem;cursor:pointer;padding:2px 6px;flex-shrink:0;">✕</button>'
+    +'</div>';
+  }).join('');
+}
+
+function removeAiPlanStop(i){
+  aiPlanState.stops.splice(i,1);
+  renderAiPlanPreview();
+}
+
+function addAiPlanStopManual(){
+  var input = document.getElementById('aiPlanAddInput');
+  var name = input.value.trim();
+  if(!name) return;
+  var match = findCampsiteMatch(name) || findCampByName(name);
+  if(!match){ toast(tr('aiplan.addNotFound')); return; }
+  aiPlanState.stops.push({naam:match.naam, dorp:match.dorp||'', provinsie:match.provinsie||'', gps:match.gps||'', legKm:null, warning:null});
+  input.value = '';
+  renderAiPlanPreview();
+}
+
+function discardAiPlan(){
+  gConfirm(tr('aiplan.discardConfirm'), function(){
+    aiPlanState.stops = [];
+    document.getElementById('aiPlanResults').style.display = 'none';
+    document.getElementById('aiPlanName').value = '';
+    document.getElementById('aiPlanTowns').value = '';
+  });
+}
+
+// The one and only place this whole feature ever touches the real tour --
+// deliberately gated behind an explicit choice the person makes here, not
+// anything automatic. "Wait, not yet" (or just closing this) leaves the
+// existing tour completely untouched, same as never opening this tab.
+function promptApplyAiPlan(){
+  if(!aiPlanState.stops.length) return;
+  var msg = tr('aiplan.useChoiceMsg');
+  var choiceBox = document.getElementById('gcBg');
+  // Three-way choice doesn't fit the plain yes/no gConfirm dialog, so this
+  // builds a small one-off version of the same confirm-dialog markup with
+  // three buttons instead of two.
+  var wrap = document.createElement('div');
+  wrap.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+  wrap.innerHTML = '<div style="background:#fff;border-radius:12px;padding:20px;max-width:360px;width:100%;">'
+    +'<div style="font-size:.92rem;color:#5D3A1A;margin-bottom:16px;">'+esc(msg)+'</div>'
+    +'<button type="button" id="aiApplyNewBtn" style="width:100%;background:var(--savanna,#2e7d32);color:#fff;border:none;border-radius:8px;padding:10px;font-size:.85rem;font-weight:700;cursor:pointer;margin-bottom:8px;">'+esc(tr('aiplan.useNew'))+'</button>'
+    +'<button type="button" id="aiApplyAppendBtn" style="width:100%;background:#1976d2;color:#fff;border:none;border-radius:8px;padding:10px;font-size:.85rem;font-weight:700;cursor:pointer;margin-bottom:8px;">'+esc(tr('aiplan.useAppend'))+'</button>'
+    +'<button type="button" id="aiApplyCancelBtn" style="width:100%;background:#eee;color:#333;border:none;border-radius:8px;padding:10px;font-size:.85rem;cursor:pointer;">'+esc(tr('aiplan.useCancel'))+'</button>'
+  +'</div>';
+  document.body.appendChild(wrap);
+  function cleanup(){ document.body.removeChild(wrap); }
+  document.getElementById('aiApplyNewBtn').onclick = function(){ cleanup(); applyAiPlanToTour('new'); };
+  document.getElementById('aiApplyAppendBtn').onclick = function(){ cleanup(); applyAiPlanToTour('append'); };
+  document.getElementById('aiApplyCancelBtn').onclick = cleanup;
+}
+
+function applyAiPlanToTour(mode){
+  var rates = getEffectiveFuelRates();
+  var newStops = aiPlanState.stops.map(function(s){
+    var km = s.legKm || 0;
+    return {
+      name: s.naam, km: km, nights: 1, costPP: 0,
+      email:'', phone:'', booked:'NO',
+      fuelCost: km>0 ? (km/rates.kmL)*rates.fuelPrice : 0,
+      date:'', gps: s.gps||'', notes:'', highlight:''
+    };
+  });
+  var tourName = document.getElementById('aiPlanName').value.trim();
+
+  if(mode==='new'){
+    tourStops = newStops;
+    tourInfo = { name: tourName, start:'', end:'', people: tourInfo.people||2, caravan: tourInfo.caravan||1 };
+  } else {
+    tourStops = tourStops.concat(newStops);
+  }
+  try{
+    localStorage.setItem('nayela_stops', JSON.stringify(tourStops));
+    localStorage.setItem('nayela_tourinfo', JSON.stringify(tourInfo));
+  }catch(e){}
+
+  toast(tr(mode==='new' ? 'aiplan.appliedNew' : 'aiplan.appliedAppend', {n:newStops.length}));
+  aiPlanState.stops = [];
+  showPage('pg-tour');
+}
+
 // Opens OpenStreetMap driving directions for one specific day's travel leg
 // — the drive FROM the previous stop TO the stop at index i — so the user
 // can pick exactly which day they're moving camp and see that day's route,
@@ -6135,6 +6952,33 @@ function openTourLegRoute(i){
   var url = 'https://www.openstreetmap.org/directions'
     + '?engine=fossgis_osrm_car'
     + '&route=' + [fromGps, toGps].map(encodeURIComponent).join(';');
+  openUrlWithFallback(url);
+}
+
+// Google Maps equivalent of openTourLegRoute() above, for the day's drive
+// FROM the previous stop TO stop i. A GPS/turn-by-turn navigation option
+// for members who prefer or already trust Google Maps on their phone over
+// OpenStreetMap -- separate from (and doesn't replace) the numeric KM
+// auto-fill, which stays on the free, keyless OSRM service. Uses Google's
+// plain "Directions URL" deep link -- NOT the Distance Matrix or Routes
+// JavaScript APIs that caused REQUEST_DENIED/billing headaches earlier in
+// this app's history. A plain directions link like this needs no API key,
+// no Google Cloud project and no billing at all -- it just opens Google
+// Maps (app or website) the same way tapping any Google Maps link on the
+// web would. This is the actual "GPS on the dashboard" use case: tap it
+// right before setting off for the day, and Google Maps takes over with
+// live turn-by-turn directions and its own moving position marker.
+function openTourLegRouteGoogle(i){
+  if(i<=0 || i>=tourStops.length) return; // first stop has no "previous" leg
+  var fromGps = stopGps(tourStops[i-1]), toGps = stopGps(tourStops[i]);
+  if(!fromGps || !toGps){
+    toast(tr('tour.schedule.routeLegNoGps'));
+    return;
+  }
+  var url = 'https://www.google.com/maps/dir/?api=1'
+    + '&origin=' + encodeURIComponent(fromGps)
+    + '&destination=' + encodeURIComponent(toGps)
+    + '&travelmode=driving';
   openUrlWithFallback(url);
 }
 
@@ -6294,6 +7138,36 @@ function renderEmergency(){
 }
 
 // ── Deposits ──────────────────────────────────────────
+// Pulls every Schedule stop into the Deposito's list that isn't already
+// there (matched by campsite name, case-insensitive) -- pre-fills camp
+// name, email and phone straight from the stop so there's no need to
+// retype what's already in the Schedule. Amount and Paid? are left at
+// 0/NO for the person to fill in themselves, since only they know what
+// deposit (if any) was actually requested and paid for each stop.
+function pullStopsToDeposits(){
+  if(!tourStops.length){ toast(tr('tour.deposits.noStopsToPull')); return; }
+  var existingNames = depositList.map(function(d){ return (d.camp||'').trim().toLowerCase(); });
+  var added = 0;
+  tourStops.forEach(function(s){
+    var key = (s.name||'').trim().toLowerCase();
+    if(!key || existingNames.indexOf(key) !== -1) return; // already in the list, skip
+    depositList.push({
+      camp: s.name,
+      email: s.email || '',
+      tel: s.phone || '',
+      code: '',
+      amount: 0,
+      paid: 'NO'
+    });
+    existingNames.push(key);
+    added++;
+  });
+  if(!added){ toast(tr('tour.deposits.allAlreadyPulled')); return; }
+  try{localStorage.setItem('nayela_deposits', JSON.stringify(depositList));}catch(e){}
+  renderDeposits();
+  toast(tr('tour.deposits.pulled', {n: added}));
+}
+
 function addDeposit(){
   var c=document.getElementById('dCamp').value.trim();
   if(!c){toast(tr('tour.deposits.enterCamp')); return;}
@@ -6548,6 +7422,37 @@ function buildTourPrintArea(){
      + '<div class="tpr-stat"><div class="v">R '+(totalCamp+totalFuel).toFixed(0)+'</div><div class="l">'+tr('tour.overview.statTotal')+'</div></div>'
      + '</div></div>';
 
+  // Map -- the exact same snapshot shown live on the Oorsig tab (same base
+  // image + projection as Kampeerterrein Soektog's map), so printing the
+  // Tour Plan gives a genuinely complete one-page document: schedule AND
+  // where it all actually is, without having to separately print Search.
+  (function(){
+    var mapImgEl = document.getElementById('mapImg');
+    var imgSrc = mapImgEl ? mapImgEl.src : '';
+    var pts = tourStops.map(function(s, idx){
+      var gps = (typeof stopGps === 'function') ? stopGps(s) : clean(s.gps);
+      if(!gps) return null;
+      var ll = gpsToLatLng(gps);
+      if(!ll) return null;
+      var xy = clampXY(gpsXY(ll.lat, ll.lng));
+      return {x:xy.x, y:xy.y, order:idx+1};
+    }).filter(Boolean);
+    if(imgSrc && pts.length){
+      var routeLine = pts.length > 1
+        ? '<polyline points="'+pts.map(function(p){ return p.x.toFixed(1)+','+p.y.toFixed(1); }).join(' ')+'" fill="none" stroke="#e65c00" stroke-width="3" stroke-dasharray="10,6" opacity="0.9"/>'
+        : '';
+      var svgPins = pts.map(function(p){
+        return '<circle cx="'+p.x.toFixed(1)+'" cy="'+p.y.toFixed(1)+'" r="10" fill="#ffcc00" stroke="#333" stroke-width="1.5"/>'
+          +'<text x="'+p.x.toFixed(1)+'" y="'+(p.y+4).toFixed(1)+'" text-anchor="middle" font-size="10" font-weight="bold" fill="#333">'+p.order+'</text>';
+      }).join('');
+      h += '<div class="tpr-sec"><h2>'+tr('tour.overview.mapTitle')+'</h2>'
+        + '<div style="position:relative;width:100%;max-width:170mm;margin:0 auto;">'
+        + '<img src="'+imgSrc+'" style="width:100%;height:auto;display:block;border:1px solid #ccc;">'
+        + '<svg viewBox="0 0 950 570" style="position:absolute;top:0;left:0;width:100%;height:auto;">'+routeLine+svgPins+'</svg>'
+        + '</div></div>';
+    }
+  })();
+
   // Schedule
   h += '<div class="tpr-sec"><h2>'+tr('tour.tab.schedule')+'</h2>';
   if(!tourStops.length){
@@ -6569,8 +7474,8 @@ function buildTourPrintArea(){
       // jotted down while actually AT the campsite -- only take up space
       // on the printed sheet when there's actually something to show.
       if(clean(s.notes) || clean(s.highlight)){
-        h += '<tr><td></td><td colspan="10" style="font-size:8pt;color:#444;padding:2mm 3mm;background:#f7f5ef;text-align:left;white-space:pre-wrap;">'
-          +(clean(s.highlight) ? '<div style="font-size:9.5pt;font-weight:700;color:#8a6d1f;margin-bottom:1.5mm;">🌟 '+esc(s.highlight)+'</div>' : '')
+        h += '<tr><td></td><td colspan="10" style="font-size:10.5pt;color:#444;padding:2.5mm 3.5mm;background:#f7f5ef;text-align:left;white-space:pre-wrap;">'
+          +(clean(s.highlight) ? '<div style="font-size:12pt;font-weight:700;color:#8a6d1f;margin-bottom:2mm;">🌟 '+esc(s.highlight)+'</div>' : '')
           +(clean(s.notes) ? '<strong>'+tr('tour.schedule.notesLbl',{name:s.name})+':</strong> '+esc(s.notes).replace(/\n/g,'<br>') : '')
           +'</td></tr>';
       }
@@ -6597,7 +7502,7 @@ function buildTourPrintArea(){
   // Vehicle & Fuel
   var rates = getEffectiveFuelRates();
   h += '<div class="tpr-sec"><h2>'+tr('tour.print.vehicleHdr')+'</h2>'
-     + '<div style="font-size:9pt;margin-bottom:3mm;">'
+     + '<div style="font-size:11pt;margin-bottom:3mm;">'
      + (vehicleInfo.make ? tr('tour.print.vehicleLabel')+' '+esc(vehicleInfo.make)+(vehicleInfo.reg?' ('+esc(vehicleInfo.reg)+')':'')+' &bull; ' : '')
      + tr('tour.print.rateUsed',{kml:rates.kmL.toFixed(2), price:rates.fuelPrice.toFixed(2)})
      + (rates.fromLog ? tr('tour.print.fromLog') : tr('tour.print.manual'))
@@ -6722,6 +7627,50 @@ I18N_REFRESH.push(function(){
 .recipe-del{background:#c00;color:#fff;}
 .no-recipes{text-align:center;color:#aaa;padding:30px;font-size:.85rem;}
 </style>
+
+<div class="page" id="pg-aiplan">
+  <div class="page-hdr">
+    <button class="back-btn" onclick="showPage('pg-menu')" data-i18n="nav.backMenu">← Kieslys</button>
+    <h2 data-i18n="aiplan.hdrTitle" style="flex:1;">🤖 AI Toer Beplanner</h2>
+  </div>
+
+  <div style="padding:12px;max-width:640px;margin:0 auto;">
+    <p style="font-size:.85rem;color:#5D3A1A;line-height:1.5;margin-bottom:14px;" data-i18n="aiplan.intro">Gee vir AI 'n toernaam en 'n paar dorpe of areas wat jy wil besoek...</p>
+
+    <div class="tp-form">
+      <div style="margin-bottom:10px;">
+        <label data-i18n="aiplan.lblName" style="display:block;font-size:.8rem;font-weight:700;color:#5D3A1A;margin-bottom:4px;">Toernaam</label>
+        <input id="aiPlanName" type="text" placeholder="bv. Blomme Toer Sept 2027" data-i18n-ph="aiplan.namePh" style="width:100%;font-size:16px;padding:8px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom:10px;">
+        <label data-i18n="aiplan.lblTowns" style="display:block;font-size:.8rem;font-weight:700;color:#5D3A1A;margin-bottom:4px;">Dorpe / Areas om te besoek (een per reël)</label>
+        <textarea id="aiPlanTowns" rows="5" placeholder="bv.&#10;Springbok&#10;Kamieskroon&#10;Nieuwoudtville&#10;Calvinia" data-i18n-ph="aiplan.townsPh" style="width:100%;font-size:.85rem;padding:8px;border:1px solid #ccc;border-radius:6px;box-sizing:border-box;font-family:inherit;resize:vertical;"></textarea>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label data-i18n="aiplan.lblMaxKm" style="display:block;font-size:.8rem;font-weight:700;color:#5D3A1A;margin-bottom:4px;">Maksimum km per dag tussen kampeerterreine</label>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <input id="aiPlanMaxKm" type="range" min="150" max="600" step="10" value="600" style="flex:1;" oninput="document.getElementById('aiPlanMaxKmVal').textContent=this.value">
+          <span id="aiPlanMaxKmVal" style="font-weight:700;color:#5D3A1A;min-width:60px;text-align:right;">600 km</span>
+        </div>
+      </div>
+      <button type="button" id="aiPlanGenBtn" onclick="runAiTourPlanner()" data-i18n="aiplan.generateBtn" style="width:100%;background:#1976d2;color:#fff;border:none;border-radius:8px;padding:12px;font-size:.9rem;font-weight:700;cursor:pointer;touch-action:manipulation;">🤖 Genereer Toer Voorstel</button>
+      <div id="aiPlanStatus" style="text-align:center;font-size:.8rem;color:#5D3A1A;margin-top:8px;min-height:1.2em;"></div>
+    </div>
+
+    <div id="aiPlanResults" style="display:none;">
+      <h3 data-i18n="aiplan.resultsTitle" style="font-size:.95rem;color:#5D3A1A;margin:18px 0 8px;">Voorgestelde Roete</h3>
+      <div id="aiPlanList"></div>
+      <div style="display:flex;gap:6px;margin:10px 0;position:relative;">
+        <input id="aiPlanAddInput" type="text" autocomplete="off" placeholder="Voeg nog 'n kampeerterrein by (tik om te soek)..." data-i18n-ph="aiplan.addManualPh" style="flex:1;font-size:16px;padding:8px;border:1px solid #ccc;border-radius:6px;" list="csSearchList">
+        <button type="button" onclick="addAiPlanStopManual()" data-i18n="aiplan.addManualBtn" style="background:#eef0e6;border:1px solid #c8cdb8;border-radius:6px;padding:8px 12px;font-size:.8rem;cursor:pointer;white-space:nowrap;">+ Voeg By</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button type="button" onclick="promptApplyAiPlan()" data-i18n="aiplan.useThisTour" style="flex:1;background:var(--savanna,#2e7d32);color:#fff;border:none;border-radius:8px;padding:12px;font-size:.88rem;font-weight:700;cursor:pointer;">✅ Gebruik Hierdie Toer</button>
+        <button type="button" onclick="discardAiPlan()" data-i18n="aiplan.discard" style="background:#c00;color:#fff;border:none;border-radius:8px;padding:12px;font-size:.85rem;cursor:pointer;">🗑 Verwerp en Begin Oor</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="page" id="pg-recipes">
   <div class="page-hdr">
@@ -7726,9 +8675,20 @@ function gateHide(){
 }
 
 async function loadMembership(user){
-  var snap = await getDoc(doc(db,'members', user.email));
+  var ref = doc(db,'members', user.email);
+  var snap = await getDoc(ref);
   if(!snap.exists() || snap.data().active !== true) return null;
-  return Object.assign({email:user.email}, snap.data());
+  var data = snap.data();
+  // Usage tracking: a simple login counter + last-active timestamp, so
+  // the admin can see at a glance who's actually using the app and
+  // roughly when -- also doubles as a quick way to narrow down who was
+  // last active if the shared data ever looks like it's been changed.
+  // Fire-and-forget: never blocks or delays login, and a failure here
+  // (e.g. briefly offline) must never lock anyone out.
+  var newCount = (data.loginCount || 0) + 1;
+  setDoc(ref, { loginCount: newCount, lastActive: new Date().toISOString() }, { merge: true })
+    .catch(function(e){ console.error('Could not update login counter:', e); });
+  return Object.assign({email:user.email}, data);
 }
 
 // One-time seed: only runs if the shared collection is completely empty,
@@ -7754,9 +8714,56 @@ async function migrateIfEmpty(){
 function subscribeCampsites(){
   if(unsubCampsites) unsubCampsites();
   unsubCampsites = onSnapshot(collection(db,'campsites'), function(snap){
+    // `sel` is an array of plain positions INTO `camps` (e.g. sel=[3,7]
+    // means "the 4th and 8th campsite in the current array"). That's fine
+    // as long as `camps` itself never changes shape -- but this listener
+    // rebuilds `camps` from scratch every single time ANYONE, anywhere,
+    // adds or edits so much as one campsite in the shared database.
+    // Firestore doesn't guarantee document order stays stable across
+    // snapshots, so a brand new campsite landing earlier in that order
+    // shifts every index after it -- meaning someone else's unrelated
+    // edit could silently make position 3 mean a completely different
+    // campsite than it did a second ago. From the user's side, campsites
+    // they never touched would appear to "randomly" get added to their
+    // selection. Capture the CURRENT selection by stable identity (_id,
+    // falling back to name) before rebuilding, then remap it onto the
+    // new array afterwards, so a live sync can only ever change WHERE a
+    // selected campsite lives in the list, never WHICH one is selected.
+    var prevSelIds = (typeof sel !== 'undefined' && typeof camps !== 'undefined')
+      ? sel.map(function(i){ var c = camps[i]; return c ? (c._id || c.naam) : null; }).filter(Boolean)
+      : [];
+
     var arr = [];
     snap.forEach(function(d){ arr.push(Object.assign({_id:d.id}, d.data())); });
+    // Firestore's snapshot order isn't just unstable across live updates --
+    // it's not alphabetical or otherwise meaningful to begin with, so the
+    // list order could look different (and shuffle again) essentially any
+    // time anyone anywhere adds or edits a campsite. Sort it ourselves,
+    // consistently, every time -- province, then town, then name (the
+    // same order already used for the Excel export) -- so the list a
+    // person is looking at stays visually stable and predictable, on top
+    // of the selection-by-identity fix above (which keeps WHICH
+    // campsites are selected correct; this keeps WHERE they appear
+    // in the list correct/consistent too).
+    arr.sort(function(a,b){
+      var pa=(a.provinsie||'').toLowerCase(), pb=(b.provinsie||'').toLowerCase();
+      if(pa!==pb) return pa<pb?-1:1;
+      var ta=(a.dorp||'').toLowerCase(), tb=(b.dorp||'').toLowerCase();
+      if(ta!==tb) return ta<tb?-1:1;
+      return (a.naam||'').toLowerCase() < (b.naam||'').toLowerCase() ? -1 : 1;
+    });
     window.camps = arr;
+
+    if(typeof sel !== 'undefined'){
+      sel.length = 0;
+      prevSelIds.forEach(function(id){
+        var idx = arr.findIndex(function(c){ return (c._id||c.naam) === id; });
+        if(idx >= 0 && sel.indexOf(idx) < 0) sel.push(idx);
+      });
+      var selCntEl = document.getElementById('selCnt');
+      if(selCntEl) selCntEl.textContent = sel.length;
+    }
+
     if(typeof window.filt !== 'undefined') window.filt = arr.slice();
     if(typeof window.doFilter === 'function') window.doFilter();
   }, function(err){
@@ -7853,8 +8860,20 @@ async function renderMembers(){
     var m = d.data();
     var row = document.createElement('div');
     row.className='fb-mem-row';
+    var usageBits = [];
+    if(m.loginCount) usageBits.push(m.loginCount + (m.loginCount===1 ? ' aanmelding' : ' aanmeldings'));
+    if(m.lastActive){
+      try{
+        var dt = new Date(m.lastActive);
+        usageBits.push('Laaste: ' + dt.toLocaleDateString('af-ZA',{day:'numeric',month:'short',year:'numeric'}) + ', ' + dt.toLocaleTimeString('af-ZA',{hour:'2-digit',minute:'2-digit'}));
+      }catch(e){}
+    }
+    var usageLine = usageBits.length ? '<div style="font-size:.7rem;color:#888;margin-top:2px;">'+usageBits.join(' · ')+'</div>' : '';
     row.innerHTML =
-      '<span class="fb-mem-email">'+d.id+(m.role==='admin'?' 👑':'')+'</span>'+
+      '<span style="flex:1;min-width:0;">'
+        +'<span class="fb-mem-email">'+d.id+(m.role==='admin'?' 👑':'')+'</span>'
+        +usageLine
+      +'</span>'+
       '<span class="fb-mem-badge'+(m.active?'':' inactive')+'">'+(m.active?'aktief':'verwyder')+'</span>';
     var btn = document.createElement('button');
     btn.textContent = m.active ? 'Verwyder' : 'Herstel';
