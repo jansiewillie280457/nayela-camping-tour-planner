@@ -245,7 +245,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(180deg,#
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v2.6 (21 Sep AI Toer)</div>
+  <div class="hdr-ver">v2.7 (21 Sep AI Toer)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -597,13 +597,16 @@ Object.assign(I18N.af, {
   'menu.aiplan.desc': 'Gee vir AI \'n paar dorpe of areas, en \'n voorstel vir jou roete kom kant-en-klaar — jy hou volle beheer om dit te verander of te verwerp.',
   'menu.aiplan.badge': '★ Nuut',
   'aiplan.hdrTitle': '🤖 AI Toer Beplanner',
-  'aiplan.intro': 'Gee vir AI \'n toernaam en \'n paar dorpe of areas wat jy wil besoek. AI stel \'n roete voor, met kampeerterreine wat reeds in die program se databasis is — jy kan enigiets daaraan verander, of dit heeltemal verwerp en self beplan. Niks word aan \'n bestaande toer verander totdat JY sê dit moet nie.',
+  'aiplan.intro': 'Gee \'n toernaam en \'n paar dorpe of areas wat jy wil besoek. Ons wys elke kampeerterrein wat reeds in die program se databasis is naby elke dorp — jy kies self watter een jy wil besoek, dan bou ons die roete met ware ry-afstande. Niks word aan \'n bestaande toer verander totdat JY sê dit moet nie.',
   'aiplan.lblName': 'Toernaam',
   'aiplan.namePh': 'bv. Blomme Toer Sept 2027',
   'aiplan.lblTowns': 'Dorpe / Areas om te besoek (een per reël)',
   'aiplan.townsPh': 'bv.\nSpringbok\nKamieskroon\nNieuwoudtville\nCalvinia',
   'aiplan.lblMaxKm': 'Maksimum km per dag tussen kampeerterreine',
-  'aiplan.generateBtn': '🤖 Genereer Toer Voorstel',
+  'aiplan.generateBtn': '🔍 Vind Kampeerterreine',
+  'aiplan.choicesTitle': 'Kies Jou Kampeerterreine',
+  'aiplan.choicesIntro': 'Meeste dorpe het meer as een kampeerterrein — kies self watter een jy wil besoek by elke dorp.',
+  'aiplan.buildRouteBtn': '🗺️ Bou Roete Met Hierdie Keuses',
   'aiplan.generating': '⏳ Besig om roete te beplan...',
   'aiplan.needName': 'Gee asseblief \'n toernaam',
   'aiplan.needTowns': 'Gee asseblief ten minste een dorp of area',
@@ -711,13 +714,16 @@ Object.assign(I18N.en, {
   'menu.aiplan.desc': 'Give AI a few towns or areas, and a route suggestion comes ready-made — you stay in full control to change or discard it.',
   'menu.aiplan.badge': '★ New',
   'aiplan.hdrTitle': '🤖 AI Tour Planner',
-  'aiplan.intro': 'Give AI a tour name and a few towns or areas you want to visit. AI suggests a route using campsites already in the app\'s database — you can change anything about it, or discard it entirely and plan your own. Nothing changes about an existing tour until YOU say so.',
+  'aiplan.intro': 'Give a tour name and a few towns or areas you want to visit. We show every campsite already in the app\'s database near each town — you choose which one to visit, then we build the route using real driving distances. Nothing changes about an existing tour until YOU say so.',
   'aiplan.lblName': 'Tour Name',
   'aiplan.namePh': 'e.g. Flower Tour Sept 2027',
   'aiplan.lblTowns': 'Towns / Areas to visit (one per line)',
   'aiplan.townsPh': 'e.g.\nSpringbok\nKamieskroon\nNieuwoudtville\nCalvinia',
   'aiplan.lblMaxKm': 'Maximum km per day between campsites',
-  'aiplan.generateBtn': '🤖 Generate Tour Suggestion',
+  'aiplan.generateBtn': '🔍 Find Campsites',
+  'aiplan.choicesTitle': 'Choose Your Campsites',
+  'aiplan.choicesIntro': 'Most towns have more than one campsite — choose which one you\'d like to visit at each town.',
+  'aiplan.buildRouteBtn': '🗺️ Build Route With These Choices',
   'aiplan.generating': '⏳ Planning route...',
   'aiplan.needName': 'Please give a tour name',
   'aiplan.needTowns': 'Please give at least one town or area',
@@ -6715,75 +6721,110 @@ async function planTourAiOrder(towns, candidates){
   return data.order;
 }
 
-async function runAiTourPlanner(){
+// ── New flow: the traveller picks their own campsite per town ──────────
+// Replaces the old "AI silently picks one campsite per town" step. Simpler,
+// faster, and no AI/network call needed for this part at all -- since the
+// traveller already knows which town they typed in which order, and now
+// also gets to see every real option the database has for it, they're in
+// a much better position to choose than an AI guessing on their behalf.
+// planTourAiOrder() above stays defined but unused for now, in case a
+// future "suggest one for me" shortcut ever wants it back.
+var aiPlanTownChoices = []; // [{town, candidates:[...], selectedNaam}]
+
+function findTownChoices(){
   var name = document.getElementById('aiPlanName').value.trim();
   var townsRaw = document.getElementById('aiPlanTowns').value;
-  var maxKm = parseInt(document.getElementById('aiPlanMaxKm').value) || 600;
-  var status = document.getElementById('aiPlanStatus');
-  var genBtn = document.getElementById('aiPlanGenBtn');
-
   if(!name){ toast(tr('aiplan.needName')); return; }
   var towns = townsRaw.split(/[\n,]/).map(function(s){return s.trim();}).filter(Boolean);
   if(!towns.length){ toast(tr('aiplan.needTowns')); return; }
 
-  var user = window.fbAuth && window.fbAuth.currentUser;
-  if(!user){ toast(tr('aiplan.loginRequired')); if(status) status.textContent = tr('aiplan.loginRequired'); return; }
+  aiPlanTownChoices = towns.map(function(t){
+    var found = findTownCandidates(t, 10); // show more options here than we used to send to AI -- the whole point now is real choice
+    return { town: t, candidates: found, selectedNaam: found.length ? found[0].naam : null };
+  });
 
-  genBtn.disabled = true;
-  if(status) status.textContent = tr('aiplan.generating');
+  if(!aiPlanTownChoices.some(function(tc){ return tc.candidates.length>0; })){
+    toast(tr('aiplan.noCandidatesAnyTown'));
+    return;
+  }
+
   document.getElementById('aiPlanResults').style.display = 'none';
+  renderAiPlanChoices();
+  document.getElementById('aiPlanChoices').style.display = 'block';
+}
 
+function renderAiPlanChoices(){
+  var container = document.getElementById('aiPlanChoicesList');
+  container.innerHTML = aiPlanTownChoices.map(function(tc, ti){
+    if(!tc.candidates.length){
+      return '<div style="background:#fff3f0;border:1px solid #f0c9c0;border-radius:8px;padding:10px 12px;margin-bottom:8px;">'
+        +'<div style="font-weight:700;color:#5D3A1A;font-size:.85rem;">'+esc(tc.town)+'</div>'
+        +'<div style="font-size:.76rem;color:#b00;margin-top:2px;">'+esc(tr('aiplan.townNoMatch',{town:tc.town}))+'</div>'
+      +'</div>';
+    }
+    var options = tc.candidates.map(function(c){
+      var checked = c.naam===tc.selectedNaam ? 'checked' : '';
+      var id = 'town'+ti+'_'+c.naam.replace(/[^a-zA-Z0-9]/g,'');
+      return '<label for="'+id+'" style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-radius:5px;cursor:pointer;">'
+        +'<input type="radio" id="'+id+'" name="townChoice'+ti+'" '+checked+' onchange="selectTownChoice('+ti+',\''+esc(c.naam).replace(/'/g,"\\'")+'\')" style="flex-shrink:0;">'
+        +'<span style="font-size:.82rem;color:#333;">'+esc(c.naam)+(c.dorp?' <span style="color:#888;">('+esc(c.dorp)+')</span>':'')+'</span>'
+      +'</label>';
+    }).join('');
+    return '<div style="background:#f7f5ef;border:1px solid #e2ddc9;border-radius:8px;padding:10px 12px;margin-bottom:8px;">'
+      +'<div style="font-weight:700;color:#5D3A1A;font-size:.85rem;margin-bottom:4px;">'+esc(tc.town)+'</div>'
+      +options
+    +'</div>';
+  }).join('');
+}
+
+function selectTownChoice(ti, naam){
+  if(aiPlanTownChoices[ti]) aiPlanTownChoices[ti].selectedNaam = naam;
+}
+
+async function buildAiPlanFromChoices(){
+  var maxKm = parseInt(document.getElementById('aiPlanMaxKm').value) || 600;
+  var buildBtn = document.getElementById('aiPlanBuildBtn');
+  var status = document.getElementById('aiPlanBuildStatus');
+
+  var byName = {};
+  aiPlanTownChoices.forEach(function(tc){ tc.candidates.forEach(function(c){ byName[c.naam]=c; }); });
+
+  // Anchors in the exact order the towns were typed, using each town's
+  // chosen campsite -- de-duplicated in case the same campsite got picked
+  // for two different towns.
+  var anchors = [], seen = {};
+  aiPlanTownChoices.forEach(function(tc){
+    if(!tc.selectedNaam) return;
+    var c = byName[tc.selectedNaam];
+    if(!c || seen[c.naam]) return;
+    seen[c.naam] = true;
+    anchors.push(c);
+  });
+
+  if(!anchors.length){ toast(tr('aiplan.noCandidatesAnyTown')); return; }
+
+  buildBtn.disabled = true;
+  if(status) status.textContent = tr('aiplan.calcDistances');
   try{
-    // Gather candidates per town, and warn (but continue) for any town
-    // with genuinely nothing nearby in our database -- matches "campsites
-    // that are on the program" as the actual constraint, honestly.
-    var allCandidates = [], seenCandNames = {}, anyMatched = false;
-    var skippedTowns = [];
-    towns.forEach(function(t){
-      var found = findTownCandidates(t, 6);
-      if(!found.length){ skippedTowns.push(t); return; }
-      anyMatched = true;
-      found.forEach(function(c){
-        if(!seenCandNames[c.naam]){ seenCandNames[c.naam]=true; allCandidates.push(c); }
-      });
-    });
-    if(!anyMatched){ toast(tr('aiplan.noCandidatesAnyTown')); if(status) status.textContent=''; genBtn.disabled=false; return; }
-    skippedTowns.forEach(function(t){ toast(tr('aiplan.townNoMatch',{town:t})); });
-
-    var orderNames = await planTourAiOrder(towns, allCandidates);
-    if(!orderNames.length){ toast(tr('aiplan.emptyOrder')); if(status) status.textContent=''; genBtn.disabled=false; return; }
-
-    var byName = {};
-    allCandidates.forEach(function(c){ byName[c.naam]=c; });
-    var anchors = orderNames.map(function(n){ return byName[n]; }).filter(Boolean);
-
-    if(status) status.textContent = tr('aiplan.calcDistances');
-
-    // Insert intermediate overnight stops wherever an anchor-to-anchor
-    // leg exceeds the traveller's chosen daily cap, using REAL OSRM
-    // driving distance (never straight-line) to decide. Bounded so a
-    // genuinely unreachable/uncovered stretch reports a warning instead
-    // of looping forever.
     var finalStops = [anchors[0]];
     var usedNames = {}; anchors.forEach(function(a){ usedNames[a.naam]=true; });
     for(var i=1;i<anchors.length;i++){
       await insertLegRespectingCap(finalStops, anchors[i], maxKm, usedNames, 0);
     }
 
-    aiPlanState.stops = finalStops.map(function(c,i){ return {naam:c.naam, dorp:c.dorp||'', provinsie:c.provinsie||'', gps:c.gps||'', legKm:null, warning:null, _idx:i}; });
-    // legKm gets filled in as part of insertLegRespectingCap's own OSRM
-    // calls above -- re-attach those computed distances now.
+    aiPlanState.stops = finalStops.map(function(c){ return {naam:c.naam, dorp:c.dorp||'', provinsie:c.provinsie||'', gps:c.gps||'', legKm:null, warning:null}; });
     for(var j=0;j<finalStops.length;j++){
       aiPlanState.stops[j].legKm = finalStops[j]._legKm!=null ? finalStops[j]._legKm : null;
       aiPlanState.stops[j].warning = finalStops[j]._warning || null;
     }
 
     renderAiPlanPreview();
+    document.getElementById('aiPlanChoices').style.display = 'none';
     document.getElementById('aiPlanResults').style.display = 'block';
   }catch(err){
     toast(tr('aiplan.aiError',{err: err.message||String(err)}));
   }finally{
-    genBtn.disabled = false;
+    buildBtn.disabled = false;
     if(status) status.textContent = '';
   }
 }
@@ -6873,7 +6914,9 @@ function addAiPlanStopManual(){
 function discardAiPlan(){
   gConfirm(tr('aiplan.discardConfirm'), function(){
     aiPlanState.stops = [];
+    aiPlanTownChoices = [];
     document.getElementById('aiPlanResults').style.display = 'none';
+    document.getElementById('aiPlanChoices').style.display = 'none';
     document.getElementById('aiPlanName').value = '';
     document.getElementById('aiPlanTowns').value = '';
   });
@@ -6928,6 +6971,25 @@ function applyAiPlanToTour(mode){
     localStorage.setItem('nayela_stops', JSON.stringify(tourStops));
     localStorage.setItem('nayela_tourinfo', JSON.stringify(tourInfo));
   }catch(e){}
+
+  // Also tick these campsites in Kampeerterrein Soektog's own selection,
+  // so its list/map shows them as chosen too -- not just the Tour Planner
+  // schedule. Added on top of whatever's already ticked there (never
+  // clears an existing selection), matched by name since that's the same
+  // robust approach saveSel()/restoreSel() already use elsewhere.
+  if(typeof sel !== 'undefined' && typeof camps !== 'undefined'){
+    aiPlanState.stops.forEach(function(s){
+      var idx = camps.findIndex(function(c){ return c && c.naam === s.naam; });
+      if(idx>=0 && sel.indexOf(idx)<0) sel.push(idx);
+    });
+    if(typeof saveSel === 'function') saveSel();
+    // If Campsite Search's own badge counters exist in the DOM right now
+    // (i.e. this tab has been opened at some point this session), keep
+    // them in sync immediately rather than leaving a stale count.
+    var selCntEl=document.getElementById('selCnt'), panCntEl=document.getElementById('panCnt');
+    if(selCntEl) selCntEl.textContent=sel.length;
+    if(panCntEl) panCntEl.textContent=sel.length;
+  }
 
   toast(tr(mode==='new' ? 'aiplan.appliedNew' : 'aiplan.appliedAppend', {n:newStops.length}));
   aiPlanState.stops = [];
@@ -7653,8 +7715,16 @@ I18N_REFRESH.push(function(){
           <span id="aiPlanMaxKmVal" style="font-weight:700;color:#5D3A1A;min-width:60px;text-align:right;">600 km</span>
         </div>
       </div>
-      <button type="button" id="aiPlanGenBtn" onclick="runAiTourPlanner()" data-i18n="aiplan.generateBtn" style="width:100%;background:#1976d2;color:#fff;border:none;border-radius:8px;padding:12px;font-size:.9rem;font-weight:700;cursor:pointer;touch-action:manipulation;">🤖 Genereer Toer Voorstel</button>
+      <button type="button" id="aiPlanGenBtn" onclick="findTownChoices()" data-i18n="aiplan.generateBtn" style="width:100%;background:#1976d2;color:#fff;border:none;border-radius:8px;padding:12px;font-size:.9rem;font-weight:700;cursor:pointer;touch-action:manipulation;">🔍 Vind Kampeerterreine</button>
       <div id="aiPlanStatus" style="text-align:center;font-size:.8rem;color:#5D3A1A;margin-top:8px;min-height:1.2em;"></div>
+    </div>
+
+    <div id="aiPlanChoices" style="display:none;">
+      <h3 data-i18n="aiplan.choicesTitle" style="font-size:.95rem;color:#5D3A1A;margin:18px 0 4px;">Kies Jou Kampeerterreine</h3>
+      <p data-i18n="aiplan.choicesIntro" style="font-size:.78rem;color:#777;margin-bottom:10px;">Meeste dorpe het meer as een kampeerterrein — kies self watter een jy wil besoek by elke dorp.</p>
+      <div id="aiPlanChoicesList"></div>
+      <button type="button" id="aiPlanBuildBtn" onclick="buildAiPlanFromChoices()" data-i18n="aiplan.buildRouteBtn" style="width:100%;background:var(--savanna,#2e7d32);color:#fff;border:none;border-radius:8px;padding:12px;font-size:.9rem;font-weight:700;cursor:pointer;margin-top:10px;touch-action:manipulation;">🗺️ Bou Roete Met Hierdie Keuses</button>
+      <div id="aiPlanBuildStatus" style="text-align:center;font-size:.8rem;color:#5D3A1A;margin-top:8px;min-height:1.2em;"></div>
     </div>
 
     <div id="aiPlanResults" style="display:none;">
@@ -8594,7 +8664,7 @@ applyLanguage();
 <div id="fbGate" class="hide">
   <div class="fb-card">
     <h2>🏕 NAYELA Camping</h2>
-    <p style="font-size:.7rem;color:#aaa;margin:-14px 0 12px;">Build: 2026-08-15-photos</p>
+    <p style="font-size:.7rem;color:#aaa;margin:-14px 0 12px;">Build: 2026-09-21-member-delete</p>
     <p>Meld aan om die gedeelde kampplek-databasis te gebruik.</p>
     <input id="fbEmail" type="email" placeholder="E-pos" autocomplete="username">
     <input id="fbPw" type="password" placeholder="Wagwoord" autocomplete="current-password">
@@ -8608,7 +8678,7 @@ applyLanguage();
 <div class="gc-bg" id="fbMemBg" style="z-index:2100;">
   <div class="fb-card" style="max-width:420px;max-height:80vh;overflow-y:auto;">
     <h2>👥 Lede</h2>
-    <p>Voeg lede by of skakel toegang af. Verwyder = onmiddellike toegangverbod, sonder om ander lede te raak.</p>
+    <p>Voeg lede by of verwyder hulle. Verwyder = permanent geskrap (geen herstel-knoppie nie). Om 'n lid terug te bring, voeg hom van voor af by.</p>
     <input id="fbNewMemEmail" type="email" placeholder="Nuwe lid se e-pos">
     <button id="fbAddMemBtn" style="margin-bottom:14px;">➕ Voeg lid by</button>
     <div id="fbMemList" style="text-align:left;"></div>
@@ -8874,14 +8944,31 @@ async function renderMembers(){
         +'<span class="fb-mem-email">'+d.id+(m.role==='admin'?' 👑':'')+'</span>'
         +usageLine
       +'</span>'+
-      '<span class="fb-mem-badge'+(m.active?'':' inactive')+'">'+(m.active?'aktief':'verwyder')+'</span>';
+      '<span class="fb-mem-badge'+(m.active?'':' inactive')+'">'+(m.active?'aktief':'gedeaktiveer')+'</span>';
+    // PERMANENT DELETE: "Verwyder" deletes the member's document from
+    // Firestore entirely (deleteDoc). There is intentionally NO "Herstel"
+    // (reinstate) button any more -- a removed member only comes back if the
+    // admin re-adds him from scratch with "Voeg lid by" (fresh record, login
+    // counter starts at zero). Legacy rows that were merely deactivated under
+    // the old behaviour get this delete button too, so they can be cleaned out.
     var btn = document.createElement('button');
-    btn.textContent = m.active ? 'Verwyder' : 'Herstel';
-    btn.style.background = m.active ? '#c62828' : '#2e7d32';
+    btn.textContent = 'Verwyder';
+    btn.style.background = '#c62828';
     btn.addEventListener('click', async function(){
+      var err = document.getElementById('fbMemErr'); err.textContent='';
       if(d.id===currentMember.email){ alert('Jy kan nie jouself verwyder nie.'); return; }
-      await setDoc(doc(db,'members', d.id), Object.assign({}, m, {active: !m.active}), {merge:true});
-      renderMembers();
+      if(!confirm('Verwyder '+d.id+' PERMANENT?\n\nDit kan nie ongedaan gemaak word nie. Om hom terug te bring moet jy hom van voor af bygevoeg.')) return;
+      btn.disabled = true;
+      try{
+        await deleteDoc(doc(db,'members', d.id));
+        await renderMembers();
+        err.style.color = '#2e7d32';
+        err.textContent = d.id+' is heeltemal verwyder. Vergeet nie om sy aanmelding ook in Firebase Console \u2192 Authentication \u2192 Users te skrap nie.';
+      }catch(e){
+        btn.disabled = false;
+        err.style.color = '#c62828';
+        err.textContent = 'Kon nie verwyder nie: '+e.message;
+      }
     });
     row.appendChild(btn);
     wrap.appendChild(row);
@@ -8889,11 +8976,12 @@ async function renderMembers(){
 }
 document.getElementById('fbAddMemBtn').addEventListener('click', async function(){
   var email = document.getElementById('fbNewMemEmail').value.trim().toLowerCase();
-  var err = document.getElementById('fbMemErr'); err.textContent='';
+  var err = document.getElementById('fbMemErr'); err.textContent=''; err.style.color='#c62828';
   if(!email || email.indexOf('@')<0){ err.textContent='Gee \'n geldige e-posadres.'; return; }
   try{
     await setDoc(doc(db,'members', email), {active:true, role:'member'}, {merge:true});
     document.getElementById('fbNewMemEmail').value='';
+    err.style.color='#2e7d32';
     err.textContent = 'Bygevoeg. Skep nou hierdie persoon se aanmelding in Firebase Console \u2192 Authentication \u2192 Users, en gee hulle die wagwoord.';
     renderMembers();
   }catch(e){ err.textContent = 'Kon nie byvoeg nie: '+e.message; }
