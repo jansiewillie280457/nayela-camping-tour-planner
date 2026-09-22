@@ -164,13 +164,25 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(180deg,#
    so clicking "Skrap" appeared to silently do nothing. 1200 clears every
    other overlay/toast z-index in the app (highest previous was 1100) so
    this always ends up on top regardless of which screen it's opened from. */
-.gc-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1200;display:none;align-items:center;justify-content:center;padding:16px;}
+.gc-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2200;display:none;align-items:center;justify-content:center;padding:16px;}
 /* ── Firebase login gate & members panel ──────────────────────────────
    z-index:2000 -- above every other overlay in the app (gc-bg is the next
    highest at 1200) since nothing should ever be usable underneath it while
    someone is logged out or not yet an approved member. */
 #fbGate{position:fixed;inset:0;background:linear-gradient(135deg,#1b5e20,#2e7d32);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;}
 #fbGate.hide{display:none;}
+#viewGate{position:fixed;inset:0;background:linear-gradient(135deg,#1b5e20,#2e7d32);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;}
+#viewGate.hide{display:none;}
+#viewBanner{display:none;background:#fff3e0;color:#e65100;padding:9px 14px;text-align:center;font-weight:700;font-size:.82rem;border-bottom:2px solid #e65100;position:sticky;top:0;z-index:1500;}
+/* View-only lockdown: every button in the Tour Planner is hidden except
+   the tab bar itself, and every form control is disabled -- this is the
+   ONE place that decides "can see everything, can change nothing", so a
+   new tab or table added later is automatically read-only too instead of
+   needing to be remembered each time. */
+body.view-only-mode #pg-tour button:not(.tab-btn){display:none!important;}
+body.view-only-mode #pg-tour input:disabled,
+body.view-only-mode #pg-tour select:disabled,
+body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;background:#f7f7f7;}
 .fb-card{background:#fff;border-radius:14px;padding:28px 24px;max-width:360px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.35);}
 .fb-card h2{margin:0 0 4px;color:#1b5e20;font-size:1.3rem;}
 .fb-card p{margin:0 0 18px;color:#666;font-size:.85rem;}
@@ -245,7 +257,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(180deg,#
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v2.9 (22 Sep Spyskaart)</div>
+  <div class="hdr-ver">v3.0 (22 Sep Deel Toer)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -4260,6 +4272,7 @@ if(window.matchMedia){
     <label class="back-btn" for="importTourFileTour" style="touch-action:manipulation;display:inline-block;vertical-align:middle;" data-i18n="tour.hdr.import">📥 Voer Toerplan In</label>
     <input type="file" id="importTourFileTour" accept=".json,application/json" style="display:none" onchange="importTourFile(this)">
     <button class="back-btn" id="aiFillAllBtn" onclick="generateAllCampsiteInfo()" style="background:#1976d2;border-color:#1976d2;" data-i18n="tour.hdr.aiFillAll" title="Vul die Omgewing- & Kampplek-inligting outomaties in vir elke stop wat dit nog nie het nie">🤖 AI Vul Alles In</button>
+    <button class="back-btn" id="shareTourBtn" onclick="openShareTourPanel()" style="background:#00897b;border-color:#00897b;" data-i18n="tour.hdr.share">🔗 Deel Toer</button>
   </div>
   <div id="aiFillAllStatus" style="text-align:right;font-size:.75rem;color:#666;padding:2px 6px 0;"></div>
 
@@ -4531,6 +4544,36 @@ Object.assign(I18N.af, {
   'tour.hdr.save': '💾 Stoor Toer',
   'tour.hdr.import': '📥 Voer Toerplan In',
   'tour.hdr.aiFillAll': '🤖 AI Vul Alles In',
+  'tour.hdr.share': '🔗 Deel Toer',
+
+  'viewmode.loading': 'Laai gedeelde toer...',
+  'viewmode.notFound': 'Hierdie skakel bestaan nie (meer) nie.',
+  'viewmode.revoked': 'Hierdie skakel is nie meer geldig nie. Vra die toer-eienaar vir \'n nuwe skakel.',
+  'viewmode.error': 'Kon nie die toer laai nie',
+  'viewmode.banner': '{name} — jy kyk as {viewer}. Jy kan niks verander nie.',
+
+  'share.title': '🔗 Deel Toer',
+  'share.intro': 'Gee toer-lede \'n skakel om die toer te sien — hulle kan niks verander nie. Skakels werk outomaties by en wys jou jongste inligting.',
+  'share.namePh': 'Naam van die persoon',
+  'share.addBtn': '➕ Skep Skakel',
+  'share.cancelAllBtn': '✕ Kanselleer Alle Deel-skakels',
+  'share.closeBtn': 'Sluit',
+  'share.loading': 'Laai...',
+  'share.noneYet': 'Hierdie toer het nog geen deel-skakel nie.',
+  'share.createBtn': '🔗 Skep Deel-skakel',
+  'share.noViewers': 'Nog geen kykers bygevoeg nie.',
+  'share.created': 'Deel-skakel geskep ✓',
+  'share.createFail': 'Kon nie skep nie',
+  'share.needName': 'Gee \'n naam vir hierdie persoon.',
+  'share.viewerAdded': '{name} se skakel geskep en gekopieer ✓',
+  'share.addFail': 'Kon nie skakel skep nie',
+  'share.removeConfirm': 'Verwyder {name} se toegang? Sy skakel sal nie meer werk nie.',
+  'share.removed': 'Toegang verwyder',
+  'share.cancelConfirm': 'Kanselleer ALLE deel-skakels vir hierdie toer? Almal se skakels sal ophou werk.',
+  'share.cancelled': 'Alle deel-skakels gekanselleer',
+  'share.copied': 'Skakel gekopieer ✓',
+  'share.copyManually': 'Kopieer hierdie skakel:',
+  'share.loadFail': 'Kon nie laai nie',
   'tour.hdr.aiFillAllNone': 'Elke stop het reeds inligting — niks om te genereer nie.',
   'tour.hdr.aiFillAllProgress': 'Genereer... ({done}/{total})',
   'tour.hdr.aiFillAllDone': '✓ {n} kampplek-beskrywings gegenereer',
@@ -4860,6 +4903,36 @@ Object.assign(I18N.en, {
   'tour.hdr.save': '💾 Save Tour',
   'tour.hdr.import': '📥 Import Tour Plan',
   'tour.hdr.aiFillAll': '🤖 AI Fill All In',
+  'tour.hdr.share': '🔗 Share Tour',
+
+  'viewmode.loading': 'Loading shared tour...',
+  'viewmode.notFound': 'This link no longer exists.',
+  'viewmode.revoked': 'This link is no longer valid. Ask the tour owner for a new link.',
+  'viewmode.error': 'Could not load the tour',
+  'viewmode.banner': '{name} — you are viewing as {viewer}. You cannot change anything.',
+
+  'share.title': '🔗 Share Tour',
+  'share.intro': "Give tour members a link to view the tour — they can't change anything. Links update automatically and always show your latest information.",
+  'share.namePh': "Person's name",
+  'share.addBtn': '➕ Create Link',
+  'share.cancelAllBtn': '✕ Cancel All Share Links',
+  'share.closeBtn': 'Close',
+  'share.loading': 'Loading...',
+  'share.noneYet': 'This tour has no share link yet.',
+  'share.createBtn': '🔗 Create Share Link',
+  'share.noViewers': 'No viewers added yet.',
+  'share.created': 'Share link created ✓',
+  'share.createFail': 'Could not create',
+  'share.needName': 'Give this person a name.',
+  'share.viewerAdded': "{name}'s link created and copied ✓",
+  'share.addFail': 'Could not create link',
+  'share.removeConfirm': "Remove {name}'s access? Their link will stop working.",
+  'share.removed': 'Access removed',
+  'share.cancelConfirm': "Cancel ALL share links for this tour? Everyone's link will stop working.",
+  'share.cancelled': 'All share links cancelled',
+  'share.copied': 'Link copied ✓',
+  'share.copyManually': 'Copy this link:',
+  'share.loadFail': 'Could not load',
   'tour.hdr.aiFillAllNone': 'Every stop already has info — nothing to generate.',
   'tour.hdr.aiFillAllProgress': 'Generating... ({done}/{total})',
   'tour.hdr.aiFillAllDone': '✓ Generated {n} campsite descriptions',
@@ -5224,6 +5297,8 @@ function showTab(id){
   if(id==='tb-packlist') renderPackList();
   if(id==='tb-menu') renderMenu();
   if(id==='tb-overview') renderOverview();
+  lockdownViewOnlyInputs();
+  if(!window.IS_VIEW_ONLY && window.pushSharedTourSnapshot) window.pushSharedTourSnapshot();
 }
 
 // ── Tour page init ────────────────────────────────────
@@ -5233,7 +5308,95 @@ function initTourPage(){
   loadTourForm();
   renderOverview();
   populateCSDatalist();
+  lockdownViewOnlyInputs();
 }
+
+// ── Deel Toer (share a tour, view-only) ─────────────────────────────
+// Disables every form control in the Tour Planner when this browser is
+// showing someone else's shared tour. Re-run after every tab switch and
+// every re-render, since re-rendering recreates the DOM (and so wipes any
+// disabled state set on the previous version of those elements).
+function lockdownViewOnlyInputs(){
+  if(!window.IS_VIEW_ONLY) return;
+  document.querySelectorAll('#pg-tour input, #pg-tour select, #pg-tour textarea').forEach(function(el){ el.disabled = true; });
+}
+
+async function openShareTourPanel(){
+  document.getElementById('shareTourBg').classList.add('show');
+  await renderShareTourPanel();
+}
+async function renderShareTourPanel(){
+  var body = document.getElementById('shareTourBody');
+  var addRow = document.getElementById('shareTourAddRow');
+  var cancelBtn = document.getElementById('shareCancelAllBtn');
+  var err = document.getElementById('shareTourErr'); err.textContent='';
+  body.innerHTML = tr('share.loading');
+  try{
+    var info = await window.getShareViewers();
+    if(!info){
+      body.innerHTML = '<p style="color:#888;">'+tr('share.noneYet')+'</p><button onclick="createShareClick()" class="btn-tp btn-add">'+tr('share.createBtn')+'</button>';
+      addRow.style.display='none'; cancelBtn.style.display='none';
+      return;
+    }
+    addRow.style.display=''; cancelBtn.style.display='';
+    if(!info.viewers.length){
+      body.innerHTML = '<p style="color:#888;">'+tr('share.noViewers')+'</p>';
+    } else {
+      body.innerHTML = info.viewers.map(function(v){
+        var link = location.origin+location.pathname+'?view='+info.shareId+'.'+v.token;
+        return '<div style="display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid #eee;">'
+          +'<span style="flex:1;overflow:hidden;text-overflow:ellipsis;">'+esc(v.name)+'</span>'
+          +'<button data-link="'+esc(link)+'" onclick="copyShareLink(this.getAttribute(&#39;data-link&#39;))" style="background:#1565c0;" title="Copy link">📋</button>'
+          +'<button data-token="'+esc(v.token)+'" data-name="'+esc(v.name)+'" onclick="removeShareViewerClick(this.getAttribute(&#39;data-token&#39;),this.getAttribute(&#39;data-name&#39;))" style="background:#c62828;" title="Remove">✕</button>'
+          +'</div>';
+      }).join('');
+    }
+  }catch(e){ err.textContent = tr('share.loadFail')+': '+e.message; body.innerHTML=''; }
+}
+async function createShareClick(){
+  var err = document.getElementById('shareTourErr'); err.textContent='';
+  try{ await window.createTourShare(); await renderShareTourPanel(); toast(tr('share.created')); }
+  catch(e){ err.textContent = tr('share.createFail')+': '+e.message; }
+}
+async function addShareViewerClick(){
+  var nameEl = document.getElementById('shareViewerName');
+  var name = nameEl.value.trim();
+  var err = document.getElementById('shareTourErr'); err.textContent='';
+  if(!name){ err.textContent = tr('share.needName'); return; }
+  try{
+    var token = await window.addShareViewer(name);
+    nameEl.value='';
+    var info = await window.getShareViewers();
+    await renderShareTourPanel();
+    var link = location.origin+location.pathname+'?view='+info.shareId+'.'+token;
+    copyShareLink(link);
+    toast(tr('share.viewerAdded',{name:name}));
+  }catch(e){ err.textContent = tr('share.addFail')+': '+e.message; }
+}
+function removeShareViewerClick(token,name){
+  gConfirm(tr('share.removeConfirm',{name:name}), async function(){
+    try{ await window.removeShareViewer(token); await renderShareTourPanel(); toast(tr('share.removed')); }
+    catch(e){ document.getElementById('shareTourErr').textContent = e.message; }
+  });
+}
+function cancelShareClick(){
+  gConfirm(tr('share.cancelConfirm'), async function(){
+    try{ await window.cancelTourShare(); await renderShareTourPanel(); toast(tr('share.cancelled')); }
+    catch(e){ document.getElementById('shareTourErr').textContent = e.message; }
+  });
+}
+function copyShareLink(link){
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(link).then(function(){ toast(tr('share.copied')); }).catch(function(){ prompt(tr('share.copyManually'), link); });
+  } else {
+    prompt(tr('share.copyManually'), link);
+  }
+}
+// Best-effort auto-sync: catches edits even if the admin never switches
+// tabs (showTab's hook is the primary path -- this is the fallback for a
+// long single-tab editing session). Safe to run unconditionally: the
+// function itself returns immediately if this tour has no active share.
+setInterval(function(){ if(!window.IS_VIEW_ONLY && window.pushSharedTourSnapshot) window.pushSharedTourSnapshot(); }, 20000);
 
 function loadTourForm(){
   // Always assign (not just when truthy) so switching to a tour with blank
@@ -8873,16 +9036,40 @@ applyLanguage();
 <div id="tourPrintArea"></div>
 
 <!-- ── Firebase login gate ─────────────────────────────────────────── -->
+<div id="viewBanner"><span id="viewBannerText"></span></div>
+<div id="viewGate" class="hide">
+  <div class="fb-card" style="text-align:center;">
+    <h2>🏕 NAYELA Camping</h2>
+    <p id="viewGateMsg">Laai gedeelde toer...</p>
+  </div>
+</div>
+
 <div id="fbGate" class="hide">
   <div class="fb-card">
     <h2>🏕 NAYELA Camping</h2>
-    <p style="font-size:.7rem;color:#aaa;margin:-14px 0 12px;">Build: 2026-09-22-tour-menu</p>
+    <p style="font-size:.7rem;color:#aaa;margin:-14px 0 12px;">Build: 2026-09-22-share-tour</p>
     <p>Meld aan om die gedeelde kampplek-databasis te gebruik.</p>
     <input id="fbEmail" type="email" placeholder="E-pos" autocomplete="username">
     <input id="fbPw" type="password" placeholder="Wagwoord" autocomplete="current-password">
     <button id="fbLoginBtn">Meld aan</button>
     <div id="fbErr"></div>
     <div id="fbStatus">Gaan lidmaatskap na...</div>
+  </div>
+</div>
+
+<!-- ── Deel Toer (share a tour, view-only) panel ───────────────────── -->
+<div class="gc-bg" id="shareTourBg" style="z-index:2100;">
+  <div class="fb-card" style="max-width:460px;max-height:80vh;overflow-y:auto;">
+    <h2 data-i18n="share.title">🔗 Deel Toer</h2>
+    <p data-i18n="share.intro">Gee toer-lede 'n skakel om die toer te sien — hulle kan niks verander nie. Skakels werk outomaties by en wys jou jongste inligting.</p>
+    <div id="shareTourBody">Laai...</div>
+    <div id="shareTourAddRow" style="display:none;margin-top:12px;">
+      <input id="shareViewerName" type="text" placeholder="Naam van die persoon" data-i18n-ph="share.namePh">
+      <button id="shareAddBtn" onclick="addShareViewerClick()" data-i18n="share.addBtn">➕ Skep Skakel</button>
+    </div>
+    <div id="shareTourErr" style="color:#c62828;font-size:.82rem;margin-top:8px;"></div>
+    <button id="shareCancelAllBtn" onclick="cancelShareClick()" style="display:none;margin-top:14px;background:#c62828;" data-i18n="share.cancelAllBtn">✕ Kanselleer Alle Deel-skakels</button>
+    <button style="margin-top:8px;background:#888;" onclick="document.getElementById(&#39;shareTourBg&#39;).classList.remove(&#39;show&#39;)" data-i18n="share.closeBtn">Sluit</button>
   </div>
 </div>
 
@@ -8932,6 +9119,158 @@ const firebaseConfig = {
 const fbApp = initializeApp(firebaseConfig);
 const auth = getAuth(fbApp);
 const db = getFirestore(fbApp);
+
+// ══════════════════════════════════════════════════════
+// DEEL TOER — view-only tour sharing
+// ══════════════════════════════════════════════════════
+// One Firestore doc per shared tour: `tour_shares/{shareId}`. shareId
+// itself is a long random token and acts as the "capability" -- anyone
+// who has it can READ that one document (see the Firestore rule this
+// needs), but only a signed-in member can WRITE one. Per-person links are
+// `?view=<shareId>.<viewerToken>`; the viewer list lives inside the same
+// doc so one person can be individually removed (their token deleted from
+// the array) without disturbing anyone else's link, and the whole tour's
+// sharing can be cancelled in one action by deleting the doc.
+function randToken(bytes){
+  var a = new Uint8Array(bytes);
+  crypto.getRandomValues(a);
+  return Array.from(a, function(b){ return b.toString(16).padStart(2,'0'); }).join('');
+}
+function currentTourPayload(){
+  return {
+    tourInfo: window.tourInfo || {},
+    tourStops: window.tourStops || [],
+    tourMembers: window.tourMembers || [],
+    vehicleInfo: window.vehicleInfo || {},
+    emergencyList: window.emergencyList || [],
+    depositList: window.depositList || [],
+    packData: window.packData || {},
+    packCustomItems: window.packCustomItems || {},
+    menuList: window.menuList || []
+  };
+}
+window.pushSharedTourSnapshot = async function(){
+  var sid = localStorage.getItem('nayela_share_id');
+  if(!sid) return;
+  try{
+    await setDoc(doc(db,'tour_shares',sid), {
+      ownerEmail: currentMember ? currentMember.email : '',
+      tourName: (window.tourInfo && window.tourInfo.name) || '',
+      updatedAt: new Date().toISOString(),
+      data: currentTourPayload()
+    }, {merge:true});
+  }catch(e){ console.warn('Deel Toer: sync failed', e); }
+};
+window.createTourShare = async function(){
+  var sid = randToken(16);
+  await setDoc(doc(db,'tour_shares',sid), {
+    ownerEmail: currentMember ? currentMember.email : '',
+    tourName: (window.tourInfo && window.tourInfo.name) || '',
+    updatedAt: new Date().toISOString(),
+    viewers: [],
+    data: currentTourPayload()
+  });
+  localStorage.setItem('nayela_share_id', sid);
+  return sid;
+};
+window.getShareViewers = async function(){
+  var sid = localStorage.getItem('nayela_share_id');
+  if(!sid) return null;
+  var snap = await getDoc(doc(db,'tour_shares',sid));
+  if(!snap.exists()){ localStorage.removeItem('nayela_share_id'); return null; }
+  return {shareId: sid, viewers: snap.data().viewers || []};
+};
+window.addShareViewer = async function(name){
+  var sid = localStorage.getItem('nayela_share_id');
+  if(!sid) throw new Error('no active share');
+  var snap = await getDoc(doc(db,'tour_shares',sid));
+  if(!snap.exists()) throw new Error('share not found');
+  var viewers = snap.data().viewers || [];
+  var token = randToken(16);
+  viewers.push({token:token, name:name, active:true, addedAt:new Date().toISOString()});
+  await setDoc(doc(db,'tour_shares',sid), {viewers:viewers}, {merge:true});
+  return token;
+};
+window.removeShareViewer = async function(token){
+  var sid = localStorage.getItem('nayela_share_id');
+  if(!sid) return;
+  var snap = await getDoc(doc(db,'tour_shares',sid));
+  if(!snap.exists()) return;
+  var viewers = (snap.data().viewers || []).filter(function(v){ return v.token !== token; });
+  await setDoc(doc(db,'tour_shares',sid), {viewers:viewers}, {merge:true});
+};
+window.cancelTourShare = async function(){
+  var sid = localStorage.getItem('nayela_share_id');
+  if(!sid) return;
+  await deleteDoc(doc(db,'tour_shares',sid));
+  localStorage.removeItem('nayela_share_id');
+};
+
+// ── Viewer boot: runs instead of the normal login flow whenever the URL
+// carries ?view=<shareId>.<token> ──────────────────────────────────────
+window.IS_VIEW_ONLY = false;
+var VIEW_PARAM = new URLSearchParams(location.search).get('view');
+if(VIEW_PARAM && VIEW_PARAM.indexOf('.') > -1){
+  window.IS_VIEW_ONLY = true;
+  bootViewerMode(VIEW_PARAM);
+}
+function applySharedData(d){
+  window.tourInfo = d.tourInfo || {};
+  window.tourStops = d.tourStops || [];
+  window.tourMembers = d.tourMembers || [];
+  window.vehicleInfo = d.vehicleInfo || {kmL:6,fuelPrice:20.02,make:'',reg:''};
+  window.emergencyList = d.emergencyList || [];
+  window.depositList = d.depositList || [];
+  window.packData = d.packData || {};
+  window.packCustomItems = d.packCustomItems || {};
+  window.menuList = d.menuList || [];
+}
+function refreshTourViews(){
+  ['loadTourForm','renderOverview','renderSchedule','renderMembers','loadVehicleForm',
+   'renderVehicleTable','renderCampCosts','renderEmergency','renderDeposits',
+   'renderPackList','renderMenu'].forEach(function(fn){
+    if(typeof window[fn] === 'function') window[fn]();
+  });
+  if(typeof window.lockdownViewOnlyInputs === 'function') window.lockdownViewOnlyInputs();
+}
+function viewGateShow(msg){
+  document.getElementById('viewGate').classList.remove('hide');
+  document.getElementById('viewGateMsg').textContent = msg || '';
+}
+function viewGateHide(){
+  document.getElementById('viewGate').classList.add('hide');
+}
+async function bootViewerMode(param){
+  var parts = param.split('.');
+  var sid = parts[0], token = parts.slice(1).join('.');
+  document.body.classList.add('view-only-mode');
+  viewGateShow('Laai gedeelde toer... / Loading shared tour...');
+  try{
+    var ref = doc(db,'tour_shares', sid);
+    var snap = await getDoc(ref);
+    if(!snap.exists()){ viewGateShow('Hierdie skakel bestaan nie (meer) nie. / This link no longer exists.'); return; }
+    var d = snap.data();
+    var v = (d.viewers || []).find(function(x){ return x.token === token && x.active; });
+    if(!v){ viewGateShow('Hierdie skakel is nie meer geldig nie. / This link is no longer valid.'); return; }
+    applySharedData(d.data || {});
+    viewGateHide();
+    var bannerText = (d.tourName || '(tour)') + ' — viewing as ' + v.name + '. You cannot change anything.';
+    document.getElementById('viewBannerText').textContent = bannerText;
+    document.getElementById('viewBanner').style.display = 'block';
+    if(typeof window.showPage === 'function') window.showPage('pg-tour');
+    refreshTourViews();
+    onSnapshot(ref, function(s2){
+      if(!s2.exists()){ viewGateShow('Hierdie skakel is nie meer geldig nie. / This link is no longer valid.'); document.getElementById('viewBanner').style.display='none'; return; }
+      var d2 = s2.data();
+      var v2 = (d2.viewers || []).find(function(x){ return x.token === token && x.active; });
+      if(!v2){ viewGateShow('Hierdie skakel is nie meer geldig nie. / This link is no longer valid.'); document.getElementById('viewBanner').style.display='none'; return; }
+      applySharedData(d2.data || {});
+      refreshTourViews();
+    });
+  }catch(e){
+    viewGateShow('Kon nie die toer laai nie: ' + e.message);
+  }
+}
 // Exposed on window so plain (non-module) functions elsewhere in the app
 // -- like generateCampsiteInfo() -- can grab the current user's ID token
 // to send along with requests to our own Netlify functions (e.g. the AI
@@ -9221,6 +9560,7 @@ document.getElementById('fbLoginBtn').addEventListener('click', async function()
 });
 
 onAuthStateChanged(auth, async function(user){
+  if(window.IS_VIEW_ONLY) return; // a viewer never sees the login gate
   if(!user){
     currentMember=null;
     gateShow('');
