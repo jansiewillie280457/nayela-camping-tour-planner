@@ -3339,13 +3339,13 @@ function generateCampsiteFacilityInfo(){
   if(status) status.textContent = tr('cs.mRemAiGenerating');
 
   user.getIdToken().then(function(idToken){
-    return fetch('/.netlify/functions/campsite-info', {
+    return fetch(AI_CAMPSITE_ENDPOINT, {
       method:'POST',
       headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+idToken },
       body: JSON.stringify({ name:name, town:town, province:province, gps:gps, lang:lang, mode:'facilities' })
     });
   })
-  .then(function(r){ return r.json().then(function(data){ return {ok:r.ok, data:data}; }); })
+  .then(aiParseResponse)
   .then(function(res){
     if(!res.ok || !res.data || !res.data.text){
       throw new Error((res.data && (res.data.error||res.data.detail)) || 'AI error');
@@ -3356,7 +3356,7 @@ function generateCampsiteFacilityInfo(){
   })
   .catch(function(err){
     console.error('generateCampsiteFacilityInfo failed:', err);
-    if(status) status.textContent = tr('cs.mRemAiError');
+    if(status) status.textContent = tr('cs.mRemAiError') + aiErrMsg(err);
   })
   .finally(function(){
     if(btn) btn.disabled = false;
@@ -6276,6 +6276,31 @@ function updateStopHighlight(i, val){
   try{localStorage.setItem('nayela_stops', JSON.stringify(tourStops));}catch(e){}
 }
 
+// ── AI response helper ───────────────────────────────────
+// The AI now runs as a Netlify EDGE function at /api/campsite-info (the
+// old /.netlify/functions/ version was cut off by Netlify's 10-second
+// limit while Claude was still busy with its web search). If the server
+// ever returns something that isn't JSON (e.g. a Netlify timeout page),
+// this still produces a readable error instead of a silent failure.
+var AI_CAMPSITE_ENDPOINT = '/api/campsite-info';
+function aiParseResponse(r){
+  return r.text().then(function(txt){
+    var data = null;
+    try{ data = JSON.parse(txt); }catch(e){}
+    if(!data || typeof data!=='object'){
+      data = { error: 'HTTP '+r.status+(txt ? ': '+String(txt).slice(0,160) : '') };
+    } else if(!r.ok && !data.error && (data.errorMessage || data.message)){
+      data.error = data.errorMessage || data.message;
+    }
+    if(r.status===404 && !data.error) data.error = 'AI endpoint not found (404) - edge function not deployed';
+    return {ok:r.ok, data:data};
+  });
+}
+function aiErrMsg(err){
+  var m = (err && err.message) ? err.message : String(err||'');
+  return m ? ' ('+m.slice(0,200)+')' : '';
+}
+
 // ── AI campsite/area info ────────────────────────────────
 // Calls our own Netlify serverless function (netlify/functions/
 // campsite-info.js), which holds the Anthropic API key privately and
@@ -6324,7 +6349,7 @@ function generateCampsiteInfo(i){
   var lang = (typeof LANG!=='undefined' && LANG==='en') ? 'en' : 'af';
 
   user.getIdToken().then(function(idToken){
-    return fetch('/.netlify/functions/campsite-info', {
+    return fetch(AI_CAMPSITE_ENDPOINT, {
       method:'POST',
       headers:{
         'Content-Type':'application/json',
@@ -6333,7 +6358,7 @@ function generateCampsiteInfo(i){
       body: JSON.stringify({ name:s.name, town:town, province:province, gps:effectiveGps, lang:lang })
     });
   })
-  .then(function(r){ return r.json().then(function(data){ return {ok:r.ok, data:data}; }); })
+  .then(aiParseResponse)
   .then(function(res){
     if(!res.ok || !res.data || !res.data.text){
       throw new Error((res.data && (res.data.error||res.data.detail)) || 'AI error');
@@ -6359,8 +6384,8 @@ function generateCampsiteInfo(i){
   })
   .catch(function(err){
     console.error('generateCampsiteInfo failed:', err);
-    if(status) status.textContent = tr('tour.schedule.aiError');
-    toast(tr('tour.schedule.aiError'));
+    if(status) status.textContent = tr('tour.schedule.aiError') + aiErrMsg(err);
+    toast(tr('tour.schedule.aiError') + aiErrMsg(err));
   })
   .finally(function(){
     if(btn) btn.disabled = false;
@@ -6391,6 +6416,7 @@ function generateAllCampsiteInfo(){
   }
   var btn = document.getElementById('aiFillAllBtn');
   if(btn) btn.disabled = true;
+  window._aiLastError = '';
   var done = 0;
   function updateProgress(){
     if(overallStatus) overallStatus.textContent = tr('tour.hdr.aiFillAllProgress', {done:done, total:targets.length});
@@ -6404,6 +6430,7 @@ function generateAllCampsiteInfo(){
         overallStatus.textContent = tr('tour.hdr.aiFillAllDone', {n:targets.length});
         setTimeout(function(){ overallStatus.textContent=''; }, 4000);
       }
+      if(window._aiLastError){ toast(tr('tour.schedule.aiError') + ' (' + String(window._aiLastError).slice(0,200) + ')'); }
       // Switch to the Skedule tab and re-render so every freshly-filled
       // notes box is visible without needing a manual refresh.
       var schedPane = document.getElementById('tb-schedule');
@@ -6460,13 +6487,13 @@ function generateCampsiteInfoSilent(i){
   var lang = (typeof LANG!=='undefined' && LANG==='en') ? 'en' : 'af';
 
   return user.getIdToken().then(function(idToken){
-    return fetch('/.netlify/functions/campsite-info', {
+    return fetch(AI_CAMPSITE_ENDPOINT, {
       method:'POST',
       headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+idToken },
       body: JSON.stringify({ name:s.name, town:town, province:province, gps:effectiveGps, lang:lang })
     });
   })
-  .then(function(r){ return r.json().then(function(data){ return {ok:r.ok, data:data}; }); })
+  .then(aiParseResponse)
   .then(function(res){
     if(res.ok && res.data && res.data.text){
       tourStops[i].notes = res.data.text;
@@ -6474,10 +6501,12 @@ function generateCampsiteInfoSilent(i){
       try{localStorage.setItem('nayela_stops', JSON.stringify(tourStops));}catch(e){}
     } else {
       console.error('generateCampsiteInfoSilent failed for stop', i, res.data);
+      window._aiLastError = (res.data && res.data.error) || ('HTTP error');
     }
   })
   .catch(function(err){
     console.error('generateCampsiteInfoSilent failed for stop', i, err);
+    window._aiLastError = (err && err.message) || String(err);
   });
 }
 
