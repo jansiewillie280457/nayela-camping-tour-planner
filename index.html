@@ -646,6 +646,7 @@ Object.assign(I18N.af, {
   'aiplan.appliedNew': 'Nuwe toer geskep met {n} stops ✓',
   'aiplan.appliedAppend': '{n} stops by jou huidige toer gevoeg ✓',
   'aiplan.lblRoundTrip': '🏠 Ry terug huis toe',
+  'aiplan.noGps': '⚠️ Geen GPS vir "{name}" nie, so die afstand is onbekend. Voeg GPS by via Kampeerterrein Soektog → Wysig.',
   'aiplan.roundTripHint': 'Eindig weer by jou eerste dorp. Jy kan ook self die terugroete se dorpe onderaan die lys tik.',
   'menu.recipes.title': 'Kampeer Resepte',
   'menu.recipes.desc': 'Voeg jou gunsteling kampeerresepte vir die toer by en blaai daardeur.',
@@ -765,6 +766,7 @@ Object.assign(I18N.en, {
   'aiplan.appliedNew': 'New tour created with {n} stops ✓',
   'aiplan.appliedAppend': '{n} stops added to your current tour ✓',
   'aiplan.lblRoundTrip': '🏠 Drive back home',
+  'aiplan.noGps': '⚠️ No GPS for "{name}", so the distance is unknown. Add GPS via Campsite Search → Edit.',
   'aiplan.roundTripHint': 'Ends back at your first town. You can also type the return route\'s towns yourself at the bottom of the list.',
   'menu.recipes.title': 'Camping Recipes',
   'menu.recipes.desc': 'Add and browse your favourite camping recipes for the trip.',
@@ -7138,7 +7140,29 @@ async function buildAiPlanFromChoices(){
 function aiPlanStopCopy(c){
   var o = Object.assign({}, c);
   delete o._legKm; delete o._warning;
+  o.gps = aiPlanUsableGps(c);
   return o;
+}
+
+// The shared (Firestore) campsite list can hold a record whose GPS is
+// empty or unreadable even though the same campsite has a perfectly good
+// coordinate elsewhere -- e.g. "BATELEUR" showed "?km" on both legs of a
+// Nelspruit -> Yellow Sands round trip while the built-in list has its
+// GPS. Before giving up on a leg, try: this record, then any other record
+// in the live list with the same name, then the built-in DATA list.
+function aiPlanUsableGps(c){
+  if(!c) return '';
+  if(gpsToLatLng(c.gps)) return String(c.gps).trim();
+  var key = (c.naam||'').trim().toLowerCase();
+  if(!key) return c.gps || '';
+  var pools = [ (typeof camps!=='undefined' ? camps : []), (typeof DATA!=='undefined' ? DATA : []) ];
+  for(var p=0;p<pools.length;p++){
+    for(var i=0;i<pools[p].length;i++){
+      var x = pools[p][i];
+      if(x && (x.naam||'').trim().toLowerCase()===key && gpsToLatLng(x.gps)) return String(x.gps).trim();
+    }
+  }
+  return c.gps || '';
 }
 
 var MAX_LEG_SPLITS = 6;
@@ -7146,8 +7170,11 @@ async function insertLegRespectingCap(stopsSoFar, nextAnchor, maxKm, usedNames, 
   var from = stopsSoFar[stopsSoFar.length-1];
   var fromLL = gpsToLatLng(from.gps), toLL = gpsToLatLng(nextAnchor.gps);
   if(!fromLL || !toLL){
+    // Say WHICH campsite has no usable GPS and how to fix it -- the old
+    // "couldn't keep this under 600km -- ?km" text sent people looking
+    // for a distance problem when it's really missing data.
     nextAnchor._legKm = null;
-    nextAnchor._warning = tr('aiplan.legWarning',{max:maxKm, km:'?'});
+    nextAnchor._warning = tr('aiplan.noGps',{name: (!fromLL ? from.naam : nextAnchor.naam)});
     stopsSoFar.push(nextAnchor);
     return;
   }
@@ -7252,14 +7279,21 @@ function promptApplyAiPlan(){
 
 function applyAiPlanToTour(mode){
   var rates = getEffectiveFuelRates();
-  var newStops = aiPlanState.stops.map(function(s){
+  var lastIdx = aiPlanState.stops.length - 1;
+  var newStops = aiPlanState.stops.map(function(s, i){
     var km = s.legKm || 0;
-    return {
-      name: s.naam, km: km, nights: 1, costPP: 0,
+    // A route that ends where it started is a trip home: the last row is
+    // the return day, not another night's stay -- same shape addReturnLeg()
+    // uses, so the schedule shows the green return badge and 0 nights.
+    var isHome = (i === lastIdx && i >= 2 && s.naam === aiPlanState.stops[0].naam);
+    var row = {
+      name: s.naam, km: km, nights: isHome ? 0 : 1, costPP: 0,
       email:'', phone:'', booked:'NO',
       fuelCost: km>0 ? (km/rates.kmL)*rates.fuelPrice : 0,
       date:'', gps: s.gps||'', notes:'', highlight:''
     };
+    if(isHome) row.isReturn = true;
+    return row;
   });
   var tourName = document.getElementById('aiPlanName').value.trim();
 
