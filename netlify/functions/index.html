@@ -173,18 +173,13 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(180deg,#
 #fbGate.hide{display:none;}
 #viewGate{position:fixed;inset:0;background:linear-gradient(135deg,#1b5e20,#2e7d32);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px;}
 #viewGate.hide{display:none;}
-#viewBanner{display:none;background:#fff3e0;color:#e65100;padding:9px 14px;text-align:center;font-weight:700;font-size:.82rem;border-bottom:2px solid #e65100;position:fixed;top:0;left:0;right:0;z-index:1500;}
+#viewBanner{display:none;background:#fff3e0;color:#e65100;padding:9px 14px;text-align:center;font-weight:700;font-size:.82rem;border-bottom:2px solid #e65100;position:sticky;top:0;z-index:1500;}
 /* View-only lockdown: every button in the Tour Planner is hidden except
    the tab bar itself, and every form control is disabled -- this is the
    ONE place that decides "can see everything, can change nothing", so a
    new tab or table added later is automatically read-only too instead of
    needing to be remembered each time. */
 body.view-only-mode #pg-tour button:not(.tab-btn){display:none!important;}
-/* "Voer Toerplan In" is a <label class="back-btn"> (styled to look like a
-   button so it can trigger the hidden file input), not a real <button> --
-   the rule above never touches it, so it needs its own selector. This
-   covers any other label-as-button the header ever grows too. */
-body.view-only-mode #pg-tour label.back-btn{display:none!important;}
 body.view-only-mode #pg-tour input:disabled,
 body.view-only-mode #pg-tour select:disabled,
 body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;background:#f7f7f7;}
@@ -262,7 +257,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.2 (22 Sep Deposito Fix)</div>
+  <div class="hdr-ver">v3.0 (22 Sep Deel Toer)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -650,6 +645,9 @@ Object.assign(I18N.af, {
   'aiplan.useCancel': 'Wag, moet nog nie',
   'aiplan.appliedNew': 'Nuwe toer geskep met {n} stops ✓',
   'aiplan.appliedAppend': '{n} stops by jou huidige toer gevoeg ✓',
+  'aiplan.lblRoundTrip': '🏠 Ry terug huis toe',
+  'aiplan.noGps': '⚠️ Geen GPS vir "{name}" nie, so die afstand is onbekend. Voeg GPS by via Kampeerterrein Soektog → Wysig.',
+  'aiplan.roundTripHint': 'Eindig weer by jou eerste dorp. Jy kan ook self die terugroete se dorpe onderaan die lys tik.',
   'menu.recipes.title': 'Kampeer Resepte',
   'menu.recipes.desc': 'Voeg jou gunsteling kampeerresepte vir die toer by en blaai daardeur.',
   'menu.recipes.badge': '★ Fase 4 — Nuut',
@@ -767,6 +765,9 @@ Object.assign(I18N.en, {
   'aiplan.useCancel': 'Wait, not yet',
   'aiplan.appliedNew': 'New tour created with {n} stops ✓',
   'aiplan.appliedAppend': '{n} stops added to your current tour ✓',
+  'aiplan.lblRoundTrip': '🏠 Drive back home',
+  'aiplan.noGps': '⚠️ No GPS for "{name}", so the distance is unknown. Add GPS via Campsite Search → Edit.',
+  'aiplan.roundTripHint': 'Ends back at your first town. You can also type the return route\'s towns yourself at the bottom of the list.',
   'menu.recipes.title': 'Camping Recipes',
   'menu.recipes.desc': 'Add and browse your favourite camping recipes for the trip.',
   'menu.recipes.badge': '★ Phase 4 — New',
@@ -3338,13 +3339,13 @@ function generateCampsiteFacilityInfo(){
   if(status) status.textContent = tr('cs.mRemAiGenerating');
 
   user.getIdToken().then(function(idToken){
-    return fetch('/.netlify/functions/campsite-info', {
+    return fetch(AI_CAMPSITE_ENDPOINT, {
       method:'POST',
       headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+idToken },
       body: JSON.stringify({ name:name, town:town, province:province, gps:gps, lang:lang, mode:'facilities' })
     });
   })
-  .then(function(r){ return r.json().then(function(data){ return {ok:r.ok, data:data}; }); })
+  .then(aiParseResponse)
   .then(function(res){
     if(!res.ok || !res.data || !res.data.text){
       throw new Error((res.data && (res.data.error||res.data.detail)) || 'AI error');
@@ -3355,7 +3356,7 @@ function generateCampsiteFacilityInfo(){
   })
   .catch(function(err){
     console.error('generateCampsiteFacilityInfo failed:', err);
-    if(status) status.textContent = tr('cs.mRemAiError');
+    if(status) status.textContent = tr('cs.mRemAiError') + aiErrMsg(err);
   })
   .finally(function(){
     if(btn) btn.disabled = false;
@@ -4845,7 +4846,6 @@ Object.assign(I18N.af, {
   'tour.deposits.thPaid': 'Betaal',
   'tour.deposits.enterCamp': 'Voer kampeerterrein in',
   'tour.deposits.recorded': '{camp} deposito aangeteken ✓',
-  'tour.deposits.updated': '{camp} se deposito bygewerk ✓',
   'tour.deposits.none': 'Nog geen deposito rekords nie.',
   'tour.deposits.paidYes': '✓ Betaal',
   'tour.deposits.paidNo': '✗ Onbetaal',
@@ -5205,7 +5205,6 @@ Object.assign(I18N.en, {
   'tour.deposits.thPaid': 'Paid',
   'tour.deposits.enterCamp': 'Enter campsite',
   'tour.deposits.recorded': '{camp} deposit recorded ✓',
-  'tour.deposits.updated': "{camp}'s deposit updated ✓",
   'tour.deposits.none': 'No deposit records yet.',
   'tour.deposits.paidYes': '✓ Paid',
   'tour.deposits.paidNo': '✗ Unpaid',
@@ -5351,15 +5350,10 @@ async function renderShareTourPanel(){
     } else {
       body.innerHTML = info.viewers.map(function(v){
         var link = location.origin+location.pathname+'?view='+info.shareId+'.'+v.token;
-        // .fb-card's shared button CSS makes every <button> width:100% by
-        // default (right, for the stacked full-width buttons elsewhere in
-        // this same panel) -- these two small icon buttons need `width:auto`
-        // to override that, or they'd each claim the full row width and
-        // squeeze the name down to nothing.
         return '<div style="display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid #eee;">'
-          +'<span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#222;">'+esc(v.name)+'</span>'
-          +'<button data-link="'+esc(link)+'" onclick="copyShareLink(this.getAttribute(&#39;data-link&#39;))" style="width:auto;flex:0 0 auto;padding:8px 12px;background:#1565c0;" title="Copy link">📋</button>'
-          +'<button data-token="'+esc(v.token)+'" data-name="'+esc(v.name)+'" onclick="removeShareViewerClick(this.getAttribute(&#39;data-token&#39;),this.getAttribute(&#39;data-name&#39;))" style="width:auto;flex:0 0 auto;padding:8px 12px;background:#c62828;" title="Remove">✕</button>'
+          +'<span style="flex:1;overflow:hidden;text-overflow:ellipsis;">'+esc(v.name)+'</span>'
+          +'<button data-link="'+esc(link)+'" onclick="copyShareLink(this.getAttribute(&#39;data-link&#39;))" style="background:#1565c0;" title="Copy link">📋</button>'
+          +'<button data-token="'+esc(v.token)+'" data-name="'+esc(v.name)+'" onclick="removeShareViewerClick(this.getAttribute(&#39;data-token&#39;),this.getAttribute(&#39;data-name&#39;))" style="background:#c62828;" title="Remove">✕</button>'
           +'</div>';
       }).join('');
     }
@@ -6282,6 +6276,31 @@ function updateStopHighlight(i, val){
   try{localStorage.setItem('nayela_stops', JSON.stringify(tourStops));}catch(e){}
 }
 
+// ── AI response helper ───────────────────────────────────
+// The AI now runs as a Netlify EDGE function at /api/campsite-info (the
+// old /.netlify/functions/ version was cut off by Netlify's 10-second
+// limit while Claude was still busy with its web search). If the server
+// ever returns something that isn't JSON (e.g. a Netlify timeout page),
+// this still produces a readable error instead of a silent failure.
+var AI_CAMPSITE_ENDPOINT = '/api/campsite-info';
+function aiParseResponse(r){
+  return r.text().then(function(txt){
+    var data = null;
+    try{ data = JSON.parse(txt); }catch(e){}
+    if(!data || typeof data!=='object'){
+      data = { error: 'HTTP '+r.status+(txt ? ': '+String(txt).slice(0,160) : '') };
+    } else if(!r.ok && !data.error && (data.errorMessage || data.message)){
+      data.error = data.errorMessage || data.message;
+    }
+    if(r.status===404 && !data.error) data.error = 'AI endpoint not found (404) - edge function not deployed';
+    return {ok:r.ok, data:data};
+  });
+}
+function aiErrMsg(err){
+  var m = (err && err.message) ? err.message : String(err||'');
+  return m ? ' ('+m.slice(0,200)+')' : '';
+}
+
 // ── AI campsite/area info ────────────────────────────────
 // Calls our own Netlify serverless function (netlify/functions/
 // campsite-info.js), which holds the Anthropic API key privately and
@@ -6330,7 +6349,7 @@ function generateCampsiteInfo(i){
   var lang = (typeof LANG!=='undefined' && LANG==='en') ? 'en' : 'af';
 
   user.getIdToken().then(function(idToken){
-    return fetch('/.netlify/functions/campsite-info', {
+    return fetch(AI_CAMPSITE_ENDPOINT, {
       method:'POST',
       headers:{
         'Content-Type':'application/json',
@@ -6339,7 +6358,7 @@ function generateCampsiteInfo(i){
       body: JSON.stringify({ name:s.name, town:town, province:province, gps:effectiveGps, lang:lang })
     });
   })
-  .then(function(r){ return r.json().then(function(data){ return {ok:r.ok, data:data}; }); })
+  .then(aiParseResponse)
   .then(function(res){
     if(!res.ok || !res.data || !res.data.text){
       throw new Error((res.data && (res.data.error||res.data.detail)) || 'AI error');
@@ -6365,8 +6384,8 @@ function generateCampsiteInfo(i){
   })
   .catch(function(err){
     console.error('generateCampsiteInfo failed:', err);
-    if(status) status.textContent = tr('tour.schedule.aiError');
-    toast(tr('tour.schedule.aiError'));
+    if(status) status.textContent = tr('tour.schedule.aiError') + aiErrMsg(err);
+    toast(tr('tour.schedule.aiError') + aiErrMsg(err));
   })
   .finally(function(){
     if(btn) btn.disabled = false;
@@ -6397,6 +6416,7 @@ function generateAllCampsiteInfo(){
   }
   var btn = document.getElementById('aiFillAllBtn');
   if(btn) btn.disabled = true;
+  window._aiLastError = '';
   var done = 0;
   function updateProgress(){
     if(overallStatus) overallStatus.textContent = tr('tour.hdr.aiFillAllProgress', {done:done, total:targets.length});
@@ -6410,6 +6430,7 @@ function generateAllCampsiteInfo(){
         overallStatus.textContent = tr('tour.hdr.aiFillAllDone', {n:targets.length});
         setTimeout(function(){ overallStatus.textContent=''; }, 4000);
       }
+      if(window._aiLastError){ toast(tr('tour.schedule.aiError') + ' (' + String(window._aiLastError).slice(0,200) + ')'); }
       // Switch to the Skedule tab and re-render so every freshly-filled
       // notes box is visible without needing a manual refresh.
       var schedPane = document.getElementById('tb-schedule');
@@ -6466,13 +6487,13 @@ function generateCampsiteInfoSilent(i){
   var lang = (typeof LANG!=='undefined' && LANG==='en') ? 'en' : 'af';
 
   return user.getIdToken().then(function(idToken){
-    return fetch('/.netlify/functions/campsite-info', {
+    return fetch(AI_CAMPSITE_ENDPOINT, {
       method:'POST',
       headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+idToken },
       body: JSON.stringify({ name:s.name, town:town, province:province, gps:effectiveGps, lang:lang })
     });
   })
-  .then(function(r){ return r.json().then(function(data){ return {ok:r.ok, data:data}; }); })
+  .then(aiParseResponse)
   .then(function(res){
     if(res.ok && res.data && res.data.text){
       tourStops[i].notes = res.data.text;
@@ -6480,10 +6501,12 @@ function generateCampsiteInfoSilent(i){
       try{localStorage.setItem('nayela_stops', JSON.stringify(tourStops));}catch(e){}
     } else {
       console.error('generateCampsiteInfoSilent failed for stop', i, res.data);
+      window._aiLastError = (res.data && res.data.error) || ('HTTP error');
     }
   })
   .catch(function(err){
     console.error('generateCampsiteInfoSilent failed for stop', i, err);
+    window._aiLastError = (err && err.message) || String(err);
   });
 }
 
@@ -6912,6 +6935,17 @@ function scoreCampForTown(camp, townLower){
   if(dorp.indexOf(townLower)===0) return 90;
   if(dorp.indexOf(townLower)!==-1) return 70;
   if(naam.indexOf(townLower)!==-1) return 50;
+  // Same checks ignoring spaces/hyphens, so "Yellowsands" finds "Yellow
+  // Sands" and "Port Elizabeth"/"PortElizabeth" etc. -- people type these
+  // both ways and the database isn't consistent about it either.
+  var squash = function(x){ return x.replace(/[\s\-]+/g,''); };
+  var tSq = squash(townLower);
+  if(tSq.length >= 3){
+    var dSq = squash(dorp), nSq = squash(naam);
+    if(dSq === tSq) return 95;
+    if(dSq.indexOf(tSq)!==-1) return 65;
+    if(nSq.indexOf(tSq)!==-1) return 45;
+  }
   if(prov.indexOf(townLower)!==-1) return 20;
   return 0;
 }
@@ -7058,16 +7092,31 @@ async function buildAiPlanFromChoices(){
   aiPlanTownChoices.forEach(function(tc){ tc.candidates.forEach(function(c){ byName[c.naam]=c; }); });
 
   // Anchors in the exact order the towns were typed, using each town's
-  // chosen campsite -- de-duplicated in case the same campsite got picked
-  // for two different towns.
-  var anchors = [], seen = {};
+  // chosen campsite. A campsite MAY appear more than once -- that's exactly
+  // what a holiday-and-back-home trip looks like (Nelspruit -> ... ->
+  // Yellow Sands -> ... -> Nelspruit, often re-using the same overnight
+  // stop on the way back). The old code de-duplicated by name across the
+  // WHOLE list, which silently threw away the entire return journey. Now
+  // only a back-to-back repeat (same campsite twice in a row = a 0km leg)
+  // is dropped.
+  // Each anchor is a shallow COPY: the leg-building code tags stops with
+  // _legKm/_warning, and a campsite visited twice must carry two different
+  // leg distances, not share one object that the second visit overwrites.
+  var anchors = [];
   aiPlanTownChoices.forEach(function(tc){
     if(!tc.selectedNaam) return;
     var c = byName[tc.selectedNaam];
-    if(!c || seen[c.naam]) return;
-    seen[c.naam] = true;
-    anchors.push(c);
+    if(!c) return;
+    if(anchors.length && anchors[anchors.length-1].naam === c.naam) return;
+    anchors.push(aiPlanStopCopy(c));
   });
+
+  // Optional "back home" -- closes the loop to the first stop without the
+  // traveller having to type their home town a second time.
+  var rtEl = document.getElementById('aiPlanRoundTrip');
+  if(rtEl && rtEl.checked && anchors.length > 1 && anchors[anchors.length-1].naam !== anchors[0].naam){
+    anchors.push(aiPlanStopCopy(anchors[0]));
+  }
 
   if(!anchors.length){ toast(tr('aiplan.noCandidatesAnyTown')); return; }
 
@@ -7075,8 +7124,13 @@ async function buildAiPlanFromChoices(){
   if(status) status.textContent = tr('aiplan.calcDistances');
   try{
     var finalStops = [anchors[0]];
-    var usedNames = {}; anchors.forEach(function(a){ usedNames[a.naam]=true; });
+    var anchorNames = {}; anchors.forEach(function(a){ anchorNames[a.naam]=true; });
     for(var i=1;i<anchors.length;i++){
+      // Fresh "used" set per anchor-to-anchor leg: the chosen campsites are
+      // never picked as fillers, but the return leg IS allowed to re-use an
+      // overnight stop the outbound leg already used (same road, same
+      // sensible halfway point), instead of being forced to a worse one.
+      var usedNames = Object.assign({}, anchorNames);
       await insertLegRespectingCap(finalStops, anchors[i], maxKm, usedNames, 0);
     }
 
@@ -7110,13 +7164,46 @@ async function buildAiPlanFromChoices(){
 // always-too-far distance. 6 splits means up to 7 days for what was meant
 // to be one long drive, which is already an unreasonable answer to hand
 // back -- past that point this stops trying and flags it instead.
+// Clean per-visit copy of a campsite for the AI route (never the live
+// `camps` entry, and never carrying leg data from another visit/build).
+function aiPlanStopCopy(c){
+  var o = Object.assign({}, c);
+  delete o._legKm; delete o._warning;
+  o.gps = aiPlanUsableGps(c);
+  return o;
+}
+
+// The shared (Firestore) campsite list can hold a record whose GPS is
+// empty or unreadable even though the same campsite has a perfectly good
+// coordinate elsewhere -- e.g. "BATELEUR" showed "?km" on both legs of a
+// Nelspruit -> Yellow Sands round trip while the built-in list has its
+// GPS. Before giving up on a leg, try: this record, then any other record
+// in the live list with the same name, then the built-in DATA list.
+function aiPlanUsableGps(c){
+  if(!c) return '';
+  if(gpsToLatLng(c.gps)) return String(c.gps).trim();
+  var key = (c.naam||'').trim().toLowerCase();
+  if(!key) return c.gps || '';
+  var pools = [ (typeof camps!=='undefined' ? camps : []), (typeof DATA!=='undefined' ? DATA : []) ];
+  for(var p=0;p<pools.length;p++){
+    for(var i=0;i<pools[p].length;i++){
+      var x = pools[p][i];
+      if(x && (x.naam||'').trim().toLowerCase()===key && gpsToLatLng(x.gps)) return String(x.gps).trim();
+    }
+  }
+  return c.gps || '';
+}
+
 var MAX_LEG_SPLITS = 6;
 async function insertLegRespectingCap(stopsSoFar, nextAnchor, maxKm, usedNames, depth){
   var from = stopsSoFar[stopsSoFar.length-1];
   var fromLL = gpsToLatLng(from.gps), toLL = gpsToLatLng(nextAnchor.gps);
   if(!fromLL || !toLL){
+    // Say WHICH campsite has no usable GPS and how to fix it -- the old
+    // "couldn't keep this under 600km -- ?km" text sent people looking
+    // for a distance problem when it's really missing data.
     nextAnchor._legKm = null;
-    nextAnchor._warning = tr('aiplan.legWarning',{max:maxKm, km:'?'});
+    nextAnchor._warning = tr('aiplan.noGps',{name: (!fromLL ? from.naam : nextAnchor.naam)});
     stopsSoFar.push(nextAnchor);
     return;
   }
@@ -7134,7 +7221,10 @@ async function insertLegRespectingCap(stopsSoFar, nextAnchor, maxKm, usedNames, 
   // Too far for one day -- find a real campsite near the midpoint to
   // split it, then recurse on both new (shorter) halves.
   var mid = midpointLL(fromLL, toLL);
-  var splitCamp = nearestUnusedCamp(mid, usedNames);
+  var foundSplit = nearestUnusedCamp(mid, usedNames);
+  // Copy, never the live `camps` entry: the same stopover can now appear on
+  // both the outbound and return legs, and each visit needs its own _legKm.
+  var splitCamp = foundSplit ? aiPlanStopCopy(foundSplit) : null;
   if(!splitCamp){
     nextAnchor._legKm = Math.round(km);
     nextAnchor._warning = tr('aiplan.legWarning',{max:maxKm, km:Math.round(km)});
@@ -7218,14 +7308,21 @@ function promptApplyAiPlan(){
 
 function applyAiPlanToTour(mode){
   var rates = getEffectiveFuelRates();
-  var newStops = aiPlanState.stops.map(function(s){
+  var lastIdx = aiPlanState.stops.length - 1;
+  var newStops = aiPlanState.stops.map(function(s, i){
     var km = s.legKm || 0;
-    return {
-      name: s.naam, km: km, nights: 1, costPP: 0,
+    // A route that ends where it started is a trip home: the last row is
+    // the return day, not another night's stay -- same shape addReturnLeg()
+    // uses, so the schedule shows the green return badge and 0 nights.
+    var isHome = (i === lastIdx && i >= 2 && s.naam === aiPlanState.stops[0].naam);
+    var row = {
+      name: s.naam, km: km, nights: isHome ? 0 : 1, costPP: 0,
       email:'', phone:'', booked:'NO',
       fuelCost: km>0 ? (km/rates.kmL)*rates.fuelPrice : 0,
       date:'', gps: s.gps||'', notes:'', highlight:''
     };
+    if(isHome) row.isReturn = true;
+    return row;
   });
   var tourName = document.getElementById('aiPlanName').value.trim();
 
@@ -7501,64 +7598,28 @@ function pullStopsToDeposits(){
 function addDeposit(){
   var c=document.getElementById('dCamp').value.trim();
   if(!c){toast(tr('tour.deposits.enterCamp')); return;}
-  var email=document.getElementById('dEmail').value.trim();
-  var tel=document.getElementById('dTel').value.trim();
-  var code=document.getElementById('dCode').value.trim();
-  var amount=parseFloat(document.getElementById('dAmount').value)||0;
-  var paid=document.getElementById('dPaid').value;
-  // If this campsite is already in the list (e.g. pulled in from the
-  // Skedule, or added earlier), record the payment ON that same row
-  // instead of creating a second, disconnected entry for the same place --
-  // that mismatch was the actual bug being fixed here: a deposit paid
-  // against an existing campsite has to show up against THAT campsite.
-  var idx = depositList.findIndex(function(d){ return (d.camp||'').trim().toLowerCase() === c.toLowerCase(); });
-  var updated = idx > -1;
-  if(updated){
-    var d = depositList[idx];
-    if(email) d.email = email;
-    if(tel) d.tel = tel;
-    if(code) d.code = code;
-    if(amount) d.amount = amount;
-    d.paid = paid;
-  } else {
-    depositList.push({camp:c, email:email, tel:tel, code:code, amount:amount, paid:paid});
-  }
+  depositList.push({camp:c, email:document.getElementById('dEmail').value.trim(),
+    tel:document.getElementById('dTel').value.trim(), code:document.getElementById('dCode').value.trim(),
+    amount:parseFloat(document.getElementById('dAmount').value)||0,
+    paid:document.getElementById('dPaid').value});
   try{localStorage.setItem('nayela_deposits', JSON.stringify(depositList));}catch(e){}
   document.getElementById('dCamp').value=''; document.getElementById('dEmail').value='';
   document.getElementById('dTel').value=''; document.getElementById('dCode').value='';
   document.getElementById('dAmount').value=''; document.getElementById('dPaid').value='NO';
-  renderDeposits(); toast(tr(updated ? 'tour.deposits.updated' : 'tour.deposits.recorded', {camp: c}));
+  renderDeposits(); toast(tr('tour.deposits.recorded', {camp: c}));
 }
 function deleteDeposit(i){depositList.splice(i,1);try{localStorage.setItem('nayela_deposits',JSON.stringify(depositList));}catch(e){}renderDeposits();}
 function toggleDepositPaid(i){depositList[i].paid=depositList[i].paid==='YES'?'NO':'YES';try{localStorage.setItem('nayela_deposits',JSON.stringify(depositList));}catch(e){}renderDeposits();}
-function updateDepositField(i,field,val){
-  if(!depositList[i]) return;
-  depositList[i][field] = (field==='amount') ? (parseFloat(val)||0) : val;
-  try{localStorage.setItem('nayela_deposits', JSON.stringify(depositList));}catch(e){}
-  // Re-render so the TOTAL/paid footer picks up the change -- deferred one
-  // tick so the browser finishes its own change/blur handling on THIS input
-  // first; rebuilding the table's innerHTML synchronously from inside that
-  // same input's onchange fought with the browser over the very node that
-  // triggered the event.
-  if(field==='amount') setTimeout(renderDeposits, 0);
-}
 function renderDeposits(){
   var tb=document.getElementById('depositBody');
   var tf=document.getElementById('depositFoot');
   if(!depositList.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:#aaa;padding:16px;">'+tr('tour.deposits.none')+'</td></tr>';tf.innerHTML='';return;}
   var total=0,paid=0;
-  var mkTxt = function(i,field,val){
-    return '<input type="text" value="'+attrEsc(val)+'" style="width:100%;min-width:70px;padding:4px 6px;font-size:.76rem;border:1px solid #ccc;border-radius:4px;" onchange="updateDepositField('+i+',\''+field+'\',this.value)">';
-  };
   tb.innerHTML=depositList.map(function(d,i){
     total+=d.amount; if(d.paid==='YES') paid+=d.amount;
     return '<tr class="deposit-'+(d.paid==='YES'?'paid':'unpaid')+'">'
-      +'<td>'+(i+1)+'</td>'
-      +'<td>'+mkTxt(i,'camp',d.camp)+'</td>'
-      +'<td>'+mkTxt(i,'email',d.email)+'</td>'
-      +'<td>'+mkTxt(i,'tel',d.tel)+'</td>'
-      +'<td>'+mkTxt(i,'code',d.code)+'</td>'
-      +'<td>R <input type="number" min="0" step="0.01" value="'+d.amount+'" style="width:80px;padding:4px 6px;font-size:.76rem;border:1px solid #ccc;border-radius:4px;" onchange="updateDepositField('+i+',\'amount\',this.value)"></td>'
+      +'<td>'+(i+1)+'</td><td>'+esc(d.camp)+'</td><td>'+esc(d.email)+'</td><td>'+esc(d.tel)+'</td><td>'+esc(d.code)+'</td>'
+      +'<td>R '+d.amount.toFixed(2)+'</td>'
       +'<td><span class="'+(d.paid==='YES'?'booked-yes':'booked-no')+'" onclick="toggleDepositPaid('+i+')" style="cursor:pointer;">'+(d.paid==='YES'?tr('tour.deposits.paidYes'):tr('tour.deposits.paidNo'))+'</span></td>'
       +'<td><button onclick="deleteDeposit('+i+')" style="background:none;border:none;color:#c00;cursor:pointer;">&#128465;</button></td></tr>';
   }).join('');
@@ -8138,6 +8199,13 @@ I18N_REFRESH.push(function(){
           <span id="aiPlanMaxKmVal" style="font-weight:700;color:#5D3A1A;min-width:60px;text-align:right;">600 km</span>
         </div>
       </div>
+      <label for="aiPlanRoundTrip" style="display:flex;align-items:flex-start;gap:8px;margin-bottom:14px;cursor:pointer;">
+        <input type="checkbox" id="aiPlanRoundTrip" style="margin-top:3px;flex-shrink:0;">
+        <span>
+          <span data-i18n="aiplan.lblRoundTrip" style="font-size:.82rem;font-weight:700;color:#5D3A1A;">🏠 Ry terug huis toe</span><br>
+          <span data-i18n="aiplan.roundTripHint" style="font-size:.74rem;color:#777;">Eindig weer by jou eerste dorp. Jy kan ook self die terugroete se dorpe onderaan die lys tik.</span>
+        </span>
+      </label>
       <button type="button" id="aiPlanGenBtn" onclick="findTownChoices()" data-i18n="aiplan.generateBtn" style="width:100%;background:#1976d2;color:#fff;border:none;border-radius:8px;padding:12px;font-size:.9rem;font-weight:700;cursor:pointer;touch-action:manipulation;">🔍 Vind Kampeerterreine</button>
       <div id="aiPlanStatus" style="text-align:center;font-size:.8rem;color:#5D3A1A;margin-top:8px;min-height:1.2em;"></div>
     </div>
@@ -9095,7 +9163,7 @@ applyLanguage();
 <div id="fbGate" class="hide">
   <div class="fb-card">
     <h2>🏕 NAYELA Camping</h2>
-    <p style="font-size:.7rem;color:#aaa;margin:-14px 0 12px;">Build: 2026-09-22-deposit-edit</p>
+    <p style="font-size:.7rem;color:#aaa;margin:-14px 0 12px;">Build: 2026-09-22-share-tour</p>
     <p>Meld aan om die gedeelde kampplek-databasis te gebruik.</p>
     <input id="fbEmail" type="email" placeholder="E-pos" autocomplete="username">
     <input id="fbPw" type="password" placeholder="Wagwoord" autocomplete="current-password">
@@ -9302,16 +9370,9 @@ async function bootViewerMode(param){
     if(!v){ viewGateShow('Hierdie skakel is nie meer geldig nie. / This link is no longer valid.'); return; }
     applySharedData(d.data || {});
     viewGateHide();
-    var bannerText = (typeof window.tr==='function') ? window.tr('viewmode.banner',{name:d.tourName||'', viewer:v.name||''}) : ((d.tourName||'') + ' — ' + (v.name||''));
+    var bannerText = (d.tourName || '(tour)') + ' — viewing as ' + v.name + '. You cannot change anything.';
     document.getElementById('viewBannerText').textContent = bannerText;
-    var banner = document.getElementById('viewBanner');
-    banner.style.display = 'block';
-    // The banner lives late in the DOM (next to the login gate) but is
-    // pinned with position:fixed so it always sits at the very top of the
-    // viewport, however far down the page it actually is in the markup --
-    // that means it covers the real header underneath unless something
-    // pushes the page down to make room, hence the padding here.
-    document.body.style.paddingTop = banner.offsetHeight + 'px';
+    document.getElementById('viewBanner').style.display = 'block';
     if(typeof window.showPage === 'function') window.showPage('pg-tour');
     refreshTourViews();
     onSnapshot(ref, function(s2){
