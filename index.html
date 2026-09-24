@@ -257,7 +257,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.0 (22 Sep Deel Toer)</div>
+  <div class="hdr-ver">v3.1 (24 Sep Handleidings)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -354,6 +354,16 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
           <h3 data-i18n="menu.tips.title">Kampeer Wenke</h3>
           <p data-i18n="menu.tips.desc">Praktiese raad oor beplanning, toerusting, veiligheid, kosmaak en om geen spoor agter te laat nie.</p>
           <span class="mc-badge badge-new" data-i18n="menu.tips.badge">★ Fase 5 — Nuut</span>
+        </div>
+      </div>
+
+      <!-- Manuals -->
+      <div class="menu-card" onclick="showPage(&#39;pg-manuals&#39;)">
+        <div class="mc-icon teal">📚</div>
+        <div class="mc-body">
+          <h3 data-i18n="menu.man.title">Handleidings</h3>
+          <p data-i18n="menu.man.desc">Jou karavaan- en programhandleidings (PDF, video's en skakels) — altyd byderhand op jou foon, tablet of rekenaar.</p>
+          <span class="mc-badge badge-new" data-i18n="menu.man.badge">★ Nuut</span>
         </div>
       </div>
 
@@ -951,6 +961,8 @@ function showPage(id){
   if(id==='pg-tour'){initTourPage();}
   if(id==='pg-recipes'){initRecipesPage();}
   if(id==='pg-road'){initRoadPage();}
+  if(id==='pg-manuals'){initManualsPage();}
+  if(id!=='pg-manuals' && typeof manualsCloseViewer==='function'){manualsCloseViewer();}
 }
 
 // ── Toast ─────────────────────────────────────────────────────────────
@@ -4708,8 +4720,8 @@ Object.assign(I18N.af, {
   'tour.schedule.returnAdded': '🏠 Terugtrek na {name} bygevoeg ✓',
   'tour.schedule.removeConfirm': 'Verwyder "{name}" van skedule?',
   'tour.schedule.stopRemoved': 'Stop verwyder',
-  'tour.schedule.clearConfirm': 'Maak alle stops van skedule skoon?',
-  'tour.schedule.cleared': 'Skedule skoongemaak',
+  'tour.schedule.clearConfirm': 'Maak alle stops van skedule skoon? Die Deposito\'s vir hierdie toer word ook skoongemaak.',
+  'tour.schedule.cleared': 'Skedule en deposito\'s skoongemaak',
   'tour.schedule.noStops': 'Nog geen stops bygevoeg nie. Voeg jou eerste stop hierbo by.',
   'tour.schedule.notesLbl': '📝 Omgewing- & Kampplek-inligting — {name}',
   'tour.schedule.notesPh': 'bv. plek van belang, wandelroetes, watervlak, veiligheidsnotas, wat om te doen in die omgewing... (verskyn ook op die gedrukte Toer Plan)',
@@ -5067,8 +5079,8 @@ Object.assign(I18N.en, {
   'tour.schedule.returnAdded': '🏠 Return leg to {name} added ✓',
   'tour.schedule.removeConfirm': 'Remove "{name}" from schedule?',
   'tour.schedule.stopRemoved': 'Stop removed',
-  'tour.schedule.clearConfirm': 'Clear all stops from schedule?',
-  'tour.schedule.cleared': 'Schedule cleared',
+  'tour.schedule.clearConfirm': 'Clear all stops from the schedule? The Deposits for this tour will be cleared too.',
+  'tour.schedule.cleared': 'Schedule and deposits cleared',
   'tour.schedule.noStops': 'No stops added yet. Add your first stop above.',
   'tour.schedule.notesLbl': '📝 Area & Campsite Info — {name}',
   'tour.schedule.notesPh': 'e.g. points of interest, hiking trails, water levels, safety notes, things to do nearby... (also appears on the printed Tour Plan)',
@@ -6514,7 +6526,13 @@ function clearSchedule(){
   gConfirm(tr('tour.schedule.clearConfirm'), function(){
     tourStops=[];
     try{localStorage.setItem('nayela_stops', JSON.stringify(tourStops));}catch(e){}
+    // The Deposito's list belongs to this tour's campsites, so clearing the
+    // Skedule clears it too (it used to be left behind with the old tour's
+    // campsites and amounts in it).
+    depositList=[];
+    try{localStorage.setItem('nayela_deposits', JSON.stringify(depositList));}catch(e){}
     renderSchedule(); recalcFuel(); renderOverview();
+    if(typeof renderDeposits==='function') renderDeposits();
     toast(tr('tour.schedule.cleared'));
   });
 }
@@ -9144,6 +9162,484 @@ I18N_REFRESH.push(function(){
 // dictionary entries and refresh callbacks above ──────────────────────
 applyLanguage();
 </script>
+
+<!-- ═══════════════════ 📚 MANUALS / HANDLEIDINGS PAGE ═══════════════════ -->
+<style>
+.mc-icon.teal{background:linear-gradient(135deg,#004d40,#00897b);}
+.man-sec{margin-bottom:18px;}
+.man-sec h3{margin:0 0 10px;font-size:1rem;color:var(--earth,#5d4037);}
+.man-item{background:#fff;border-radius:10px;box-shadow:0 1px 6px rgba(0,0,0,.08);padding:12px 14px;margin-bottom:10px;display:flex;gap:12px;align-items:center;flex-wrap:wrap;}
+.man-ico{font-size:1.6rem;width:36px;text-align:center;flex:0 0 36px;}
+.man-info{flex:1 1 180px;min-width:0;}
+.man-info .t{font-weight:700;font-size:.92rem;word-break:break-word;}
+.man-info .m{font-size:.74rem;color:#777;margin-top:2px;}
+.man-badge{display:inline-block;font-size:.68rem;padding:2px 8px;border-radius:12px;margin-left:4px;font-weight:700;}
+.man-badge.dev{background:#e8f5e9;color:#2e7d32;border:1px solid #c8e6c9;}
+.man-badge.cloud{background:#eef3fb;color:#1565c0;border:1px solid #d6e3f5;}
+.man-acts{display:flex;gap:6px;flex-wrap:wrap;}
+.man-acts .btn-tp{touch-action:manipulation;}
+.man-prog{width:100%;height:8px;margin-top:6px;}
+.man-empty{color:#999;font-size:.85rem;padding:10px 4px;}
+#manViewer{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:3000;display:none;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);}
+#manViewer.show{display:flex;}
+#manViewer .mv-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 12px;background:#222;color:#fff;}
+#manViewer .mv-bar .mv-t{flex:1 1 150px;font-weight:700;font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#manViewer .mv-bar a,#manViewer .mv-bar button{background:#444;color:#fff;border:none;border-radius:6px;padding:8px 12px;font-size:.8rem;font-weight:600;text-decoration:none;cursor:pointer;}
+#manViewer .mv-body{flex:1;min-height:0;display:flex;align-items:center;justify-content:center;overflow:auto;-webkit-overflow-scrolling:touch;}
+#manViewer iframe{width:100%;height:100%;border:0;background:#fff;}
+#manViewer video,#manViewer img{max-width:100%;max-height:100%;}
+#manViewer .mv-msg{color:#fff;text-align:center;padding:20px;font-size:.9rem;}
+</style>
+
+<div class="page" id="pg-manuals">
+  <div class="page-hdr">
+    <button class="back-btn" onclick="showPage(&#39;pg-menu&#39;)" data-i18n="nav.backMenu">← Kieslys</button>
+    <h2 data-i18n="man.title">📚 Handleidings</h2>
+    <div class="date-auto"><span id="manCountBadge"></span></div>
+  </div>
+
+  <div id="manNotice" style="font-size:.8rem;color:#8d6e63;margin:0 4px 10px;"></div>
+  <div class="man-sec"><h3 data-i18n="man.cat.caravan">🚐 Karavaan</h3><div id="manListCaravan"></div></div>
+  <div class="man-sec"><h3 data-i18n="man.cat.program">💻 Program</h3><div id="manListProgram"></div></div>
+
+  <details class="tp-form" id="manAddBox" style="background:#f3faf8;border:1px solid #cfe8e2;">
+    <summary style="cursor:pointer;font-weight:700;color:#00695c;" data-i18n="man.addSummary">➕ Voeg 'n handleiding of video by</summary>
+    <h3 style="margin-top:12px;" data-i18n="man.upHdr">⬆ Laai 'n Handleiding Op (PDF, video of foto)</h3>
+    <div class="fg">
+      <div><label data-i18n="man.lblTitle">Titel</label><input id="manTitle" type="text" style="font-size:16px;" placeholder="bv. Jurgens Karavaan Handleiding" data-i18n-ph="man.titlePh"></div>
+      <div><label data-i18n="man.lblCat">Kategorie</label>
+        <select id="manCat"><option value="caravan" data-i18n="man.cat.caravan">🚐 Karavaan</option><option value="program" data-i18n="man.cat.program">💻 Program</option></select></div>
+      <div><label data-i18n="man.lblFile">Lêer</label><input id="manFile" type="file" accept="application/pdf,.pdf,video/*,image/*" onchange="manualsFilePicked(this)"></div>
+    </div>
+    <button class="btn-tp btn-add" id="manUpBtn" onclick="manualsUpload()" data-i18n="man.upBtn">⬆ Laai Op</button>
+    <div id="manUpStatus" style="font-size:.8rem;color:#555;margin-top:8px;"></div>
+    <progress id="manUpProg" class="man-prog" value="0" max="100" style="display:none;"></progress>
+
+    <h3 style="margin-top:16px;" data-i18n="man.linkHdr">🔗 Of voeg 'n video-skakel by (YouTube ens.)</h3>
+    <div class="fg">
+      <div><label data-i18n="man.lblTitle">Titel</label><input id="manLinkTitle" type="text" style="font-size:16px;" placeholder="bv. Hoe om die sonpaneel op te stel" data-i18n-ph="man.linkTitlePh"></div>
+      <div><label data-i18n="man.lblCat">Kategorie</label>
+        <select id="manLinkCat"><option value="caravan" data-i18n="man.cat.caravan">🚐 Karavaan</option><option value="program" data-i18n="man.cat.program">💻 Program</option></select></div>
+      <div><label data-i18n="man.lblUrl">Skakel</label><input id="manLinkUrl" type="url" style="font-size:16px;" placeholder="https://youtu.be/..."></div>
+    </div>
+    <button class="btn-tp btn-add" onclick="manualsAddLink()" data-i18n="man.linkBtn">+ Voeg Skakel By</button>
+    <p style="font-size:.74rem;color:#777;margin:10px 0 0;" data-i18n="man.tip">💡 Wenk: tik "Stoor op toestel" by elke handleiding voor jy vertrek — dan maak dit oop sonder om weer af te laai. Skakels (YouTube) het altyd internet nodig.</p>
+  </details>
+</div>
+
+<div id="manViewer">
+  <div class="mv-bar">
+    <div class="mv-t" id="mvTitle"></div>
+    <a id="mvNewTab" target="_blank" rel="noopener" data-i18n="man.newTab">↗ Nuwe oortjie</a>
+    <a id="mvDownload" data-i18n="man.download">💾 Stoor as lêer</a>
+    <button onclick="manualsCloseViewer()" data-i18n="man.close">✕ Sluit</button>
+  </div>
+  <div class="mv-body" id="mvBody"></div>
+</div>
+
+<script>
+// ── 📚 Manuals / Handleidings ────────────────────────────────────────
+// Files live in Netlify Blobs via netlify/functions/manuals.mjs
+// (/api/manuals), so they're the same on every device you log in on.
+// Uploads/downloads go in 3 MB pieces (a Netlify function can only move
+// ~6 MB per request). A downloaded file is kept in this device's
+// IndexedDB ("Stoor op toestel") so it opens instantly next time and
+// doesn't use Netlify bandwidth again. The list itself is also cached in
+// localStorage so it still shows when there's no signal.
+Object.assign(I18N.af, {
+  'menu.man.title': 'Handleidings',
+  'menu.man.desc': 'Jou karavaan- en programhandleidings (PDF, video\'s en skakels) — altyd byderhand op jou foon, tablet of rekenaar.',
+  'menu.man.badge': '★ Nuut',
+  'man.title': '📚 Handleidings',
+  'man.addSummary': '➕ Voeg \'n handleiding of video by',
+  'man.upHdr': '⬆ Laai \'n Handleiding Op (PDF, video of foto)',
+  'man.lblTitle': 'Titel',
+  'man.titlePh': 'bv. Jurgens Karavaan Handleiding',
+  'man.linkTitlePh': 'bv. Hoe om die sonpaneel op te stel',
+  'man.lblCat': 'Kategorie',
+  'man.cat.caravan': '🚐 Karavaan',
+  'man.cat.program': '💻 Program',
+  'man.lblFile': 'Lêer',
+  'man.upBtn': '⬆ Laai Op',
+  'man.linkHdr': '🔗 Of voeg \'n video-skakel by (YouTube ens.)',
+  'man.lblUrl': 'Skakel',
+  'man.linkBtn': '+ Voeg Skakel By',
+  'man.tip': '💡 Wenk: tik "Stoor op toestel" by elke handleiding voor jy vertrek — dan maak dit oop sonder om weer af te laai. Skakels (YouTube) het altyd internet nodig.',
+  'man.none': 'Nog niks hier nie.',
+  'man.count': '{n} handleiding(s)',
+  'man.open': '📖 Maak oop',
+  'man.save': '📥 Stoor op toestel',
+  'man.forget': 'Verwyder van toestel',
+  'man.delete': '🗑',
+  'man.deleteConfirm': 'Skrap "{t}" permanent vir ALMAL (van al die toestelle en die wolk)?',
+  'man.deleted': 'Geskrap ✓',
+  'man.onDevice': '✓ Op hierdie toestel',
+  'man.cloudOnly': '☁ Aanlyn',
+  'man.link': '🔗 Skakel',
+  'man.pickFile': 'Kies eers \'n lêer',
+  'man.enterTitle': 'Tik \'n titel in',
+  'man.enterUrl': 'Tik die skakel in (begin met https://)',
+  'man.loginRequired': 'Teken eers in om handleidings te gebruik.',
+  'man.uploading': 'Laai op… {p}%',
+  'man.uploaded': '"{t}" opgelaai ✓',
+  'man.downloading': 'Laai af… {p}%',
+  'man.savedDevice': 'Gestoor op hierdie toestel ✓',
+  'man.forgotten': 'Van hierdie toestel verwyder (bly steeds in die wolk)',
+  'man.linkAdded': 'Skakel bygevoeg ✓',
+  'man.error': 'Iets het fout gegaan',
+  'man.offlineList': '📴 Geen verbinding nie — wys die laaste bekende lys. Net handleidings wat "Op hierdie toestel" is, sal oopmaak.',
+  'man.bigFile': 'Groot lêer ({mb} MB) — dit kan \'n rukkie vat. Hou die skerm oop tot dit klaar is.',
+  'man.close': '✕ Sluit',
+  'man.newTab': '↗ Nuwe oortjie',
+  'man.download': '💾 Stoor as lêer',
+  'man.noPreview': 'Hierdie lêer kan nie hier gewys word nie. Tik "Stoor as lêer" of "Nuwe oortjie".',
+  'man.busy': 'Wag asseblief — iets word nog op- of afgelaai.'
+});
+Object.assign(I18N.en, {
+  'menu.man.title': 'Manuals',
+  'menu.man.desc': 'Your caravan and program manuals (PDFs, videos and links) — always at hand on your phone, tablet or computer.',
+  'menu.man.badge': '★ New',
+  'man.title': '📚 Manuals',
+  'man.addSummary': '➕ Add a manual or video',
+  'man.upHdr': '⬆ Upload a Manual (PDF, video or photo)',
+  'man.lblTitle': 'Title',
+  'man.titlePh': 'e.g. Jurgens Caravan Manual',
+  'man.linkTitlePh': 'e.g. How to set up the solar panel',
+  'man.lblCat': 'Category',
+  'man.cat.caravan': '🚐 Caravan',
+  'man.cat.program': '💻 Program',
+  'man.lblFile': 'File',
+  'man.upBtn': '⬆ Upload',
+  'man.linkHdr': '🔗 Or add a video link (YouTube etc.)',
+  'man.lblUrl': 'Link',
+  'man.linkBtn': '+ Add Link',
+  'man.tip': '💡 Tip: tap "Save on device" for each manual before you leave — then it opens without downloading again. Links (YouTube) always need internet.',
+  'man.none': 'Nothing here yet.',
+  'man.count': '{n} manual(s)',
+  'man.open': '📖 Open',
+  'man.save': '📥 Save on device',
+  'man.forget': 'Remove from device',
+  'man.delete': '🗑',
+  'man.deleteConfirm': 'Permanently delete "{t}" for EVERYONE (from all devices and the cloud)?',
+  'man.deleted': 'Deleted ✓',
+  'man.onDevice': '✓ On this device',
+  'man.cloudOnly': '☁ Online',
+  'man.link': '🔗 Link',
+  'man.pickFile': 'Choose a file first',
+  'man.enterTitle': 'Enter a title',
+  'man.enterUrl': 'Enter the link (starting with https://)',
+  'man.loginRequired': 'Please log in to use manuals.',
+  'man.uploading': 'Uploading… {p}%',
+  'man.uploaded': '"{t}" uploaded ✓',
+  'man.downloading': 'Downloading… {p}%',
+  'man.savedDevice': 'Saved on this device ✓',
+  'man.forgotten': 'Removed from this device (still in the cloud)',
+  'man.linkAdded': 'Link added ✓',
+  'man.error': 'Something went wrong',
+  'man.offlineList': '📴 No connection — showing the last known list. Only manuals marked "On this device" will open.',
+  'man.bigFile': 'Large file ({mb} MB) — this can take a while. Keep the screen on until it finishes.',
+  'man.close': '✕ Close',
+  'man.newTab': '↗ New tab',
+  'man.download': '💾 Save as file',
+  'man.noPreview': 'This file can\'t be shown here. Tap "Save as file" or "New tab".',
+  'man.busy': 'Please wait — something is still uploading or downloading.'
+});
+
+var MANUALS_API = '/api/manuals';
+var manualsItems; try{ manualsItems = JSON.parse(localStorage.getItem('nayela_manuals_index') || '[]'); }catch(e){ manualsItems = []; }
+var manualsOnDevice = {};   // id -> true when a copy is in IndexedDB
+var manualsProgress = {};   // id -> progress text while downloading
+var manualsOffline = false;
+var manualsUploadBusy = false;
+var manualsViewerUrl = null;
+
+// ── IndexedDB helpers (device copies) ──
+function manualsDb(){
+  return new Promise(function(res, rej){
+    if(!window.indexedDB){ rej(new Error('IndexedDB not available')); return; }
+    var r = indexedDB.open('nayela_manuals', 1);
+    r.onupgradeneeded = function(){ r.result.createObjectStore('files'); };
+    r.onsuccess = function(){ res(r.result); };
+    r.onerror = function(){ rej(r.error); };
+  });
+}
+function manualsIdb(mode, fn){
+  return manualsDb().then(function(db){
+    return new Promise(function(res, rej){
+      var tx = db.transaction('files', mode), st = tx.objectStore('files'), out;
+      var req = fn(st);
+      if(req) req.onsuccess = function(){ out = req.result; };
+      tx.oncomplete = function(){ db.close(); res(out); };
+      tx.onerror = tx.onabort = function(){ db.close(); rej(tx.error || new Error('IndexedDB error')); };
+    });
+  });
+}
+function manualsIdbGet(id){ return manualsIdb('readonly', function(st){ return st.get(id); }); }
+function manualsIdbPut(id, rec){ return manualsIdb('readwrite', function(st){ return st.put(rec, id); }); }
+function manualsIdbDel(id){ return manualsIdb('readwrite', function(st){ return st.delete(id); }); }
+function manualsIdbKeys(){ return manualsIdb('readonly', function(st){ return st.getAllKeys(); }); }
+
+// ── Server helpers ──
+function manualsToken(){
+  var user = window.fbAuth && window.fbAuth.currentUser;
+  if(!user) return Promise.reject(new Error(tr('man.loginRequired')));
+  return user.getIdToken();
+}
+function manualsApi(method, query, body, wantBytes){
+  return manualsToken().then(function(tok){
+    var headers = { 'Authorization': 'Bearer ' + tok };
+    var b = body;
+    if(body && !(body instanceof Blob) && !(body instanceof ArrayBuffer)){ b = JSON.stringify(body); headers['Content-Type'] = 'application/json'; }
+    return fetch(MANUALS_API + '?' + query, { method: method, headers: headers, body: b });
+  }).then(function(r){
+    if(wantBytes && r.ok) return r.arrayBuffer();
+    return aiParseResponse(r).then(function(res){
+      if(!res.ok) throw new Error((res.data && res.data.error) || ('HTTP ' + r.status));
+      return res.data;
+    });
+  });
+}
+// retries a step a few times -- a phone on weak signal drops the odd request
+function manualsRetry(fn, tries){
+  return fn().catch(function(err){
+    if(tries <= 1 || /log in|teken/i.test(err.message||'')) throw err;
+    return new Promise(function(r){ setTimeout(r, 1500); }).then(function(){ return manualsRetry(fn, tries - 1); });
+  });
+}
+
+function manualsSaveIndex(){ try{ localStorage.setItem('nayela_manuals_index', JSON.stringify(manualsItems)); }catch(e){} }
+function manualsFmtSize(b){ if(!b) return ''; var mb = b/1048576; return mb >= 1 ? mb.toFixed(1) + ' MB' : Math.max(1, Math.round(b/1024)) + ' KB'; }
+function manualsIcon(it){
+  if(it.kind === 'link') return /youtu/i.test(it.url||'') ? '▶️' : '🔗';
+  var m = it.mime || '';
+  if(m.indexOf('pdf') !== -1) return '📄';
+  if(m.indexOf('video/') === 0) return '🎬';
+  if(m.indexOf('image/') === 0) return '🖼';
+  return '📎';
+}
+
+// ── Page ──
+function initManualsPage(){
+  renderManuals();
+  manualsIdbKeys().then(function(keys){
+    manualsOnDevice = {}; (keys||[]).forEach(function(k){ manualsOnDevice[k] = true; });
+    renderManuals();
+  }).catch(function(){});
+  manualsRefresh();
+}
+function manualsRefresh(){
+  return manualsApi('GET', 'op=list').then(function(data){
+    manualsOffline = false;
+    manualsItems = (data.items || []).sort(function(a,b){ return (a.title||'').localeCompare(b.title||''); });
+    manualsSaveIndex();
+    renderManuals();
+  }).catch(function(err){
+    manualsOffline = !navigator.onLine || /fetch|network|load failed/i.test(err.message||'');
+    renderManuals();
+    if(!manualsOffline) toast(tr('man.error') + ' (' + err.message + ')');
+  });
+}
+
+function renderManuals(){
+  var n = document.getElementById('manNotice');
+  if(!n) return;
+  n.textContent = manualsOffline ? tr('man.offlineList') : '';
+  var badge = document.getElementById('manCountBadge');
+  if(badge) badge.textContent = '📚 ' + tr('man.count', {n: manualsItems.length});
+  ['caravan','program'].forEach(function(cat){
+    var el = document.getElementById(cat === 'caravan' ? 'manListCaravan' : 'manListProgram');
+    var list = manualsItems.filter(function(it){ return (it.cat || 'caravan') === cat; });
+    if(!list.length){ el.innerHTML = '<div class="man-empty">' + tr('man.none') + '</div>'; return; }
+    el.innerHTML = list.map(function(it){
+      var id = esc(it.id);
+      var meta = [];
+      if(it.kind === 'link') meta.push(tr('man.link'));
+      else meta.push(esc(manualsFmtSize(it.size)));
+      if(it.added) meta.push(new Date(it.added).toLocaleDateString(LANG==='af'?'af-ZA':'en-ZA'));
+      var badgeHtml = '';
+      if(it.kind === 'file'){
+        badgeHtml = manualsOnDevice[it.id]
+          ? '<span class="man-badge dev">' + tr('man.onDevice') + '</span>'
+          : '<span class="man-badge cloud">' + tr('man.cloudOnly') + '</span>';
+      }
+      var prog = manualsProgress[it.id] ? '<div style="font-size:.75rem;color:#00796b;margin-top:3px;">' + esc(manualsProgress[it.id]) + '</div>' : '';
+      var acts = '<button class="btn-tp btn-add" onclick="manualsOpen(\'' + id + '\')">' + tr('man.open') + '</button>';
+      if(it.kind === 'file'){
+        acts += manualsOnDevice[it.id]
+          ? '<button class="btn-tp btn-clear" onclick="manualsForget(\'' + id + '\')">' + tr('man.forget') + '</button>'
+          : '<button class="btn-tp btn-clear" onclick="manualsSaveToDevice(\'' + id + '\')">' + tr('man.save') + '</button>';
+      }
+      acts += '<button class="btn-tp btn-clear" style="color:#c00;" onclick="manualsDelete(\'' + id + '\')" title="Delete">' + tr('man.delete') + '</button>';
+      return '<div class="man-item"><div class="man-ico">' + manualsIcon(it) + '</div>'
+        + '<div class="man-info"><div class="t">' + esc(it.title) + badgeHtml + '</div><div class="m">' + meta.join(' · ') + '</div>' + prog + '</div>'
+        + '<div class="man-acts">' + acts + '</div></div>';
+    }).join('');
+  });
+}
+I18N_REFRESH.push(renderManuals);
+
+function manualsFind(id){ for(var i=0;i<manualsItems.length;i++){ if(manualsItems[i].id === id) return manualsItems[i]; } return null; }
+
+// ── Upload ──
+function manualsFilePicked(input){
+  var f = input.files && input.files[0];
+  var t = document.getElementById('manTitle');
+  if(f && t && !t.value.trim()) t.value = f.name.replace(/\.[^.]+$/, '').replace(/[_-]+/g, ' ');
+  var st = document.getElementById('manUpStatus');
+  if(f && st) st.textContent = f.size > 50*1048576 ? tr('man.bigFile', {mb: Math.round(f.size/1048576)}) : '';
+}
+function manualsUpload(){
+  if(manualsUploadBusy){ toast(tr('man.busy')); return; }
+  var fileEl = document.getElementById('manFile');
+  var f = fileEl.files && fileEl.files[0];
+  if(!f){ toast(tr('man.pickFile')); return; }
+  var title = document.getElementById('manTitle').value.trim();
+  if(!title){ toast(tr('man.enterTitle')); return; }
+  var cat = document.getElementById('manCat').value;
+  var btn = document.getElementById('manUpBtn'), st = document.getElementById('manUpStatus'), pg = document.getElementById('manUpProg');
+  manualsUploadBusy = true; btn.disabled = true;
+  pg.style.display = 'block'; pg.value = 0; st.textContent = tr('man.uploading', {p: 0});
+  var mime = f.type || (/\.pdf$/i.test(f.name) ? 'application/pdf' : 'application/octet-stream');
+  var info;
+  manualsApi('POST', 'op=create', { title: title, cat: cat, name: f.name, mime: mime, size: f.size })
+  .then(function(res){
+    info = res;
+    var n = 0;
+    function next(){
+      if(n >= info.chunks) return Promise.resolve();
+      var piece = f.slice(n * info.chunkSize, (n + 1) * info.chunkSize);
+      var idx = n;
+      return manualsRetry(function(){ return manualsApi('PUT', 'op=chunk&id=' + encodeURIComponent(info.id) + '&n=' + idx, piece); }, 4)
+        .then(function(){
+          n++;
+          var p = Math.round(n / info.chunks * 100);
+          pg.value = p; st.textContent = tr('man.uploading', {p: p});
+          return next();
+        });
+    }
+    return next();
+  })
+  .then(function(){ return manualsApi('POST', 'op=finish&id=' + encodeURIComponent(info.id)); })
+  .then(function(res){
+    // keep the uploaded file on this device too -- no need to download it again
+    return manualsIdbPut(info.id, { blob: f, mime: mime, name: f.name, size: f.size, saved: Date.now() })
+      .then(function(){ manualsOnDevice[info.id] = true; }, function(){})
+      .then(function(){ return res; });
+  })
+  .then(function(){
+    st.textContent = ''; toast(tr('man.uploaded', {t: title}));
+    fileEl.value = ''; document.getElementById('manTitle').value = '';
+    return manualsRefresh();
+  })
+  .catch(function(err){
+    st.textContent = tr('man.error') + ' (' + (err.message || err) + ')';
+    if(info && info.id){ manualsApi('POST', 'op=delete&id=' + encodeURIComponent(info.id)).catch(function(){}); }
+  })
+  .then(function(){ manualsUploadBusy = false; btn.disabled = false; pg.style.display = 'none'; });
+}
+
+function manualsAddLink(){
+  var url = document.getElementById('manLinkUrl').value.trim();
+  if(!/^https?:\/\//i.test(url)){ toast(tr('man.enterUrl')); return; }
+  var title = document.getElementById('manLinkTitle').value.trim();
+  if(!title){ toast(tr('man.enterTitle')); return; }
+  manualsApi('POST', 'op=link', { title: title, cat: document.getElementById('manLinkCat').value, url: url })
+  .then(function(){
+    document.getElementById('manLinkUrl').value = ''; document.getElementById('manLinkTitle').value = '';
+    toast(tr('man.linkAdded')); return manualsRefresh();
+  })
+  .catch(function(err){ toast(tr('man.error') + ' (' + err.message + ')'); });
+}
+
+// ── Download to device ──
+function manualsDownload(it){
+  if(manualsProgress[it.id]) return Promise.reject(new Error(tr('man.busy')));
+  var parts = [], n = 0;
+  manualsProgress[it.id] = tr('man.downloading', {p: 0}); renderManuals();
+  function next(){
+    if(n >= it.chunks) return Promise.resolve();
+    var idx = n;
+    return manualsRetry(function(){ return manualsApi('GET', 'op=chunk&id=' + encodeURIComponent(it.id) + '&n=' + idx, null, true); }, 4)
+      .then(function(buf){
+        parts.push(buf); n++;
+        manualsProgress[it.id] = tr('man.downloading', {p: Math.round(n / it.chunks * 100)}); renderManuals();
+        return next();
+      });
+  }
+  return next().then(function(){
+    var blob = new Blob(parts, { type: it.mime || 'application/octet-stream' });
+    delete manualsProgress[it.id];
+    try{ if(navigator.storage && navigator.storage.persist) navigator.storage.persist(); }catch(e){}
+    return manualsIdbPut(it.id, { blob: blob, mime: it.mime, name: it.name, size: it.size, saved: Date.now() })
+      .then(function(){ manualsOnDevice[it.id] = true; }, function(){ /* storage full / private mode: still open it */ })
+      .then(function(){ renderManuals(); return blob; });
+  }, function(err){ delete manualsProgress[it.id]; renderManuals(); throw err; });
+}
+function manualsSaveToDevice(id){
+  var it = manualsFind(id); if(!it) return;
+  manualsDownload(it).then(function(){ toast(tr('man.savedDevice')); })
+    .catch(function(err){ toast(tr('man.error') + ' (' + err.message + ')'); });
+}
+function manualsForget(id){
+  manualsIdbDel(id).then(function(){ delete manualsOnDevice[id]; renderManuals(); toast(tr('man.forgotten')); })
+    .catch(function(err){ toast(tr('man.error') + ' (' + err.message + ')'); });
+}
+
+// ── Open ──
+function manualsOpen(id){
+  var it = manualsFind(id); if(!it) return;
+  if(it.kind === 'link'){ window.open(it.url, '_blank', 'noopener'); return; }
+  manualsIdbGet(id).catch(function(){ return null; }).then(function(rec){
+    if(rec && rec.blob) return rec.blob;
+    return manualsDownload(it);
+  }).then(function(blob){ manualsShowViewer(it, blob); })
+    .catch(function(err){ toast(tr('man.error') + ' (' + err.message + ')'); });
+}
+function manualsShowViewer(it, blob){
+  manualsCloseViewer();
+  manualsViewerUrl = URL.createObjectURL(blob);
+  var body = document.getElementById('mvBody'), m = it.mime || blob.type || '';
+  document.getElementById('mvTitle').textContent = it.title;
+  var nt = document.getElementById('mvNewTab'), dl = document.getElementById('mvDownload');
+  nt.href = manualsViewerUrl; dl.href = manualsViewerUrl; dl.setAttribute('download', it.name || (it.title + ''));
+  if(m.indexOf('pdf') !== -1){
+    body.innerHTML = '<iframe title="PDF"></iframe>';
+    body.firstChild.src = manualsViewerUrl;
+  } else if(m.indexOf('video/') === 0){
+    body.innerHTML = '<video controls playsinline preload="metadata"></video>';
+    body.firstChild.src = manualsViewerUrl;
+  } else if(m.indexOf('image/') === 0){
+    body.innerHTML = '<img alt="">';
+    body.firstChild.src = manualsViewerUrl;
+  } else {
+    body.innerHTML = '<div class="mv-msg">' + tr('man.noPreview') + '</div>';
+  }
+  document.getElementById('manViewer').classList.add('show');
+}
+function manualsCloseViewer(){
+  var v = document.getElementById('manViewer');
+  if(v) v.classList.remove('show');
+  var body = document.getElementById('mvBody');
+  if(body){ var vid = body.querySelector('video'); if(vid){ try{ vid.pause(); }catch(e){} } body.innerHTML = ''; }
+  if(manualsViewerUrl){ try{ URL.revokeObjectURL(manualsViewerUrl); }catch(e){} manualsViewerUrl = null; }
+}
+
+// ── Delete (for everyone) ──
+function manualsDelete(id){
+  var it = manualsFind(id); if(!it) return;
+  gConfirm(tr('man.deleteConfirm', {t: it.title}), function(){
+    manualsApi('POST', 'op=delete&id=' + encodeURIComponent(id))
+    .then(function(){ return manualsIdbDel(id).catch(function(){}); })
+    .then(function(){ delete manualsOnDevice[id]; toast(tr('man.deleted')); return manualsRefresh(); })
+    .catch(function(err){ toast(tr('man.error') + ' (' + err.message + ')'); });
+  });
+}
+
+// This block loads after the app's first applyLanguage() call, so apply
+// once more now that the Manuals strings are registered.
+applyLanguage();
+</script>
+<!-- ═══════════════════ end MANUALS ═══════════════════ -->
 
 <!-- PRINT-ONLY: full Tour Plan document, built fresh from all tabs each
      time "Print Tour Plan" is clicked. Kept as a top-level element (not
