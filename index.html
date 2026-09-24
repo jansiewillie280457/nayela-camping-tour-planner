@@ -257,7 +257,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.1 (24 Sep Handleidings)</div>
+  <div class="hdr-ver">v3.2 (24 Sep Deposito Bedrae)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -7628,16 +7628,27 @@ function addDeposit(){
 }
 function deleteDeposit(i){depositList.splice(i,1);try{localStorage.setItem('nayela_deposits',JSON.stringify(depositList));}catch(e){}renderDeposits();}
 function toggleDepositPaid(i){depositList[i].paid=depositList[i].paid==='YES'?'NO':'YES';try{localStorage.setItem('nayela_deposits',JSON.stringify(depositList));}catch(e){}renderDeposits();}
+function updateDepositField(i, field, value){
+  var d = depositList[i]; if(!d) return;
+  if(field==='amount'){ var v = parseFloat(String(value).replace(',', '.')); d.amount = (isNaN(v)||v<0) ? 0 : Math.round(v*100)/100; }
+  else { d[field] = String(value||'').trim(); }
+  try{localStorage.setItem('nayela_deposits', JSON.stringify(depositList));}catch(e){}
+  renderDeposits();
+}
 function renderDeposits(){
   var tb=document.getElementById('depositBody');
   var tf=document.getElementById('depositFoot');
   if(!depositList.length){tb.innerHTML='<tr><td colspan="8" style="text-align:center;color:#aaa;padding:16px;">'+tr('tour.deposits.none')+'</td></tr>';tf.innerHTML='';return;}
   var total=0,paid=0;
   tb.innerHTML=depositList.map(function(d,i){
-    total+=d.amount; if(d.paid==='YES') paid+=d.amount;
+    var amt = parseFloat(d.amount)||0;
+    total+=amt; if(d.paid==='YES') paid+=amt;
+    // Kode and Bedrag are typed straight into the list -- rows pulled from
+    // the Skedule start at R 0.00 and previously had no way to fill it in.
     return '<tr class="deposit-'+(d.paid==='YES'?'paid':'unpaid')+'">'
-      +'<td>'+(i+1)+'</td><td>'+esc(d.camp)+'</td><td>'+esc(d.email)+'</td><td>'+esc(d.tel)+'</td><td>'+esc(d.code)+'</td>'
-      +'<td>R '+d.amount.toFixed(2)+'</td>'
+      +'<td>'+(i+1)+'</td><td>'+esc(d.camp)+'</td><td>'+esc(d.email)+'</td><td>'+esc(d.tel)+'</td>'
+      +'<td><input class="dep-edit" type="text" value="'+esc(d.code||'')+'" onchange="updateDepositField('+i+',\'code\',this.value)" style="width:80px;font-size:16px;"></td>'
+      +'<td style="white-space:nowrap;">R <input class="dep-edit" type="number" inputmode="decimal" min="0" step="0.01" value="'+(amt?amt.toFixed(2):'')+'" placeholder="0.00" onchange="updateDepositField('+i+',\'amount\',this.value)" style="width:100px;font-size:16px;"></td>'
       +'<td><span class="'+(d.paid==='YES'?'booked-yes':'booked-no')+'" onclick="toggleDepositPaid('+i+')" style="cursor:pointer;">'+(d.paid==='YES'?tr('tour.deposits.paidYes'):tr('tour.deposits.paidNo'))+'</span></td>'
       +'<td><button onclick="deleteDeposit('+i+')" style="background:none;border:none;color:#c00;cursor:pointer;">&#128465;</button></td></tr>';
   }).join('');
