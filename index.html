@@ -257,7 +257,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.2 (24 Sep Deposito Bedrae)</div>
+  <div class="hdr-ver">v3.3 (25 Sep Sterre-gradering)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -1694,7 +1694,17 @@ I18N_REFRESH.push(function(){
       </div>
       <div class="mfr"><label data-i18n="cs.mTel">Telefoonnommer</label><input id="mTel" type="text"></div>
       <div class="mfr"><label data-i18n="cs.mSel">Selfoonnommer</label><input id="mSel" type="text"></div>
-      <div class="mfr"><label data-i18n="cs.mUrl">Webtuiste / URL</label><input id="mUrl" type="text"></div>
+      <div class="mfr"><label data-i18n="cs.mRating">Gradering — tik op die sterre</label>
+        <div id="mRatingStars" class="rate-stars"></div>
+        <div id="mRatingInfo" style="font-size:.78rem;color:#777;margin-top:3px;"></div>
+      </div>
+      <style>
+        .rate-stars{display:flex;gap:4px;align-items:center;flex-wrap:wrap;}
+        .rate-stars button.rs{background:none;border:none;font-size:1.9rem;line-height:1;padding:2px 3px;cursor:pointer;color:#ccc;touch-action:manipulation;min-width:38px;min-height:38px;}
+        .rate-stars button.rs.on{color:#f9a825;}
+        .rate-stars button.rs-clear{background:#f3f3f3;border:1px solid #ddd;border-radius:12px;font-size:.72rem;padding:3px 10px;margin-left:6px;cursor:pointer;color:#555;}
+        .ri-stars{color:#f9a825;font-size:.78rem;font-weight:700;margin-left:6px;white-space:nowrap;}
+      </style>
       <div class="mfr"><label data-i18n="cs.mInfo">Info / E-pos</label><input id="mInfo" type="text"></div>
       <div class="mfr"><label data-i18n="cs.mGps">GPS Koordimate (lat,lon)</label>
         <div style="display:flex;gap:6px;">
@@ -2049,6 +2059,13 @@ Object.assign(I18N.af, {
   'cs.mTel': 'Telefoonnommer',
   'cs.mSel': 'Selfoonnommer',
   'cs.mUrl': 'Webtuiste / URL',
+  'cs.mRating': 'Gradering — tik op die sterre',
+  'cs.mRatingNone': 'Nog geen gradering nie — wees die eerste!',
+  'cs.mRatingAvg': 'Gemiddeld {avg} ★ uit {n} gradering(s) deur lede',
+  'cs.mRatingMine': 'Jou gradering: {n} ★ (word gestoor as jy Stoor tik)',
+  'cs.mRatingClear': 'Verwyder my gradering',
+  'cs.rating': 'Gradering',
+  'cs.ratingCount': '{n} gradering(s)',
   'cs.mInfo': 'E-pos',
   'cs.mGps': 'GPS Koordimate (lat,lon)',
   'cs.mRem': 'Aantekeninge',
@@ -2177,6 +2194,13 @@ Object.assign(I18N.en, {
   'cs.mTel': 'Telephone Number',
   'cs.mSel': 'Cell Number',
   'cs.mUrl': 'Website / URL',
+  'cs.mRating': 'Rating — tap the stars',
+  'cs.mRatingNone': 'No rating yet — be the first!',
+  'cs.mRatingAvg': 'Average {avg} ★ from {n} member rating(s)',
+  'cs.mRatingMine': 'Your rating: {n} ★ (saved when you tap Save)',
+  'cs.mRatingClear': 'Remove my rating',
+  'cs.rating': 'Rating',
+  'cs.ratingCount': '{n} rating(s)',
   'cs.mInfo': 'Email',
   'cs.mGps': 'GPS Coordinates (lat,lon)',
   'cs.mRem': 'Notes',
@@ -2722,7 +2746,7 @@ function renderList(){
     var isAct=idx===curIdx;
     h+='<div class="ritem'+(isAct?' active':'')+(isSel?' ticked':'')+(isAct&&isSel?' active ticked':'')+'" data-idx="'+idx+'">'
       +'<input type="checkbox" class="ri-cb" data-cidx="'+idx+'"'+(isSel?' checked':'')+' onclick="event.stopPropagation();toggleSel('+idx+')">'
-      +'<div class="ri-body"><div class="ri-name">'+esc(c.naam)+'</div>'
+      +'<div class="ri-body"><div class="ri-name">'+esc(c.naam)+(function(){ var st=campRatingStats(c); return st ? '<span class="ri-stars" title="'+tr('cs.ratingCount',{n:st.n})+'">★ '+st.avg.toFixed(1)+'</span>' : ''; })()+'</div>'
       +'<div class="ri-sub">'+esc(clean(c.dorp)||'&mdash;')+(c.provinsie?' &bull; '+esc(provLabel(c.provinsie)):'')+'</div>'
       +'</div></div>';
   });
@@ -2746,6 +2770,8 @@ function showDetail(idx){
     });
     h+='</div>';
   }
+  var rst=campRatingStats(c);
+  if(rst) h+='<div class="drow"><span class="dlbl">'+tr('cs.rating')+':</span><span class="dval"><span style="color:#f9a825;font-size:1.05em;letter-spacing:1px;">'+campStarsStr(rst.avg)+'</span> '+rst.avg.toFixed(1)+' <span style="color:#888;font-size:.85em;">('+tr('cs.ratingCount',{n:rst.n})+')</span></span></div>';
   if(tel) h+='<div class="drow"><span class="dlbl">'+tr('cs.town')+':</span><span class="dval">'+esc(tel)+'</span></div>';
   if(cel) h+='<div class="drow"><span class="dlbl">'+tr('cs.cell')+':</span><span class="dval">'+esc(cel)+'</span></div>';
   if(url) h+='<div class="drow"><span class="dlbl">'+tr('cs.website')+':</span><span class="dval"><a href="'+esc(url)+'" target="_blank" rel="noopener">'+esc(url)+'</a></span></div>';
@@ -3287,11 +3313,80 @@ function plotDots(autoScroll){
 // the modal is open; renderPhotoPicker mutates it in place as photos are
 // added/removed, and it's read into the record on Save.
 var pendingCampPhotos = [];
+
+// ── ⭐ Star rating (1-5) per member ──────────────────────────────
+// Each member gives their own 1-5 stars; they're stored on the shared
+// campsite record as ratings[<member id>] = {stars, by, date}, and the
+// list/detail card show the average. Rating again replaces your own
+// rating; nobody can change someone else's.
+var pendingRatingCamp = null;   // campsite being edited (null = new)
+var pendingMyRating = null;     // this member's stars in the open form (null = none)
+function campRatingKey(){
+  var u = window.fbAuth && window.fbAuth.currentUser;
+  return u && u.uid ? u.uid : 'local';
+}
+function campRatingStats(c){
+  var r = c && c.ratings;
+  if(!r || typeof r !== 'object') return null;
+  var vals = Object.keys(r).map(function(k){ return r[k] ? parseInt(r[k].stars, 10) : 0; })
+    .filter(function(v){ return v >= 1 && v <= 5; });
+  if(!vals.length) return null;
+  var sum = vals.reduce(function(a, b){ return a + b; }, 0);
+  return { avg: sum / vals.length, n: vals.length };
+}
+function campMyRating(c){
+  var r = c && c.ratings && c.ratings[campRatingKey()];
+  var v = r ? parseInt(r.stars, 10) : 0;
+  return (v >= 1 && v <= 5) ? v : null;
+}
+function campStarsStr(avg){
+  var full = Math.round(avg), s = '';
+  for(var i = 1; i <= 5; i++) s += i <= full ? '★' : '☆';
+  return s;
+}
+function campMergedRatings(c){
+  var out = {};
+  var old = c && c.ratings && typeof c.ratings === 'object' ? c.ratings : {};
+  Object.keys(old).forEach(function(k){ out[k] = old[k]; });
+  var key = campRatingKey();
+  if(pendingMyRating){
+    var u = window.fbAuth && window.fbAuth.currentUser;
+    out[key] = { stars: pendingMyRating, by: (u && u.email) || '', date: Date.now() };
+  } else {
+    delete out[key];
+  }
+  return out;
+}
+function renderRatingPicker(){
+  var box = document.getElementById('mRatingStars'), info = document.getElementById('mRatingInfo');
+  if(!box) return;
+  var h = '';
+  for(var i = 1; i <= 5; i++){
+    h += '<button type="button" class="rs' + (pendingMyRating && i <= pendingMyRating ? ' on' : '') + '" data-star="' + i + '" aria-label="' + i + '">★</button>';
+  }
+  if(pendingMyRating) h += '<button type="button" class="rs-clear" data-star="0">' + tr('cs.mRatingClear') + '</button>';
+  box.innerHTML = h;
+  box.querySelectorAll('button').forEach(function(b){
+    b.addEventListener('click', function(){
+      var v = parseInt(b.getAttribute('data-star'), 10);
+      pendingMyRating = v >= 1 ? v : null;
+      renderRatingPicker();
+    });
+  });
+  var lines = [];
+  var st = campRatingStats(pendingRatingCamp);
+  lines.push(st ? tr('cs.mRatingAvg', {avg: st.avg.toFixed(1), n: st.n}) : tr('cs.mRatingNone'));
+  if(pendingMyRating) lines.push(tr('cs.mRatingMine', {n: pendingMyRating}));
+  info.innerHTML = lines.map(esc).join('<br>');
+}
+I18N_REFRESH.push(function(){ if(document.getElementById('modalBg') && document.getElementById('modalBg').classList.contains('show')) renderRatingPicker(); });
+
 function openAddModal(){
   editIdx=-1;
   document.getElementById('modalTitle').textContent=tr('cs.addTitle');
   document.getElementById('btnDel').style.display='none';
-  ['mNaam','mDorp','mTel','mSel','mUrl','mInfo','mGps','mRem'].forEach(function(id){document.getElementById(id).value='';});
+  ['mNaam','mDorp','mTel','mSel','mInfo','mGps','mRem'].forEach(function(id){document.getElementById(id).value='';});
+  pendingRatingCamp = null; pendingMyRating = null; renderRatingPicker();
   document.getElementById('mProv').value='';
   pendingCampPhotos = [];
   renderPhotoPicker('mPhotoPicker', pendingCampPhotos, 4);
@@ -3307,7 +3402,7 @@ function openEditModal(idx){
   document.getElementById('mProv').value=c.provinsie||'';
   document.getElementById('mTel').value=c.tel||'';
   document.getElementById('mSel').value=c.sel||'';
-  document.getElementById('mUrl').value=c.url||'';
+  pendingRatingCamp = c; pendingMyRating = campMyRating(c); renderRatingPicker();
   document.getElementById('mInfo').value=c.info||'';
   document.getElementById('mGps').value=c.gps||'';
   document.getElementById('mRem').value=c.notes||'';
@@ -4060,7 +4155,10 @@ if(window.matchMedia){
       provinsie:document.getElementById('mProv').value,
       tel:document.getElementById('mTel').value.trim(),
       sel:document.getElementById('mSel').value.trim(),
-      url:document.getElementById('mUrl').value.trim(),
+      // Webtuiste/URL is no longer on the form -- keep whatever was stored
+      // (older records use it for the website/booking e-mail) instead of blanking it.
+      url:(editIdx>=0 && camps[editIdx] && camps[editIdx].url) || '',
+      ratings:campMergedRatings(editIdx>=0 ? camps[editIdx] : null),
       info:document.getElementById('mInfo').value.trim(),
       notes:document.getElementById('mRem').value.trim(),
       gps:gpsClean,
