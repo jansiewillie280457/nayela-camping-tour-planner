@@ -257,7 +257,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.3 (25 Sep Sterre-gradering)</div>
+  <div class="hdr-ver">v3.5 (25 Sep Nuwe Toer = Nuwe Brandstof Log)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -452,6 +452,18 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
           </div>
         </div>
       </div>
+
+      <!-- Planned vs actual fuel -->
+      <div class="card" style="margin-top:18px;">
+        <div class="card-hdr" style="background:linear-gradient(135deg,#e65100,#f9a825);" data-i18n="fuel.cmp.hdr">⚖️ Beplan vs Werklik</div>
+        <div class="card-body" id="fuelCmpBody"></div>
+      </div>
+      <style>
+        .fuel-cmp-tbl{width:100%;border-collapse:collapse;font-size:.78rem;}
+        .fuel-cmp-tbl th{background:#fff3e0;color:#5d4037;padding:5px 6px;text-align:right;font-weight:700;white-space:nowrap;}
+        .fuel-cmp-tbl td{padding:5px 6px;border-bottom:1px solid #f0f0f0;text-align:right;white-space:nowrap;}
+        .fuel-cmp-tbl td:first-child{white-space:normal;}
+      </style>
     </div>
 
     <!-- RIGHT: Log + Graph -->
@@ -699,7 +711,7 @@ Object.assign(I18N.af, {
   'menu.saved.stops': 'stops',
   'menu.saved.savedOn': 'gestoor',
   'menu.saved.load': 'Oplaai',
-  'menu.saved.loadConfirm': 'Laai "{name}"? Dit vervang jou HUIDIGE toer (toerbesonderhede, skedule, lede, voertuig, noodgevalle, deposito\'s, paklys). Stoor jou huidige toer eers as jy dit wil behou.',
+  'menu.saved.loadConfirm': 'Laai "{name}"? Dit vervang jou HUIDIGE toer (toerbesonderhede, skedule, lede, voertuig, noodgevalle, deposito\'s, paklys, brandstof log). Stoor jou huidige toer eers as jy dit wil behou.',
   'menu.saved.loaded': 'opgelaai ✓',
   'menu.saved.delConfirm': 'Skrap gestoorde toer "{name}"? Dit kan nie ongedaan gemaak word nie.',
   'menu.saved.deleted': 'Geskrap',
@@ -819,7 +831,7 @@ Object.assign(I18N.en, {
   'menu.saved.stops': 'stops',
   'menu.saved.savedOn': 'saved',
   'menu.saved.load': 'Load',
-  'menu.saved.loadConfirm': 'Load "{name}"? This replaces your CURRENT tour (Trip Details, Schedule, Members, Vehicle, Emergency, Deposits, Pack List). Save your current tour first if you want to keep it.',
+  'menu.saved.loadConfirm': 'Load "{name}"? This replaces your CURRENT tour (Trip Details, Schedule, Members, Vehicle, Emergency, Deposits, Pack List, Fuel log). Save your current tour first if you want to keep it.',
   'menu.saved.loaded': 'loaded ✓',
   'menu.saved.delConfirm': 'Delete saved tour "{name}"? This cannot be undone.',
   'menu.saved.deleted': 'Deleted',
@@ -962,6 +974,7 @@ function showPage(id){
   if(id==='pg-recipes'){initRecipesPage();}
   if(id==='pg-road'){initRoadPage();}
   if(id==='pg-manuals'){initManualsPage();}
+  if(id==='pg-fuel' && typeof renderFuelPlanCompare==='function'){renderFuelPlanCompare();}
   if(id!=='pg-manuals' && typeof manualsCloseViewer==='function'){manualsCloseViewer();}
 }
 
@@ -1171,6 +1184,16 @@ function deleteEntry(i){
   });
 }
 
+// ── Start a new tour: empty the fuel log without asking again ──────────
+// Used by "Maak Skedule Skoon" and the AI planner's "Begin 'n Nuwe Toer",
+// so a new trip starts with a clean Brandstof page. (Save the old tour
+// first under Gestoorde Toere -- the fuel log is part of that snapshot.)
+function resetFuelLogForNewTour(){
+  fuelLog = [];
+  try{localStorage.setItem('nayela_fuel', JSON.stringify(fuelLog));}catch(e){}
+  try{ renderLog(); renderAllFuelGraphs(); updateStats(); }catch(e){}
+}
+
 // ── Clear entire fuel log ───────────────────────────────────────────────
 function clearFuelLog(){
   if(!fuelLog.length){ toast(tr('fuel.logAlreadyEmpty')); return; }
@@ -1184,6 +1207,7 @@ function clearFuelLog(){
 
 // ── Render log table ──────────────────────────────────────────────────
 function renderLog(){
+  if(typeof renderFuelPlanCompare==='function') setTimeout(renderFuelPlanCompare, 0);
   var tb = document.getElementById('fuelBody');
   if(!fuelLog.length){
     tb.innerHTML='<tr><td colspan="10" class="no-entries">'+esc(tr('fuel.noEntries'))+'</td></tr>';
@@ -4818,8 +4842,8 @@ Object.assign(I18N.af, {
   'tour.schedule.returnAdded': '🏠 Terugtrek na {name} bygevoeg ✓',
   'tour.schedule.removeConfirm': 'Verwyder "{name}" van skedule?',
   'tour.schedule.stopRemoved': 'Stop verwyder',
-  'tour.schedule.clearConfirm': 'Maak alle stops van skedule skoon? Die Deposito\'s vir hierdie toer word ook skoongemaak.',
-  'tour.schedule.cleared': 'Skedule en deposito\'s skoongemaak',
+  'tour.schedule.clearConfirm': 'Maak alle stops van skedule skoon? Die Deposito\'s en die Brandstof log van hierdie toer word ook skoongemaak. (Stoor eers die toer onder Gestoorde Toere as jy dit wil hou.)',
+  'tour.schedule.cleared': 'Skedule, deposito\'s en brandstof log skoongemaak',
   'tour.schedule.noStops': 'Nog geen stops bygevoeg nie. Voeg jou eerste stop hierbo by.',
   'tour.schedule.notesLbl': '📝 Omgewing- & Kampplek-inligting — {name}',
   'tour.schedule.notesPh': 'bv. plek van belang, wandelroetes, watervlak, veiligheidsnotas, wat om te doen in die omgewing... (verskyn ook op die gedrukte Toer Plan)',
@@ -5177,8 +5201,8 @@ Object.assign(I18N.en, {
   'tour.schedule.returnAdded': '🏠 Return leg to {name} added ✓',
   'tour.schedule.removeConfirm': 'Remove "{name}" from schedule?',
   'tour.schedule.stopRemoved': 'Stop removed',
-  'tour.schedule.clearConfirm': 'Clear all stops from the schedule? The Deposits for this tour will be cleared too.',
-  'tour.schedule.cleared': 'Schedule and deposits cleared',
+  'tour.schedule.clearConfirm': 'Clear all stops from the schedule? The Deposits and the Fuel log for this tour will be cleared too. (Save the tour under Saved Tours first if you want to keep it.)',
+  'tour.schedule.cleared': 'Schedule, deposits and fuel log cleared',
   'tour.schedule.noStops': 'No stops added yet. Add your first stop above.',
   'tour.schedule.notesLbl': '📝 Area & Campsite Info — {name}',
   'tour.schedule.notesPh': 'e.g. points of interest, hiking trails, water levels, safety notes, things to do nearby... (also appears on the printed Tour Plan)',
@@ -5595,6 +5619,7 @@ async function saveCurrentTourAs(){
       packData: packData,
       packCustomItems: packCustomItems,
       menuList: menuList,
+      fuelLog: fuelLog,
       // Kampeerterrein Soektog: saved by name+town (not raw array indices,
       // which would silently point at the wrong campsite if the database
       // has since been re-ordered or updated) so it can be matched back up
@@ -5631,6 +5656,10 @@ function loadSavedTour(id){
     packData = d.packData || {};
     packCustomItems = d.packCustomItems || {};
     menuList = d.menuList || [];
+    // Each saved tour carries its own fuel log (older saves had none -> empty).
+    fuelLog = Array.isArray(d.fuelLog) ? d.fuelLog : [];
+    try{localStorage.setItem('nayela_fuel', JSON.stringify(fuelLog));}catch(e){}
+    try{ renderLog(); renderAllFuelGraphs(); updateStats(); }catch(e){}
     try{localStorage.setItem('nayela_tourinfo', JSON.stringify(tourInfo));}catch(e){}
     try{localStorage.setItem('nayela_stops', JSON.stringify(tourStops));}catch(e){}
     try{localStorage.setItem('nayela_members', JSON.stringify(tourMembers));}catch(e){}
@@ -5874,6 +5903,7 @@ function importTourFile(inputEl){
         packData: data.packData || {},
         packCustomItems: data.packCustomItems || {},
         menuList: data.menuList || [],
+        fuelLog: Array.isArray(data.fuelLog) ? data.fuelLog : [],
         csSelection: data.csSelection || [],
         csFilter: data.csFilter || {prov:'', town:'', name:''}
       }
@@ -6629,6 +6659,8 @@ function clearSchedule(){
     // campsites and amounts in it).
     depositList=[];
     try{localStorage.setItem('nayela_deposits', JSON.stringify(depositList));}catch(e){}
+    // New trip = new fuel log too (Brandstof Berekenaar + Beplan vs Werklik).
+    resetFuelLogForNewTour();
     renderSchedule(); recalcFuel(); renderOverview();
     if(typeof renderDeposits==='function') renderDeposits();
     toast(tr('tour.schedule.cleared'));
@@ -7445,6 +7477,12 @@ function applyAiPlanToTour(mode){
   if(mode==='new'){
     tourStops = newStops;
     tourInfo = { name: tourName, start:'', end:'', people: tourInfo.people||2, caravan: tourInfo.caravan||1 };
+    // A brand-new tour starts with empty Deposito's and an empty fuel log,
+    // same as "Maak Skedule Skoon".
+    depositList = [];
+    try{ localStorage.setItem('nayela_deposits', JSON.stringify(depositList)); }catch(e){}
+    if(typeof renderDeposits==='function') renderDeposits();
+    resetFuelLogForNewTour();
   } else {
     tourStops = tourStops.concat(newStops);
   }
@@ -9749,6 +9787,145 @@ function manualsDelete(id){
 applyLanguage();
 </script>
 <!-- ═══════════════════ end MANUALS ═══════════════════ -->
+<script>
+// ── ⚖️ Brandstof: Beplan vs Werklik ──────────────────────────────────
+// Compares the fuel PLAN (Toer Beplanner: Skedule km per leg, with the
+// Voertuig tab's km/L and R/L) against what's ACTUALLY happening in the
+// Brandstof log, while the tour is on the go. Everything is compared for
+// the same distance (the km actually driven so far), so it's fair even
+// half-way through the tour; plus a projection for the whole tour.
+Object.assign(I18N.af, {
+  'fuel.cmp.hdr': '⚖️ Beplan vs Werklik',
+  'fuel.cmp.noPlan': 'Nog geen beplande roete nie. Voeg stops met afstande (km) by in die Toer Beplanner se Skedule — dan word jou werklike brandstof hier daarteen vergelyk.',
+  'fuel.cmp.noActual': 'Beplan vir die hele toer: {km} km · {lit} L · R {cost}. Voeg ten minste twee brandstofstops by (met die reisafstandmeter) om werklike verbruik te vergelyk.',
+  'fuel.cmp.driven': 'Gery: {km} km van {total} km beplan ({pct}%)',
+  'fuel.cmp.sched': 'Volgens die skedule moes julle teen {date} omtrent {km} km gery het.',
+  'fuel.cmp.colItem': '',
+  'fuel.cmp.colPlan': 'Beplan',
+  'fuel.cmp.colActual': 'Werklik',
+  'fuel.cmp.colDiff': 'Verskil',
+  'fuel.cmp.rowKmL': 'Verbruik (km/L)',
+  'fuel.cmp.rowL100': 'Verbruik (L/100km)',
+  'fuel.cmp.rowPrice': 'Prys (R/L)',
+  'fuel.cmp.rowLit': 'Brandstof vir {km} km',
+  'fuel.cmp.rowCost': 'Koste vir {km} km',
+  'fuel.cmp.projHdr': 'Hele toer ({km} km)',
+  'fuel.cmp.projPlan': 'Beplan: R {cost} ({lit} L)',
+  'fuel.cmp.projExp': 'Verwag teen huidige tempo: R {cost} ({lit} L)',
+  'fuel.cmp.over': 'R {amt} meer as beplan',
+  'fuel.cmp.under': 'R {amt} minder as beplan',
+  'fuel.cmp.onPlan': 'Presies op plan',
+  'fuel.cmp.remaining': 'Nog {km} km oor — verwag omtrent {lit} L en R {cost}.',
+  'fuel.cmp.done': 'Julle het die beplande afstand klaar gery.',
+  'fuel.cmp.note': 'Beplan = die Voertuig-oortjie se verbruik ({kml} km/L) en prys (R {price}/L) met die Skedule se afstande. Werklik = hierdie brandstof log. Verander die plan in Toer Beplanner → Voertuig.'
+});
+Object.assign(I18N.en, {
+  'fuel.cmp.hdr': '⚖️ Planned vs Actual',
+  'fuel.cmp.noPlan': 'No planned route yet. Add stops with distances (km) in the Tour Planner\'s Schedule — then your actual fuel is compared against it here.',
+  'fuel.cmp.noActual': 'Planned for the whole tour: {km} km · {lit} L · R {cost}. Add at least two fuel stops (with the odometer) to compare actual consumption.',
+  'fuel.cmp.driven': 'Driven: {km} km of {total} km planned ({pct}%)',
+  'fuel.cmp.sched': 'According to the schedule you should have driven about {km} km by {date}.',
+  'fuel.cmp.colItem': '',
+  'fuel.cmp.colPlan': 'Planned',
+  'fuel.cmp.colActual': 'Actual',
+  'fuel.cmp.colDiff': 'Difference',
+  'fuel.cmp.rowKmL': 'Consumption (km/L)',
+  'fuel.cmp.rowL100': 'Consumption (L/100km)',
+  'fuel.cmp.rowPrice': 'Price (R/L)',
+  'fuel.cmp.rowLit': 'Fuel for {km} km',
+  'fuel.cmp.rowCost': 'Cost for {km} km',
+  'fuel.cmp.projHdr': 'Whole tour ({km} km)',
+  'fuel.cmp.projPlan': 'Planned: R {cost} ({lit} L)',
+  'fuel.cmp.projExp': 'Expected at current rate: R {cost} ({lit} L)',
+  'fuel.cmp.over': 'R {amt} more than planned',
+  'fuel.cmp.under': 'R {amt} less than planned',
+  'fuel.cmp.onPlan': 'Exactly on plan',
+  'fuel.cmp.remaining': '{km} km still to go — expect about {lit} L and R {cost}.',
+  'fuel.cmp.done': 'You have driven the full planned distance.',
+  'fuel.cmp.note': 'Planned = the Vehicle tab\'s consumption ({kml} km/L) and price (R {price}/L) with the Schedule\'s distances. Actual = this fuel log. Change the plan in Tour Planner → Vehicle.'
+});
+
+function fuelCmpFmt(n, d){
+  var v = (Math.round(n * Math.pow(10, d||0)) / Math.pow(10, d||0)).toFixed(d||0);
+  var parts = v.split('.'); parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+  return parts.join('.');
+}
+// Difference cell: `worseWhenHigher` decides colour (red = bad for the budget).
+function fuelCmpDiff(plan, actual, d, unit, worseWhenHigher){
+  if(!(plan > 0)) return '—';
+  var diff = actual - plan, pct = diff / plan * 100;
+  if(Math.abs(pct) < 0.5) return '<span style="color:#2e7d32;">±0%</span>';
+  var bad = worseWhenHigher ? diff > 0 : diff < 0;
+  var sign = diff > 0 ? '+' : '−';
+  return '<span style="color:' + (bad ? '#c62828' : '#2e7d32') + ';font-weight:700;">' + sign + (unit === 'R' ? 'R ' : '')
+    + fuelCmpFmt(Math.abs(diff), d) + (unit && unit !== 'R' ? ' ' + unit : '') + ' (' + sign + fuelCmpFmt(Math.abs(pct), 0) + '%)</span>';
+}
+
+function renderFuelPlanCompare(){
+  var el = document.getElementById('fuelCmpBody');
+  if(!el) return;
+  var stops = (typeof tourStops !== 'undefined' && tourStops) ? tourStops : [];
+  var veh = (typeof vehicleInfo !== 'undefined' && vehicleInfo) ? vehicleInfo : {};
+  var planKmL = parseFloat(veh.kmL) || 6, planPrice = parseFloat(veh.fuelPrice) || 20.02;
+  var totalKm = stops.reduce(function(s, st){ return s + (parseFloat(st.km) || 0); }, 0);
+  var note = '<p style="font-size:.72rem;color:#888;margin:10px 0 0;">' + esc(tr('fuel.cmp.note', {kml: planKmL.toFixed(1), price: planPrice.toFixed(2)})) + '</p>';
+  if(!(totalKm > 0)){ el.innerHTML = '<div style="font-size:.82rem;color:#777;">' + esc(tr('fuel.cmp.noPlan')) + '</div>'; return; }
+
+  var planTotLit = totalKm / planKmL, planTotCost = planTotLit * planPrice;
+  var log = (typeof fuelLog !== 'undefined' && fuelLog) ? fuelLog : [];
+  var legs = log.filter(function(e){ return e.dist > 0 && e.litres > 0; });
+  var actKm = legs.reduce(function(s, e){ return s + e.dist; }, 0);
+  if(!(actKm > 0)){
+    el.innerHTML = '<div style="font-size:.82rem;color:#555;">' + esc(tr('fuel.cmp.noActual', {km: fuelCmpFmt(totalKm), lit: fuelCmpFmt(planTotLit), cost: fuelCmpFmt(planTotCost)})) + '</div>' + note;
+    return;
+  }
+  var actLit = legs.reduce(function(s, e){ return s + e.litres; }, 0);
+  var actCost = legs.reduce(function(s, e){ return s + (e.cost || 0); }, 0);
+  var actKmL = actKm / actLit, actPrice = actCost / actLit;
+  var planLit = actKm / planKmL, planCost = planLit * planPrice;
+
+  // progress
+  var pct = Math.min(100, Math.round(actKm / totalKm * 100));
+  var h = '<div style="font-size:.82rem;font-weight:700;color:#333;">' + esc(tr('fuel.cmp.driven', {km: fuelCmpFmt(actKm), total: fuelCmpFmt(totalKm), pct: Math.round(actKm / totalKm * 100)})) + '</div>'
+    + '<div style="background:#eee;border-radius:6px;height:10px;margin:5px 0 4px;overflow:hidden;"><div style="width:' + pct + '%;height:100%;background:linear-gradient(90deg,#43a047,#1b5e20);"></div></div>';
+  // where the schedule says we should be, by the date of the latest fill-up
+  var lastDate = log.reduce(function(m, e){ return (e.date && e.date > m) ? e.date : m; }, '');
+  var dated = stops.filter(function(st){ return st.date; });
+  if(lastDate && dated.length){
+    var schedKm = stops.reduce(function(s, st){ return s + ((st.date && st.date <= lastDate) ? (parseFloat(st.km) || 0) : 0); }, 0);
+    if(schedKm > 0) h += '<div style="font-size:.74rem;color:#777;margin-bottom:8px;">' + esc(tr('fuel.cmp.sched', {date: lastDate, km: fuelCmpFmt(schedKm)})) + '</div>';
+  }
+  // comparison table (same distance)
+  function row(label, p, a, d, unit, worseHigh, pre){
+    pre = pre || '';
+    return '<tr><td style="text-align:left;">' + esc(label) + '</td><td>' + pre + fuelCmpFmt(p, d) + '</td><td><b>' + pre + fuelCmpFmt(a, d) + '</b></td><td>' + fuelCmpDiff(p, a, d, unit, worseHigh) + '</td></tr>';
+  }
+  h += '<div style="overflow-x:auto;"><table class="fuel-cmp-tbl"><thead><tr><th></th><th>' + esc(tr('fuel.cmp.colPlan')) + '</th><th>' + esc(tr('fuel.cmp.colActual')) + '</th><th>' + esc(tr('fuel.cmp.colDiff')) + '</th></tr></thead><tbody>'
+    + row(tr('fuel.cmp.rowKmL'), planKmL, actKmL, 2, '', false)
+    + row(tr('fuel.cmp.rowL100'), 100 / planKmL, 100 / actKmL, 1, '', true)
+    + row(tr('fuel.cmp.rowPrice'), planPrice, actPrice, 2, 'R', true, 'R ')
+    + row(tr('fuel.cmp.rowLit', {km: fuelCmpFmt(actKm)}), planLit, actLit, 1, 'L', true)
+    + row(tr('fuel.cmp.rowCost', {km: fuelCmpFmt(actKm)}), planCost, actCost, 0, 'R', true, 'R ')
+    + '</tbody></table></div>';
+  // projection for the whole tour
+  var remKm = Math.max(0, totalKm - actKm);
+  var expLit = actLit + remKm / actKmL, expCost = actCost + (remKm / actKmL) * actPrice;
+  var diff = expCost - planTotCost;
+  var verdict = Math.abs(diff) < 1 ? tr('fuel.cmp.onPlan') : tr(diff > 0 ? 'fuel.cmp.over' : 'fuel.cmp.under', {amt: fuelCmpFmt(Math.abs(diff))});
+  var col = Math.abs(diff) < 1 ? '#2e7d32' : (diff > 0 ? '#c62828' : '#2e7d32');
+  h += '<div style="margin-top:10px;background:#fffaf0;border:1px solid #f0dfb5;border-radius:8px;padding:9px 11px;font-size:.8rem;">'
+    + '<div style="font-weight:700;margin-bottom:3px;">' + esc(tr('fuel.cmp.projHdr', {km: fuelCmpFmt(totalKm)})) + '</div>'
+    + '<div>' + esc(tr('fuel.cmp.projPlan', {cost: fuelCmpFmt(planTotCost), lit: fuelCmpFmt(planTotLit)})) + '</div>'
+    + '<div>' + esc(tr('fuel.cmp.projExp', {cost: fuelCmpFmt(expCost), lit: fuelCmpFmt(expLit)})) + '</div>'
+    + '<div style="color:' + col + ';font-weight:700;margin-top:3px;">' + esc(verdict) + '</div>'
+    + '<div style="color:#666;margin-top:3px;">' + esc(remKm > 0 ? tr('fuel.cmp.remaining', {km: fuelCmpFmt(remKm), lit: fuelCmpFmt(remKm / actKmL), cost: fuelCmpFmt(remKm / actKmL * actPrice)}) : tr('fuel.cmp.done')) + '</div>'
+    + '</div>';
+  el.innerHTML = h + note;
+}
+I18N_REFRESH.push(renderFuelPlanCompare);
+renderFuelPlanCompare();
+applyLanguage();
+</script>
 
 <!-- PRINT-ONLY: full Tour Plan document, built fresh from all tabs each
      time "Print Tour Plan" is clicked. Kept as a top-level element (not
