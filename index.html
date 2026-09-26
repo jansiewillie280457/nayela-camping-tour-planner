@@ -257,7 +257,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.6 (26 Sep Padkaart)</div>
+  <div class="hdr-ver">v3.6.1 (26 Sep Padkaart)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -9883,9 +9883,13 @@ function rvApply(center){
   var sc = document.getElementById('rvScroll'), st = document.getElementById('rvStage');
   if(!sc || !st) return;
   // keep the point in the middle of the screen in the middle after zooming
-  var oldW = st.offsetWidth || 1, oldH = st.offsetHeight || 1;
+  var oldW = st.offsetWidth || 1, oldH = oldW * 570 / 950;
   var fx = (sc.scrollLeft + sc.clientWidth / 2) / oldW, fy = (sc.scrollTop + sc.clientHeight / 2) / oldH;
-  st.style.width = rvWidth() + 'px';
+  // Size the stage explicitly (map is always 950:570), so centring works even
+  // before the picture has finished loading/laying out.
+  var newW = rvWidth();
+  st.style.width = newW + 'px';
+  st.style.height = Math.round(newW * 570 / 950) + 'px';
   if(center){
     // centre on the campsite dots/pins that are showing, else the middle of SA
     var pts = [];
@@ -9899,7 +9903,7 @@ function rvApply(center){
       fy = pts.reduce(function(a, p){ return a + p[1]; }, 0) / pts.length / 570;
     } else { fx = 0.5; fy = 0.62; }
   }
-  var W = st.offsetWidth, H = st.offsetHeight;
+  var W = newW, H = newW * 570 / 950;
   sc.scrollLeft = Math.max(0, fx * W - sc.clientWidth / 2);
   sc.scrollTop = Math.max(0, fy * H - sc.clientHeight / 2);
 }
