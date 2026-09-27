@@ -2576,8 +2576,17 @@ function restoreCsSnapshot(csSelection, csFilter){
       if(nameEl && csFilter.name !== undefined) nameEl.value = csFilter.name;
       if(typeof doFilter === 'function') doFilter();
     }
+    // Always clear the CURRENT selection first, even when the tour being
+    // loaded has no csSelection of its own (an older saved tour from
+    // before this field existed, or one where the person never used the
+    // Search page's checkboxes). Without this, loading such a tour left
+    // whatever was selected from the PREVIOUS tour sitting in `sel` --
+    // still ticked, still on the map -- so campsites from two different
+    // tours could get mixed up for the member. Restoring the new
+    // selection (if any) always happens after that clear, never guarded
+    // behind "only if csSelection isn't empty".
+    sel.length = 0;
     if(csSelection && csSelection.length){
-      sel.length = 0;
       csSelection.forEach(function(row){
         var match = findCampsiteMatch(row.naam);
         if(match){
@@ -2585,19 +2594,22 @@ function restoreCsSnapshot(csSelection, csFilter){
           if(idx >= 0 && sel.indexOf(idx) < 0) sel.push(idx);
         }
       });
-      var selCntEl = document.getElementById('selCnt');
-      if(selCntEl) selCntEl.textContent = sel.length;
-      // Both need to run AFTER `sel` is actually restored above, not
-      // before -- renderList() alone doesn't touch the map at all, and
-      // plotDots() draws its pins/route line from whatever `sel` holds
-      // at the moment it's called. Calling doFilter() earlier (for the
-      // csFilter branch) runs plotDots() too, but at that point `sel`
-      // is still the OLD selection -- that's exactly why the map's
-      // numbered pins and route line weren't showing up after loading
-      // a saved tour, even though the list/count looked right.
-      if(typeof renderList === 'function') renderList();
-      if(typeof plotDots === 'function') plotDots();
     }
+    var selCntEl = document.getElementById('selCnt');
+    if(selCntEl) selCntEl.textContent = sel.length;
+    // Both need to run AFTER `sel` is actually restored above, not
+    // before -- renderList() alone doesn't touch the map at all, and
+    // plotDots() draws its pins/route line from whatever `sel` holds
+    // at the moment it's called. Calling doFilter() earlier (for the
+    // csFilter branch) runs plotDots() too, but at that point `sel`
+    // is still the OLD selection -- that's exactly why the map's
+    // numbered pins and route line weren't showing up after loading
+    // a saved tour, even though the list/count looked right. Both also
+    // need to run unconditionally now (not just when csSelection has
+    // entries), so an empty new selection actually clears the old
+    // pins/list on screen instead of leaving them showing.
+    if(typeof renderList === 'function') renderList();
+    if(typeof plotDots === 'function') plotDots();
   }catch(e){ console.error('restoreCsSnapshot failed:', e); }
 }
 
@@ -5735,6 +5747,23 @@ function loadSavedTour(id){
     try{localStorage.setItem('nayela_menu', JSON.stringify(menuList));}catch(e){}
     restoreCsSnapshot(d.csSelection, d.csFilter);
     showPage('pg-tour');
+    // showPage('pg-tour') -> initTourPage() only re-renders the Oorsig
+    // sub-tab. Every OTHER Toer Beplanner sub-tab (Skedule, Lede,
+    // Voertuig, Kampkoste, Nood, Deposito's, Paklys, Spyskaart) only
+    // re-renders when the person clicks its own oortjie (see showTab()) --
+    // so whichever one happened to be open before "Oplaai" kept showing
+    // the PREVIOUS tour's table until the person manually clicked away
+    // and back. Force every one of them to reflect the just-loaded tour
+    // right now, regardless of which is currently visible, so nothing
+    // from the old tour is left on screen anywhere.
+    try{ renderSchedule(); }catch(e){}
+    try{ renderMembers(); }catch(e){}
+    try{ loadVehicleForm(); renderVehicleTable(); }catch(e){}
+    try{ renderCampCosts(); }catch(e){}
+    try{ renderEmergency(); }catch(e){}
+    try{ renderDeposits(); }catch(e){}
+    try{ renderPackList(); }catch(e){}
+    try{ renderMenu(); }catch(e){}
     toast('"' + t.name + '" ' + tr('menu.saved.loaded'));
   });
 }
