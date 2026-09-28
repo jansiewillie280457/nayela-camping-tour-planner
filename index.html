@@ -257,7 +257,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.7 (27 Sep AI Toer regstellings)</div>
+  <div class="hdr-ver">v3.8 (28 Sep Gestoorde Toere sinkroniseer)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -376,6 +376,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
       <button class="btn-tp btn-add" onclick="saveCurrentTourAs()" data-i18n="menu.saved.btn">💾 Stoor Huidige Toer</button>
       <label class="btn-tp btn-add" for="importTourFile" style="touch-action:manipulation;display:inline-block;vertical-align:middle;" data-i18n="menu.saved.importBtn">📥 Voer Toerplan In</label>
       <input type="file" id="importTourFile" accept=".json,application/json" style="display:none" onchange="importTourFile(this)">
+      <div id="savedToursSync" style="font-size:.74rem;margin-top:8px;color:#777;"></div>
       <div id="savedToursList" style="margin-top:14px;"><div class="saved-tours-empty">Nog geen gestoorde toere nie. Beplan 'n toer, en tik dan "Stoor Huidige Toer" om 'n kopie hier te hou.</div></div>
     </div>
   </div>
@@ -705,6 +706,11 @@ Object.assign(I18N.af, {
   'menu.tips.desc': 'Praktiese raad oor beplanning, toerusting, veiligheid, kosmaak en om geen spoor agter te laat nie.',
   'menu.tips.badge': '★ Fase 5 — Nuut',
   'menu.saved.title': '💾 Gestoorde Toere',
+  'menu.saved.cloudSyncError': 'Kon nie die toer na die wolk stuur nie — dit is veilig op hierdie toestel gestoor en sal later outomaties sinkroniseer.',
+  'menu.saved.syncOk': '☁️ Gesinkroniseer — jou gestoorde toere is op al jou toestelle waar jy aanmeld.',
+  'menu.saved.syncDenied': '⚠️ Gestoorde toere sinkroniseer nie: Firebase het toestemming geweier. Hulle bly net op hierdie toestel totdat die admin die Firestore-reël vir savedTours byvoeg.',
+  'menu.saved.syncError': '⚠️ Kan nie nou sinkroniseer nie ({err}). Toere bly op hierdie toestel en sinkroniseer later.',
+  'menu.saved.syncLocal': 'Gestoorde toere word net op hierdie toestel gewys totdat jy aangemeld is.',
   'menu.saved.desc': 'Stoor \'n momentopname van jou huidige toer (toerbesonderhede, skedule, lede, voertuig, noodgevalle, deposito\'s en paklys) sodat jy \'n nuwe een kan begin, en dit later weer kan oplaai.',
   'menu.saved.btn': '💾 Stoor Huidige Toer',
   'menu.saved.empty': 'Nog geen gestoorde toere nie. Beplan \'n toer, en tik dan "Stoor Huidige Toer" om \'n kopie hier te hou.',
@@ -826,6 +832,11 @@ Object.assign(I18N.en, {
   'menu.tips.desc': 'Practical advice on planning, gear, safety, cooking and leaving no trace.',
   'menu.tips.badge': '★ Phase 5 — New',
   'menu.saved.title': '💾 Saved Tours',
+  'menu.saved.cloudSyncError': 'Could not send the tour to the cloud — it is safely saved on this device and will sync automatically later.',
+  'menu.saved.syncOk': '☁️ Synced — your saved tours are on all your devices where you log in.',
+  'menu.saved.syncDenied': '⚠️ Saved tours are not syncing: Firebase denied permission. They stay on this device only until the admin adds the Firestore rule for savedTours.',
+  'menu.saved.syncError': '⚠️ Cannot sync right now ({err}). Tours stay on this device and will sync later.',
+  'menu.saved.syncLocal': 'Saved tours are shown for this device only until you are logged in.',
   'menu.saved.desc': 'Save a snapshot of your current tour (trip details, schedule, members, vehicle, emergency, deposits & pack list) so you can start a new one, then load it back any time.',
   'menu.saved.btn': '💾 Save Current Tour',
   'menu.saved.empty': 'No saved tours yet. Plan a tour, then tap "Save Current Tour" to keep a copy here.',
@@ -2576,8 +2587,11 @@ function restoreCsSnapshot(csSelection, csFilter){
       if(nameEl && csFilter.name !== undefined) nameEl.value = csFilter.name;
       if(typeof doFilter === 'function') doFilter();
     }
+    // Always start from an EMPTY Soektog selection when a tour is loaded --
+    // if the loaded tour has no selection of its own, the previous tour's
+    // ticks/pins must not stay behind (two tours got mixed up that way).
+    sel.length = 0;
     if(csSelection && csSelection.length){
-      sel.length = 0;
       csSelection.forEach(function(row){
         var match = findCampsiteMatch(row.naam);
         if(match){
@@ -2595,9 +2609,15 @@ function restoreCsSnapshot(csSelection, csFilter){
       // is still the OLD selection -- that's exactly why the map's
       // numbered pins and route line weren't showing up after loading
       // a saved tour, even though the list/count looked right.
-      if(typeof renderList === 'function') renderList();
-      if(typeof plotDots === 'function') plotDots();
     }
+    // ALWAYS redraw (also when the loaded tour has no selection), so the
+    // previous tour's pins/ticks disappear.
+    var selCntEl2 = document.getElementById('selCnt'), panCntEl2 = document.getElementById('panCnt');
+    if(selCntEl2) selCntEl2.textContent = sel.length;
+    if(panCntEl2) panCntEl2.textContent = sel.length;
+    if(typeof saveSel === 'function') saveSel();
+    if(typeof renderList === 'function') renderList();
+    if(typeof plotDots === 'function') plotDots();
   }catch(e){ console.error('restoreCsSnapshot failed:', e); }
 }
 
@@ -5654,6 +5674,40 @@ function setSavedTours(list){
   catch(e){ return false; }
 }
 
+// ── ☁️ Saved Tours cloud sync (per member) ─────────────────────────
+// The Firebase module exposes window.fbSaveTour / window.fbDeleteTour and
+// keeps localStorage ('nayela_saved_tours') as a live mirror of the
+// member's own cloud list (savedTours/{email}/tours). A tour that couldn't
+// reach the cloud yet (offline, rules not set, not logged in) is flagged
+// _pending and is kept locally + retried on the next sync -- a save is
+// never lost and never blocked by the cloud.
+function markSavedTourPending(id, pending){
+  var list = getSavedTours(), changed = false;
+  list.forEach(function(t){ if(t.id===id && !!t._pending !== !!pending){ if(pending) t._pending = true; else delete t._pending; changed = true; } });
+  if(changed) setSavedTours(list);
+}
+function cloudPushSavedTour(entry, quiet){
+  if(typeof window.fbSaveTour !== 'function'){ markSavedTourPending(entry.id, true); return; }
+  window.fbSaveTour(entry).then(function(){ markSavedTourPending(entry.id, false); })
+    .catch(function(e){
+      markSavedTourPending(entry.id, true);
+      console.error('saved tour cloud save failed', e);
+      if(!quiet) toast(tr('menu.saved.cloudSyncError'));
+    });
+}
+window.cloudPushSavedTour = cloudPushSavedTour;
+function setSavedToursSyncStatus(state, msg){
+  var el = document.getElementById('savedToursSync');
+  if(!el) return;
+  window._savedToursSync = {state: state, msg: msg || ''};
+  if(state === 'ok'){ el.style.color = '#2e7d32'; el.textContent = tr('menu.saved.syncOk'); }
+  else if(state === 'denied'){ el.style.color = '#b00'; el.textContent = tr('menu.saved.syncDenied'); }
+  else if(state === 'error'){ el.style.color = '#b26a00'; el.textContent = tr('menu.saved.syncError', {err: msg || ''}); }
+  else { el.style.color = '#777'; el.textContent = tr('menu.saved.syncLocal'); }
+}
+window.setSavedToursSyncStatus = setSavedToursSyncStatus;
+I18N_REFRESH.push(function(){ var st = window._savedToursSync; setSavedToursSyncStatus(st ? st.state : 'local', st ? st.msg : ''); });
+
 async function saveCurrentTourAs(){
   var defaultName = (tourInfo && tourInfo.name) ? tourInfo.name : (tr('menu.saved.defaultName') + ' ' + new Date().toLocaleDateString(LANG==='af'?'af-ZA':'en-GB'));
   var name = prompt(tr('menu.saved.promptName'), defaultName);
@@ -5691,6 +5745,7 @@ async function saveCurrentTourAs(){
   savedTours.push(entry);
   setSavedTours(savedTours);
   renderSavedTours();
+  cloudPushSavedTour(entry);   // ☁️ also on the member's other devices
   var result = await downloadTourJSON(entry);
   toast('"' + name + '" ' + tr(result ? 'menu.saved.savedFile' : 'menu.saved.saved'));
 }
@@ -5726,6 +5781,12 @@ function loadSavedTour(id){
     try{localStorage.setItem('nayela_menu', JSON.stringify(menuList));}catch(e){}
     restoreCsSnapshot(d.csSelection, d.csFilter);
     showPage('pg-tour');
+    // showPage only redraws the Oorsig tab; redraw EVERY tab now so whichever
+    // one is open shows the loaded tour, not the previous one.
+    ['loadTourForm','renderOverview','renderSchedule','renderMembers','loadVehicleForm','renderVehicleTable',
+     'renderCampCosts','renderEmergency','renderDeposits','renderPackList','renderMenu','recalcFuel'].forEach(function(fn){
+      try{ if(typeof window[fn] === 'function') window[fn](); }catch(e){ console.error(fn, e); }
+    });
     toast('"' + t.name + '" ' + tr('menu.saved.loaded'));
   });
 }
@@ -5739,6 +5800,9 @@ function deleteSavedTour(id){
     if(setSavedTours(savedTours)){
       renderSavedTours();
       toast(tr('menu.saved.deleted'));
+      if(typeof window.fbDeleteTour === 'function'){
+        window.fbDeleteTour(id).catch(function(e){ console.error('saved tour cloud delete failed', e); toast(tr('menu.saved.cloudSyncError')); });
+      }
     } else {
       toast(tr('menu.saved.importStorageError'));
     }
@@ -5944,8 +6008,9 @@ function importTourFile(inputEl){
     while(savedTours.some(function(s){ return s.name===finalName; })){
       n++; finalName = name + ' (' + n + ')';
     }
+    var importedId = 't_' + Date.now();
     savedTours.push({
-      id: 't_' + Date.now(),
+      id: importedId,
       name: finalName,
       savedAt: new Date().toISOString(),
       data: {
@@ -5972,6 +6037,8 @@ function importTourFile(inputEl){
     if(setSavedTours(savedTours)){
       renderSavedTours();
       toast('"' + finalName + '" ' + tr('menu.saved.imported'));
+      var imp = savedTours.find(function(s){ return s.id === importedId; });
+      if(imp) cloudPushSavedTour(imp);
     } else {
       toast(tr('menu.saved.importStorageError'));
     }
@@ -10575,6 +10642,70 @@ window.fbDeleteCampsite = async function(id){
 };
 window.fbIsAdmin = function(){ return !!(currentMember && currentMember.role==='admin'); };
 
+// ── ☁️ Saved Tours: private per member, savedTours/{email}/tours/{id} ──
+// Needs this Firestore rule (Firebase Console → Firestore → Rules):
+//   match /savedTours/{email}/tours/{tourId} {
+//     allow read, write: if request.auth != null && request.auth.token.email == email;
+//   }
+// The tour's data is stored as ONE JSON text field (dataJson): Firestore
+// rejects nested arrays and undefined values, and a tour must never fail
+// to sync because of what's inside it.
+let unsubSavedTours = null;
+function savedToursCol(){
+  var u = auth.currentUser;
+  if(!u || !u.email) throw new Error('not logged in');
+  return collection(db, 'savedTours', u.email, 'tours');
+}
+function tourToCloud(t){
+  return { id: t.id, name: t.name || '', savedAt: t.savedAt || new Date().toISOString(), dataJson: JSON.stringify(t.data || {}) };
+}
+function tourFromCloud(id, d){
+  var data = {};
+  try{ data = d.dataJson ? JSON.parse(d.dataJson) : (d.data || {}); }catch(e){ data = {}; }
+  return { id: id, name: d.name || '', savedAt: d.savedAt || '', data: data };
+}
+window.fbSaveTour = async function(entry){
+  if(!entry || !entry.id) return;
+  var rec = tourToCloud(entry);
+  if(rec.dataJson.length > 900000) throw new Error('tour too large for cloud (' + Math.round(rec.dataJson.length/1024) + ' KB)');
+  await setDoc(doc(savedToursCol(), entry.id), rec);
+};
+window.fbDeleteTour = async function(id){
+  if(!id) return;
+  await deleteDoc(doc(savedToursCol(), id));
+};
+// One-time catch-up per login: tours saved on this device before sync
+// existed (or while offline) are uploaded. Only ever ADDS -- never deletes.
+async function migrateLocalSavedToursIfNeeded(){
+  var local = (typeof getSavedTours === 'function') ? getSavedTours() : [];
+  if(!local.length) return;
+  var snap = await getDocs(savedToursCol());
+  var have = {}; snap.forEach(function(d){ have[d.id] = true; });
+  for(var i=0;i<local.length;i++){
+    if(!have[local[i].id]){
+      try{ await window.fbSaveTour(local[i]); }catch(e){ console.error('upload saved tour', local[i].id, e); }
+    }
+  }
+}
+function subscribeSavedTours(){
+  if(unsubSavedTours) unsubSavedTours();
+  unsubSavedTours = onSnapshot(savedToursCol(), function(snap){
+    var cloud = [], ids = {};
+    snap.forEach(function(d){ cloud.push(tourFromCloud(d.id, d.data())); ids[d.id] = true; });
+    // keep local tours that haven't reached the cloud yet, and retry them
+    var local = (typeof getSavedTours === 'function') ? getSavedTours() : [];
+    var pending = local.filter(function(t){ return t._pending && !ids[t.id]; });
+    if(typeof setSavedTours === 'function') setSavedTours(cloud.concat(pending));
+    if(typeof renderSavedTours === 'function') renderSavedTours();
+    if(typeof window.setSavedToursSyncStatus === 'function') window.setSavedToursSyncStatus('ok');
+    pending.forEach(function(t){ if(typeof window.cloudPushSavedTour === 'function') window.cloudPushSavedTour(t, true); });
+  }, function(err){
+    console.error('saved tours sync error', err);
+    var denied = err && (err.code === 'permission-denied' || /permission/i.test(err.message||''));
+    if(typeof window.setSavedToursSyncStatus === 'function') window.setSavedToursSyncStatus(denied ? 'denied' : 'error', err && (err.code || err.message));
+  });
+}
+
 // ── Members admin panel ────────────────────────────────────────────
 async function renderMembers(){
   var wrap = document.getElementById('fbMemList');
@@ -10667,6 +10798,8 @@ onAuthStateChanged(auth, async function(user){
   if(window.IS_VIEW_ONLY) return; // a viewer never sees the login gate
   if(!user){
     currentMember=null;
+    if(unsubSavedTours){ try{ unsubSavedTours(); }catch(e){} unsubSavedTours = null; }
+    if(typeof window.setSavedToursSyncStatus === 'function') window.setSavedToursSyncStatus('local');
     gateShow('');
     var acct0 = document.getElementById('hdrAcct');
     if(acct0) acct0.style.display = 'none';
@@ -10692,6 +10825,17 @@ onAuthStateChanged(auth, async function(user){
     await migrateRecipesIfEmpty();
     subscribeRecipes();
     subscribeRoadConditions();
+    // Saved Tours sync is isolated in its OWN try/catch: if it fails for any
+    // reason (rules not set yet, offline...) the app must still unlock and
+    // saved tours simply stay on this device -- see Phase 23b.
+    try{
+      await migrateLocalSavedToursIfNeeded();
+      subscribeSavedTours();
+    }catch(e){
+      console.error('saved tours sync unavailable (app still works, saved tours stay on this device):', e);
+      var denied0 = e && (e.code === 'permission-denied' || /permission/i.test(e.message||''));
+      if(typeof window.setSavedToursSyncStatus === 'function') window.setSavedToursSyncStatus(denied0 ? 'denied' : 'error', e && (e.code || e.message));
+    }
     gateHide();
     // Show who's logged in + a real, working logout button in the
     // header -- previously signOut() was only ever called automatically
