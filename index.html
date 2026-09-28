@@ -141,6 +141,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(180deg,#
 .bar-lbl{font-size:.6rem;color:#666;margin-top:4px;text-align:center;max-width:40px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .bar.consumption{background:linear-gradient(to top,#0d47a1,#1976d2);}
 .bar.price{background:linear-gradient(to top,#4a148c,#8e24aa);}
+.bar.kml{background:linear-gradient(to top,#00695c,#26a69a);}
 /* Zoomed fuel graphs (verbruik + prys): bars sit in a .bar-area so dashed
    reference lines (plan / gemiddeld) can be drawn at the same height in
    every column; the scale no longer starts at 0 so small differences show. */
@@ -266,7 +267,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.9 (28 Sep Brandstof-grafieke skaal)</div>
+  <div class="hdr-ver">v3.10 (28 Sep km/L grafiek)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -492,6 +493,15 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
         <div class="card-body">
           <div class="graph-wrap">
             <div class="bar-chart" id="consumptionChart"><div style="color:#ccc;font-size:.8rem;margin:auto;">Nog nie genoeg stops nie</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:18px;">
+        <div class="card-hdr" style="background:linear-gradient(135deg,#00695c,#26a69a);" data-i18n="fuel.kmlGraphHdr">📊 Brandstofverbruik — Grafiek (km per liter)</div>
+        <div class="card-body">
+          <div class="graph-wrap">
+            <div class="bar-chart" id="kmlChart"><div style="color:#ccc;font-size:.8rem;margin:auto;">Nog nie genoeg stops nie</div></div>
           </div>
         </div>
       </div>
@@ -901,6 +911,8 @@ Object.assign(I18N.af, {
   'fuel.graphHdr': '📈 Brandstof per Stop — Grafiek',
   'fuel.consumptionGraphHdr': '📊 Brandstofverbruik — Grafiek (L/100km)',
   'fuel.priceGraphHdr': '💰 Prys per Liter — Grafiek',
+  'fuel.kmlGraphHdr': '📊 Brandstofverbruik — Grafiek (km per liter)',
+  'fuel.kmlHigherBetter': 'Hoër is beter: hoe verder jy op een liter ry.',
   'fuel.noConsumptionGraph': 'Nog nie genoeg stops nie',
   'fuel.noStopsGraph': 'Nog geen brandstof stops nie',
   'fuel.logHdr': '📌 Brandstof Log',
@@ -960,6 +972,8 @@ Object.assign(I18N.en, {
   'fuel.graphHdr': '📈 Fuel per Stop — Graph',
   'fuel.consumptionGraphHdr': '📊 Fuel Consumption — Graph (L/100km)',
   'fuel.priceGraphHdr': '💰 Price per Litre — Graph',
+  'fuel.kmlGraphHdr': '📊 Fuel Consumption — Graph (km per litre)',
+  'fuel.kmlHigherBetter': 'Higher is better: the further you drive on one litre.',
   'fuel.noConsumptionGraph': 'Not enough stops yet',
   'fuel.noStopsGraph': 'No fuel stops yet',
   'fuel.logHdr': '📌 Fuel Log',
@@ -1339,6 +1353,30 @@ function renderConsumptionGraph(){
   });
 }
 
+// ── km per litre graph (per stop) ────────────────────────────────────────
+// Same data as L/100km, the other way round: km driven ÷ litres filled.
+// Here HIGHER is better (further on a litre).
+function renderKmlGraph(){
+  var chart = document.getElementById('kmlChart');
+  if(!chart) return;
+  var legs = fuelLog.filter(function(e){ return e.dist>0 && e.litres>0; });
+  if(!legs.length){
+    chart.innerHTML='<div style="color:#ccc;font-size:.8rem;margin:auto;">'+esc(tr('fuel.noConsumptionGraph'))+'</div>';
+    clearZoomCap(chart);
+    return;
+  }
+  var km = legs.reduce(function(a,e){ return a + e.dist; }, 0);
+  var lit = legs.reduce(function(a,e){ return a + e.litres; }, 0);
+  var plan = fuelPlanRates();
+  renderZoomBars(chart, legs.map(function(e){ var v = e.dist / e.litres; return {v:v, town:e.town, valText:v.toFixed(2)}; }), {
+    cls:'kml', minSpread:1, step:0.25, fmt:function(v){ return v.toFixed(2) + ' km/L'; },
+    refs:[ plan.kmL>0 ? {v:plan.kmL, color:'#e65100', label:tr('fuel.refPlan')} : null,
+           lit>0 ? {v:km/lit, color:'#2e7d32', label:tr('fuel.refAvg')} : null ]
+  });
+  var cap = document.getElementById('kmlChartCap');
+  if(cap) cap.innerHTML += '<br>' + esc(tr('fuel.kmlHigherBetter'));
+}
+
 // ── Price per litre graph (R/L per stop) ─────────────────────────────────
 function renderPriceGraph(){
   var chart = document.getElementById('priceChart');
@@ -1364,6 +1402,7 @@ function renderPriceGraph(){
 function renderAllFuelGraphs(){
   renderGraph();
   renderConsumptionGraph();
+  renderKmlGraph();
   renderPriceGraph();
 }
 
