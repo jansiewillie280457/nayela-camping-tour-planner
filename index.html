@@ -268,7 +268,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.12 (29 Sep AI roetes bly op pad)</div>
+  <div class="hdr-ver">v3.13 (29 Sep AI meer nagte)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -674,6 +674,7 @@ Object.assign(I18N.af, {
   'aiplan.legWarning': '⚠️ Kon nie \'n kampeerterrein vind om hierdie afstand onder {max}km te hou nie — {km}km',
   'aiplan.resultsTitle': 'Voorgestelde Roete',
   'aiplan.legKm': '{km} km vanaf vorige stop',
+  'aiplan.nightsN': '{n} nagte',
   'aiplan.firstStop': 'Eerste stop',
   'aiplan.removeStop': 'Verwyder hierdie stop',
   'aiplan.addManualPh': 'Voeg nog \'n kampeerterrein by (tik om te soek)...',
@@ -801,6 +802,7 @@ Object.assign(I18N.en, {
   'aiplan.legWarning': '⚠️ Could not find a campsite to keep this leg under {max}km — {km}km',
   'aiplan.resultsTitle': 'Suggested Route',
   'aiplan.legKm': '{km} km from previous stop',
+  'aiplan.nightsN': '{n} nights',
   'aiplan.firstStop': 'First stop',
   'aiplan.removeStop': 'Remove this stop',
   'aiplan.addManualPh': 'Add another campsite (type to search)...',
@@ -7623,7 +7625,10 @@ async function buildAiPlanFromChoices(){
   aiPlanTownChoices.forEach(function(tc){
     var c = (tc.selectedIdx >= 0 && tc.candidates[tc.selectedIdx]) ? tc.candidates[tc.selectedIdx] : (tc.selectedNaam ? byName[tc.selectedNaam] : null);
     if(!c) return;
-    if(anchors.length && anchors[anchors.length-1].naam === c.naam) return;
+    // The same place on consecutive lines = staying there longer, e.g.
+    // Kgalagadi ×3 = one stop with 3 nights (it used to silently become 1).
+    var prevA = anchors[anchors.length-1];
+    if(prevA && prevA.naam === c.naam && prevA.gps === c.gps){ prevA._nights = (prevA._nights || 1) + 1; return; }
     anchors.push(aiPlanStopCopy(c));
   });
 
@@ -7650,7 +7655,7 @@ async function buildAiPlanFromChoices(){
       await insertLegRespectingCap(finalStops, anchors[i], maxKm, usedNames, 0);
     }
 
-    aiPlanState.stops = finalStops.map(function(c){ return {naam:c.naam, dorp:c.dorp||'', provinsie:c.provinsie||'', gps:c.gps||'', legKm:null, warning:null}; });
+    aiPlanState.stops = finalStops.map(function(c){ return {naam:c.naam, dorp:c.dorp||'', provinsie:c.provinsie||'', gps:c.gps||'', legKm:null, warning:null, nights:c._nights||1}; });
     for(var j=0;j<finalStops.length;j++){
       aiPlanState.stops[j].legKm = finalStops[j]._legKm!=null ? finalStops[j]._legKm : null;
       aiPlanState.stops[j].warning = finalStops[j]._warning || null;
@@ -7756,6 +7761,7 @@ function renderAiPlanPreview(){
   var list = document.getElementById('aiPlanList');
   list.innerHTML = aiPlanState.stops.map(function(s, i){
     var legText = (i===0) ? tr('aiplan.firstStop') : (s.legKm!=null ? tr('aiplan.legKm',{km:s.legKm}) : '?');
+    if(s.nights > 1) legText += ' · ' + tr('aiplan.nightsN', {n: s.nights});
     var warnHtml = s.warning ? '<div style="color:#b00;font-size:.72rem;margin-top:2px;">'+esc(s.warning)+'</div>' : '';
     return '<div style="display:flex;align-items:center;gap:10px;background:#f7f5ef;border:1px solid #e2ddc9;border-radius:8px;padding:8px 10px;margin-bottom:6px;">'
       +'<div style="width:24px;height:24px;border-radius:50%;background:var(--savanna,#2e7d32);color:#fff;display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700;flex-shrink:0;">'+(i+1)+'</div>'
@@ -7832,7 +7838,7 @@ function applyAiPlanToTour(mode){
     // uses, so the schedule shows the green return badge and 0 nights.
     var isHome = (i === lastIdx && i >= 2 && s.naam === aiPlanState.stops[0].naam);
     var row = {
-      name: s.naam, km: km, nights: isHome ? 0 : 1, costPP: 0,
+      name: s.naam, km: km, nights: isHome ? 0 : (s.nights || 1), costPP: 0,
       email:'', phone:'', booked:'NO',
       fuelCost: km>0 ? (km/rates.kmL)*rates.fuelPrice : 0,
       date:'', gps: s.gps||'', notes:'', highlight:''
