@@ -268,7 +268,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.15 (29 Sep AI afstande herbereken)</div>
+  <div class="hdr-ver">v3.16 (30 Sep Foto's by wenke)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -9454,6 +9454,11 @@ I18N_REFRESH.push(function(){
 .tip-card-custom{border-color:#c9a27a;background:#fffaf3;}
 .tip-card-custom h4{flex:1;}
 .tip-del{background:none;border:none;color:#c00;cursor:pointer;font-size:.85rem;padding:0 0 0 6px;flex-shrink:0;}
+.tip-photos{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:8px;}
+.tip-photos .tp-ph{position:relative;width:64px;height:64px;}
+.tip-photos .tp-ph img{width:64px;height:64px;object-fit:cover;border-radius:6px;border:1px solid #ddd;cursor:zoom-in;}
+.tip-photos .tp-ph button{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;background:#c62828;color:#fff;border:none;font-size:11px;line-height:1;cursor:pointer;padding:0;}
+.tip-photos .tp-add{display:inline-flex;align-items:center;justify-content:center;height:30px;padding:0 10px;border:1px dashed #bbb;border-radius:14px;color:#8d6e63;font-size:.72rem;font-weight:700;cursor:pointer;touch-action:manipulation;background:#faf7f2;}
 .tip-own-badge{display:inline-block;margin-top:8px;font-size:.62rem;font-weight:700;color:#8d6e63;background:#efe3d6;padding:2px 7px;border-radius:8px;}
 </style>
 
@@ -9488,6 +9493,10 @@ I18N_REFRESH.push(function(){
         <label data-i18n="tips.form.lblDetails">Besonderhede (opsioneel)</label>
         <textarea id="tipDesc" rows="2" placeholder="bv. Gewone reguit penne trek maklik uit in sanderige of winderige toestande — spiraal-/skroefpenne of ekstra tentlyne met sandpenne hou baie beter." data-i18n-ph="tips.form.detailsPh"></textarea>
       </div>
+    </div>
+    <div style="margin:10px 0 4px;">
+      <label style="font-size:.72rem;font-weight:700;color:#5d4037;text-transform:uppercase;" data-i18n="tips.form.photos">Foto's (tot 4)</label>
+      <div id="tipPhotoPicker" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;"></div>
     </div>
     <div class="btn-row">
       <button class="btn-tp btn-add" onclick="saveTip()" data-i18n="tips.form.saveBtn">💾 Stoor Wenk</button>
@@ -9582,6 +9591,12 @@ Object.assign(I18N.af, {
   'tips.form.lblDetails': 'Besonderhede (opsioneel)',
   'tips.form.detailsPh': 'bv. Gewone reguit penne trek maklik uit in sanderige of winderige toestande — spiraal-/skroefpenne of ekstra tentlyne met sandpenne hou baie beter.',
   'tips.form.saveBtn': '💾 Stoor Wenk',
+  'tips.form.photos': "Foto's (tot 4)",
+  'tips.photo.add': '📷 Foto',
+  'tips.photo.added': 'Foto bygevoeg ✓',
+  'tips.photo.remove': 'Verwyder foto',
+  'tips.photo.removeConfirm': 'Verwyder hierdie foto?',
+  'tips.photo.error': 'Kon nie die foto stoor nie',
   'tips.cat.planning': '📋 Beplanning & Bespreking',
   'tips.cat.gear': '🎒 Toerusting',
   'tips.cat.safety': '🛟 Veiligheid & Noodhulp',
@@ -9665,6 +9680,12 @@ Object.assign(I18N.en, {
   'tips.form.lblDetails': 'Details (optional)',
   'tips.form.detailsPh': 'e.g. Standard straight pegs pull out easily in sandy or windy conditions — spiral/screw pegs or extra guy ropes with sand pegs hold much better.',
   'tips.form.saveBtn': '💾 Save Tip',
+  'tips.form.photos': 'Photos (up to 4)',
+  'tips.photo.add': '📷 Photo',
+  'tips.photo.added': 'Photo added ✓',
+  'tips.photo.remove': 'Remove photo',
+  'tips.photo.removeConfirm': 'Remove this photo?',
+  'tips.photo.error': 'Could not save the photo',
   'tips.cat.planning': '📋 Planning & Booking',
   'tips.cat.gear': '🎒 Gear & Equipment',
   'tips.cat.safety': '🛟 Safety & First Aid',
@@ -9747,17 +9768,111 @@ function showTipsTab(cat){
   });
 }
 
+// ── 📷 Photos on tips ────────────────────────────────────────────────
+// Any tip -- built-in or your own -- can have up to 4 photos. They're
+// compressed like campsite/recipe photos and kept in this device's
+// IndexedDB ('nayela_tip_photos'), keyed by the tip: own tips by their id,
+// built-in tips by their title key (e.g. tips.builtin.gear2.title).
+// localStorage (~5 MB) is far too small for photos.
+var TIP_PHOTO_MAX = 4;
+var tipPhotoCache = null;          // key -> [dataURL,...]
+var pendingTipPhotos = [];         // photos in the "add your own tip" form
+function tipPhotoDb(){
+  return new Promise(function(res, rej){
+    if(!window.indexedDB){ rej(new Error('IndexedDB not available')); return; }
+    var r = indexedDB.open('nayela_tip_photos', 1);
+    r.onupgradeneeded = function(){ r.result.createObjectStore('photos'); };
+    r.onsuccess = function(){ res(r.result); };
+    r.onerror = function(){ rej(r.error); };
+  });
+}
+function tipPhotoTx(mode, fn){
+  return tipPhotoDb().then(function(db){
+    return new Promise(function(res, rej){
+      var tx = db.transaction('photos', mode), st = tx.objectStore('photos'), out;
+      var req = fn(st); if(req) req.onsuccess = function(){ out = req.result; };
+      tx.oncomplete = function(){ db.close(); res(out); };
+      tx.onerror = tx.onabort = function(){ db.close(); rej(tx.error || new Error('IndexedDB error')); };
+    });
+  });
+}
+function loadTipPhotos(){
+  if(tipPhotoCache) return Promise.resolve(tipPhotoCache);
+  return tipPhotoDb().then(function(db){
+    return new Promise(function(res){
+      var cache = {}, tx = db.transaction('photos', 'readonly'), cur = tx.objectStore('photos').openCursor();
+      cur.onsuccess = function(){ var c = cur.result; if(c){ cache[c.key] = c.value || []; c.continue(); } };
+      tx.oncomplete = function(){ db.close(); tipPhotoCache = cache; res(cache); };
+      tx.onerror = function(){ db.close(); tipPhotoCache = {}; res(tipPhotoCache); };
+    });
+  }).catch(function(){ tipPhotoCache = {}; return tipPhotoCache; });
+}
+function setTipPhotos(key, list){
+  if(!tipPhotoCache) tipPhotoCache = {};
+  if(list && list.length){ tipPhotoCache[key] = list; return tipPhotoTx('readwrite', function(st){ return st.put(list, key); }); }
+  delete tipPhotoCache[key];
+  return tipPhotoTx('readwrite', function(st){ return st.delete(key); });
+}
+function tipCardKey(card){
+  var del = card.querySelector('.tip-del[data-id]');
+  if(del) return 'own:' + del.getAttribute('data-id');
+  var h = card.querySelector('h4[data-i18n]');
+  return h ? h.getAttribute('data-i18n') : null;
+}
+// Draw the photo strip + "📷 Foto" button on every tip card.
+function renderAllTipPhotos(){
+  return loadTipPhotos().then(function(cache){
+    document.querySelectorAll('#pg-tips .tip-card').forEach(function(card){
+      var key = tipCardKey(card); if(!key) return;
+      var box = card.querySelector('.tip-photos');
+      if(!box){ box = document.createElement('div'); box.className = 'tip-photos'; card.appendChild(box); }
+      var list = cache[key] || [];
+      var h = list.map(function(src, i){
+        return '<div class="tp-ph"><img src="'+src+'" data-i="'+i+'" alt=""><button type="button" data-rm="'+i+'" title="'+esc(tr('tips.photo.remove'))+'">✕</button></div>';
+      }).join('');
+      if(list.length < TIP_PHOTO_MAX){
+        h += '<label class="tp-add">'+esc(tr('tips.photo.add'))+'<input type="file" accept="image/*" multiple style="display:none;"></label>';
+      }
+      box.innerHTML = h;
+      box.querySelectorAll('img').forEach(function(img){ img.addEventListener('click', function(){ openLightbox(img.src); }); });
+      box.querySelectorAll('button[data-rm]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          gConfirm(tr('tips.photo.removeConfirm'), function(){
+            var cur = (tipPhotoCache[key] || []).slice(); cur.splice(parseInt(btn.getAttribute('data-rm'),10), 1);
+            setTipPhotos(key, cur).then(renderAllTipPhotos, function(e){ toast(tr('tips.photo.error') + ' (' + e.message + ')'); });
+          });
+        });
+      });
+      var inp = box.querySelector('input[type=file]');
+      if(inp) inp.addEventListener('change', function(){
+        var cur = (tipPhotoCache[key] || []).slice();
+        var files = Array.prototype.slice.call(inp.files || []).slice(0, TIP_PHOTO_MAX - cur.length);
+        Promise.all(files.map(function(f){ return compressImageFile(f, 1000, 180000); })).then(function(datas){
+          return setTipPhotos(key, cur.concat(datas));
+        }).then(function(){ toast(tr('tips.photo.added')); renderAllTipPhotos(); })
+          .catch(function(e){ toast(tr('tips.photo.error') + ' (' + e.message + ')'); });
+      });
+    });
+  });
+}
+function renderTipFormPhotos(){ if(typeof renderPhotoPicker === 'function') renderPhotoPicker('tipPhotoPicker', pendingTipPhotos, TIP_PHOTO_MAX); }
+
 // ── Add a user's own tip ─────────────────────────────────────────────
 function saveTip(){
   var cat   = document.getElementById('tipCat').value;
   var title = document.getElementById('tipTitle').value.trim();
   var desc  = document.getElementById('tipDesc').value.trim();
   if(!title){ toast(tr('tips.toast.needTitle')); return; }
+  var newId = 't'+Date.now()+Math.floor(Math.random()*1000);
   tipsCustom.push({
-    id: 't'+Date.now()+Math.floor(Math.random()*1000),
+    id: newId,
     cat: cat, title: title, desc: desc
   });
   try{localStorage.setItem('nayela_tips_custom', JSON.stringify(tipsCustom));}catch(e){}
+  if(pendingTipPhotos.length){
+    setTipPhotos('own:' + newId, pendingTipPhotos.slice()).then(renderAllTipPhotos, function(e){ toast(tr('tips.photo.error') + ' (' + e.message + ')'); });
+  }
+  pendingTipPhotos.length = 0; renderTipFormPhotos();
   document.getElementById('tipTitle').value = '';
   document.getElementById('tipDesc').value = '';
   renderCustomTips();
@@ -9787,6 +9902,7 @@ function renderCustomTips(){
       grid.appendChild(card);
     });
   });
+  renderAllTipPhotos();
 }
 
 function deleteTipBtn(el){ deleteTip(el.dataset.id); }
@@ -9796,6 +9912,7 @@ function deleteTip(id){
   gConfirm(tr('tips.confirm.delete',{title:t.title}), function(){
     tipsCustom = tipsCustom.filter(function(x){return x.id!==id;});
     try{localStorage.setItem('nayela_tips_custom', JSON.stringify(tipsCustom));}catch(e){}
+    setTipPhotos('own:' + id, []).catch(function(){});
     renderCustomTips();
     updateTipsOwnBadge();
     toast(tr('tips.toast.deleted'));
@@ -9810,6 +9927,7 @@ function updateTipsOwnBadge(){
 
 renderCustomTips();
 updateTipsOwnBadge();
+renderTipFormPhotos();
 
 I18N_REFRESH.push(function(){
   // Re-render dynamic Camping Tips UI content on language switch, preserving
