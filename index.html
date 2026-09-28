@@ -141,6 +141,15 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(180deg,#
 .bar-lbl{font-size:.6rem;color:#666;margin-top:4px;text-align:center;max-width:40px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
 .bar.consumption{background:linear-gradient(to top,#0d47a1,#1976d2);}
 .bar.price{background:linear-gradient(to top,#4a148c,#8e24aa);}
+/* Zoomed fuel graphs (verbruik + prys): bars sit in a .bar-area so dashed
+   reference lines (plan / gemiddeld) can be drawn at the same height in
+   every column; the scale no longer starts at 0 so small differences show. */
+.bar-area{position:relative;flex:1;width:100%;display:flex;align-items:flex-end;margin-top:18px;}
+.bar-area .bar-val{background:rgba(255,255,255,.9);padding:0 3px;border-radius:3px;z-index:3;font-weight:700;color:#333;}
+.bar-area .bar{width:100%;}
+.bar-ref{position:absolute;left:-4px;right:-4px;height:0;border-top:2px dashed;pointer-events:none;z-index:2;}
+.bar-cap{font-size:.66rem;color:#777;margin-top:6px;line-height:1.5;}
+.bar-cap .ref-key{display:inline-block;width:18px;height:0;border-top:2px dashed;vertical-align:middle;margin:0 3px 0 8px;}
 
 /* ── DATE BADGE ── */
 .date-auto{display:inline-flex;align-items:center;gap:6px;background:#e8f5e9;border:1px solid #c8e6c9;border-radius:6px;padding:4px 10px;font-size:.78rem;color:var(--earth);}
@@ -257,7 +266,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.8 (28 Sep Gestoorde Toere sinkroniseer)</div>
+  <div class="hdr-ver">v3.9 (28 Sep Brandstof-grafieke skaal)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -879,6 +888,9 @@ Object.assign(I18N.af, {
   'fuel.costPh': 'bv. 1350.00',
   'fuel.addStopBtn': '+ Voeg Stop By',
   'fuel.clearBtn': '✕ Maak Skoon',
+  'fuel.scaleCap': 'Skaal: {lo} tot {hi} (begin nie by nul nie, sodat die verskille sigbaar is)',
+  'fuel.refPlan': 'Plan',
+  'fuel.refAvg': 'Gemiddeld',
   'fuel.summaryHdr': '📈 Toer Opsomming',
   'fuel.statKm': 'Totale Afstand',
   'fuel.statLit': 'Totale Brandstof',
@@ -935,6 +947,9 @@ Object.assign(I18N.en, {
   'fuel.costPh': 'e.g. 1350.00',
   'fuel.addStopBtn': '+ Add Stop',
   'fuel.clearBtn': '✕ Clear',
+  'fuel.scaleCap': 'Scale: {lo} to {hi} (does not start at zero, so differences are visible)',
+  'fuel.refPlan': 'Plan',
+  'fuel.refAvg': 'Average',
   'fuel.summaryHdr': '📈 Tour Summary',
   'fuel.statKm': 'Total Distance',
   'fuel.statLit': 'Total Fuel',
@@ -987,7 +1002,7 @@ function showPage(id){
   if(id==='pg-recipes'){initRecipesPage();}
   if(id==='pg-road'){initRoadPage();}
   if(id==='pg-manuals'){initManualsPage();}
-  if(id==='pg-fuel' && typeof renderFuelPlanCompare==='function'){renderFuelPlanCompare();}
+  if(id==='pg-fuel' && typeof renderFuelPlanCompare==='function'){renderFuelPlanCompare(); try{ renderAllFuelGraphs(); }catch(e){}}
   if(id!=='pg-manuals' && typeof manualsCloseViewer==='function'){manualsCloseViewer();}
 }
 
@@ -1264,6 +1279,43 @@ function renderGraph(){
   chart.innerHTML=h;
 }
 
+// ── Zoomed bar chart (used for verbruik + prys) ─────────────────────────
+// A price of R23.00 vs R23.50 or 14.2 vs 16.3 L/100km looks identical when
+// bars start at 0, so these two graphs scale to the data: the axis starts
+// a bit below the lowest value (never below 0) and the caption says where.
+// Dashed lines mark the plan (Toer Beplanner -> Voertuig) and the average.
+function renderZoomBars(chart, items, opts){
+  var vals = items.map(function(it){ return it.v; });
+  var refs = (opts.refs || []).filter(function(r){ return r && r.v > 0 && isFinite(r.v); });
+  var all = vals.concat(refs.map(function(r){ return r.v; }));
+  var lo = Math.min.apply(null, all), hi = Math.max.apply(null, all);
+  var spread = Math.max(hi - lo, opts.minSpread || 1);
+  var base = Math.max(0, lo - spread * 0.45);
+  var top = hi + spread * 0.12;
+  if(opts.step){ base = Math.floor(base / opts.step) * opts.step; top = Math.ceil(top / opts.step) * opts.step; }
+  function pct(v){ return Math.max(3, Math.min(100, (v - base) / (top - base) * 100)); }
+  var h = '';
+  items.forEach(function(it){
+    var lbl = it.town.length>8 ? it.town.substring(0,7)+'…' : it.town;
+    var refHtml = refs.map(function(r){ return '<div class="bar-ref" style="bottom:'+pct(r.v).toFixed(1)+'%;border-color:'+r.color+';"></div>'; }).join('');
+    h += '<div class="bar-col"><div class="bar-area">'
+      + '<div class="bar '+opts.cls+'" style="height:'+pct(it.v).toFixed(1)+'%"><span class="bar-val">'+it.valText+'</span></div>'
+      + refHtml + '</div>'
+      + '<div class="bar-lbl">'+esc(lbl)+'</div></div>';
+  });
+  chart.innerHTML = h;
+  var capId = chart.id + 'Cap', cap = document.getElementById(capId);
+  if(!cap){ cap = document.createElement('div'); cap.id = capId; cap.className = 'bar-cap'; chart.parentNode.insertBefore(cap, chart.nextSibling); }
+  var c = esc(tr('fuel.scaleCap', {lo: opts.fmt(base), hi: opts.fmt(top)}));
+  refs.forEach(function(r){ c += '<span class="ref-key" style="border-color:'+r.color+';"></span>' + esc(r.label + ' ' + opts.fmt(r.v)); });
+  cap.innerHTML = c;
+}
+function clearZoomCap(chart){ var cap = document.getElementById(chart.id + 'Cap'); if(cap) cap.innerHTML = ''; }
+function fuelPlanRates(){
+  var v = (typeof vehicleInfo !== 'undefined' && vehicleInfo) ? vehicleInfo : null;
+  return { kmL: v ? parseFloat(v.kmL) || 0 : 0, price: v ? parseFloat(v.fuelPrice) || 0 : 0 };
+}
+
 // ── Consumption graph (L/100km per stop) ────────────────────────────────
 // The first stop (and any stop with no odometer distance from the one
 // before it) has no l100 value yet — same as the "—" shown for it in the
@@ -1274,40 +1326,37 @@ function renderConsumptionGraph(){
   var withConsumption = fuelLog.filter(function(e){ return e.l100>0; });
   if(!withConsumption.length){
     chart.innerHTML='<div style="color:#ccc;font-size:.8rem;margin:auto;">'+esc(tr('fuel.noConsumptionGraph'))+'</div>';
+    clearZoomCap(chart);
     return;
   }
-  var maxL100 = Math.max.apply(null, withConsumption.map(function(e){return e.l100;}));
-  var h='';
-  withConsumption.forEach(function(e){
-    var pct = (e.l100/maxL100)*100;
-    var lbl = e.town.length>8 ? e.town.substring(0,7)+'…' : e.town;
-    h+='<div class="bar-col">'
-      +'<div class="bar consumption" style="height:'+pct+'%"><span class="bar-val">'+e.l100.toFixed(1)+'</span></div>'
-      +'<div class="bar-lbl">'+esc(lbl)+'</div>'
-      +'</div>';
+  var km = withConsumption.reduce(function(a,e){ return a + (e.dist||0); }, 0);
+  var lit = withConsumption.reduce(function(a,e){ return a + (e.litres||0); }, 0);
+  var plan = fuelPlanRates();
+  renderZoomBars(chart, withConsumption.map(function(e){ return {v:e.l100, town:e.town, valText:e.l100.toFixed(1)}; }), {
+    cls:'consumption', minSpread:2, step:0.5, fmt:function(v){ return v.toFixed(1) + ' L/100km'; },
+    refs:[ plan.kmL>0 ? {v:100/plan.kmL, color:'#e65100', label:tr('fuel.refPlan')} : null,
+           km>0 ? {v:lit/km*100, color:'#2e7d32', label:tr('fuel.refAvg')} : null ]
   });
-  chart.innerHTML=h;
 }
 
 // ── Price per litre graph (R/L per stop) ─────────────────────────────────
 function renderPriceGraph(){
   var chart = document.getElementById('priceChart');
   if(!chart) return;
-  if(!fuelLog.length){
+  var withPrice = fuelLog.filter(function(e){ return e.rpl>0; });
+  if(!withPrice.length){
     chart.innerHTML='<div style="color:#ccc;font-size:.8rem;margin:auto;">'+esc(tr('fuel.noStopsGraph'))+'</div>';
+    clearZoomCap(chart);
     return;
   }
-  var maxRpl = Math.max.apply(null, fuelLog.map(function(e){return e.rpl;}));
-  var h='';
-  fuelLog.forEach(function(e){
-    var pct = maxRpl>0 ? (e.rpl/maxRpl)*100 : 0;
-    var lbl = e.town.length>8 ? e.town.substring(0,7)+'…' : e.town;
-    h+='<div class="bar-col">'
-      +'<div class="bar price" style="height:'+pct+'%"><span class="bar-val">R'+e.rpl.toFixed(2)+'</span></div>'
-      +'<div class="bar-lbl">'+esc(lbl)+'</div>'
-      +'</div>';
+  var lit = withPrice.reduce(function(a,e){ return a + (e.litres||0); }, 0);
+  var cost = withPrice.reduce(function(a,e){ return a + (e.cost||0); }, 0);
+  var plan = fuelPlanRates();
+  renderZoomBars(chart, withPrice.map(function(e){ return {v:e.rpl, town:e.town, valText:'R'+e.rpl.toFixed(2)}; }), {
+    cls:'price', minSpread:1, step:0.25, fmt:function(v){ return 'R ' + v.toFixed(2); },
+    refs:[ plan.price>0 ? {v:plan.price, color:'#e65100', label:tr('fuel.refPlan')} : null,
+           lit>0 ? {v:cost/lit, color:'#2e7d32', label:tr('fuel.refAvg')} : null ]
   });
-  chart.innerHTML=h;
 }
 
 // Convenience wrapper — every place that used to refresh just the litres
