@@ -268,7 +268,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.11 (28 Sep liter-skaal 90)</div>
+  <div class="hdr-ver">v3.12 (29 Sep AI roetes bly op pad)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -682,6 +682,7 @@ Object.assign(I18N.af, {
   'aiplan.useThisTour': '✅ Gebruik Hierdie Toer',
   'aiplan.discard': '🗑 Verwerp en Begin Oor',
   'aiplan.discardConfirm': 'Verwerp hierdie voorgestelde roete? Dit sal nie enige bestaande toer raak nie — dit gooi net hierdie voorstel weg.',
+  'aiplan.farFromTown': '⚠ Hierdie plek se GPS is ~{km} km van die ander plekke by hierdie dorp — dalk \'n ander dorp met dieselfde naam, of \'n fout in die ligging.',
   'aiplan.nothingToUse': 'Daar is nog geen roete om te gebruik nie. Tik eers "Vind Kampeerterreine", kies die plekke en tik "Bou Roete".',
   'aiplan.useChoiceMsg': 'Hoe wil jy hierdie roete gebruik?',
   'aiplan.useNew': 'Begin \'n Nuwe Toer',
@@ -808,6 +809,7 @@ Object.assign(I18N.en, {
   'aiplan.useThisTour': '✅ Use This Tour',
   'aiplan.discard': '🗑 Discard and Start Over',
   'aiplan.discardConfirm': 'Discard this suggested route? This won\'t affect any existing tour — it just throws away this suggestion.',
+  'aiplan.farFromTown': '⚠ This place\'s GPS is ~{km} km from the other places in this town — maybe another town with the same name, or a wrong location.',
   'aiplan.nothingToUse': 'There is no route to use yet. First tap "Find Campsites", choose the places and tap "Build Route".',
   'aiplan.useChoiceMsg': 'How would you like to use this route?',
   'aiplan.useNew': 'Start a New Tour',
@@ -7322,8 +7324,65 @@ function scoreCampForTown(camp, townLower){
     if(nSq.indexOf(tSq)!==-1) return 45;
   }
   if(prov.indexOf(townLower)!==-1) return 20;
+  // Typos: "Nelsruit" -> Nelspruit, "Kgalagadie" -> Kgalagadi. Compare with
+  // the whole town field and with each word of the town and the name.
+  if(tSq.length >= 5){
+    var allow = tSq.length >= 8 ? 2 : 1;
+    var words = function(x){ return x.split(/[\s\/\-,()]+/).filter(function(w){ return w.length >= 4; }); };
+    if(aiEditDistance(squash(dorp), tSq) <= allow) return 42;
+    if(words(dorp).some(function(w){ return aiEditDistance(w, tSq) <= allow; })) return 40;
+    if(words(naam).some(function(w){ return aiEditDistance(w, tSq) <= allow; })) return 30;
+  }
   return 0;
 }
+
+// Levenshtein distance (small strings only).
+function aiEditDistance(a, b){
+  if(a === b) return 0;
+  if(Math.abs(a.length - b.length) > 2) return 99;
+  var prev = [], cur, i, j;
+  for(j=0;j<=b.length;j++) prev[j] = j;
+  for(i=1;i<=a.length;i++){
+    cur = [i];
+    for(j=1;j<=b.length;j++){
+      cur[j] = Math.min(prev[j]+1, cur[j-1]+1, prev[j-1] + (a.charAt(i-1)===b.charAt(j-1) ? 0 : 1));
+    }
+    prev = cur;
+  }
+  return prev[b.length];
+}
+
+// New and old town names -- the database uses both.
+var AI_TOWN_ALIASES = [
+  ['mbombela','nelspruit'], ['polokwane','pietersburg'], ['gqeberha','port elizabeth'], ['makhanda','grahamstown'],
+  ['mthatha','umtata'], ['emalahleni','witbank'], ['mahikeng','mafikeng'], ['musina','messina'], ['modimolle','nylstroom'],
+  ['mokopane','potgietersrus'], ['bela-bela','warmbad'], ['bela bela','warmbad'], ['kgalagadi','kalahari gemsbok'],
+  ['twee rivieren','kgalagadi'], ['kasane','chobe'], ['sodwana','sodwana bay'], ['jeffreys bay','jeffrys baai'],
+  ['ladysmith','ladismith'], ['kgalagadi','askham']
+];
+function aiTownTerms(town){
+  var t = town.trim().toLowerCase(), out = [t];
+  AI_TOWN_ALIASES.forEach(function(p){
+    if(p[0] === t && out.indexOf(p[1]) < 0) out.push(p[1]);
+    if(p[1] === t && out.indexOf(p[0]) < 0) out.push(p[0]);
+  });
+  return out;
+}
+
+// Which country a campsite is in, from its provinsie field.
+function aiCampCountry(c){
+  var p = ((c && c.provinsie) || '').toLowerCase();
+  if(p.indexOf('botswana') >= 0) return 'BW';
+  if(p.indexOf('namib') >= 0) return 'NA';
+  if(p.indexOf('zimbabwe') >= 0) return 'ZW';
+  if(p.indexOf('mosambiek') >= 0 || p.indexOf('mozambi') >= 0) return 'MZ';
+  if(p.indexOf('lesotho') >= 0) return 'LS';
+  if(p.indexOf('swazi') >= 0 || p.indexOf('eswatini') >= 0) return 'SZ';
+  return 'ZA';   // SA provinces, Nasionale Parke, Transkei
+}
+// Booking offices / reception entries are in the database but aren't
+// places to sleep -- never pick them as an overnight stop.
+function aiIsOffice(c){ return /besprek|kantoor|office|booking/i.test((c && c.naam) || ''); }
 
 // Returns up to `limit` campsites from the live `camps` array that best
 // match a given town/area name, best match first. Empty array if truly
@@ -7331,16 +7390,42 @@ function scoreCampForTown(camp, townLower){
 function findTownCandidates(town, limit){
   var townLower = (town||'').trim().toLowerCase();
   if(!townLower) return [];
+  var terms = aiTownTerms(townLower);
   var scored = camps
-    .map(function(c){ return {c:c, score:scoreCampForTown(c, townLower)}; })
+    .map(function(c){
+      var sc = 0;
+      // the word you typed counts fully; an alternative name (alias) a bit less
+      terms.forEach(function(t, ti){ sc = Math.max(sc, scoreCampForTown(c, t) * (ti === 0 ? 1 : 0.85)); });
+      return {c:c, score:sc, ll:gpsToLatLng(c.gps)};
+    })
     .filter(function(x){ return x.score>0 && x.c.naam; });
-  scored.sort(function(a,b){ return b.score-a.score; });
+  // Where is this town? Use the campsites whose TOWN field matches best and
+  // take the median of their GPS. A campsite more than ~120 km from that is
+  // (250 km -- big parks like the Kgalagadi span 150 km) is
+  // almost always a data error (e.g. "Kalihari monate": town Upington, GPS in
+  // Namibia) or a different town with the same name -- it goes to the end
+  // of the list with a ⚠ instead of being the default choice.
+  var best = scored.reduce(function(m, x){ return Math.max(m, x.score); }, 0);
+  var core = scored.filter(function(x){ return x.ll && x.score >= Math.min(best, 90); });
+  if(!core.length) core = scored.filter(function(x){ return x.ll; });
+  var centre = null;
+  if(core.length){
+    var med = function(a){ a = a.slice().sort(function(p,q){ return p-q; }); var k = Math.floor(a.length/2); return a.length%2 ? a[k] : (a[k-1]+a[k])/2; };
+    centre = { lat: med(core.map(function(x){ return x.ll.lat; })), lng: med(core.map(function(x){ return x.ll.lng; })) };
+  }
+  scored.forEach(function(x){
+    x.far = 0;
+    if(centre && x.ll){ var d = haversineKmLL(centre, x.ll); if(d != null && d > 250) x.far = Math.round(d); }
+  });
+  // order: normal places, then booking offices, then far-away (⚠) places
+  scored.forEach(function(x){ x.rank = (x.far ? 2 : 0) + (aiIsOffice(x.c) ? 1 : 0); });
+  scored.sort(function(a,b){ return a.rank - b.rank || b.score - a.score; });
   var out = [], seenNames = {};
   for(var i=0;i<scored.length && out.length<(limit||6); i++){
     var naam = scored[i].c.naam;
     if(seenNames[naam]) continue; // camps can carry duplicate-name entries; keep the route list clean
     seenNames[naam]=true;
-    out.push(scored[i].c);
+    out.push(scored[i].far ? Object.assign({}, scored[i].c, {_farKm: scored[i].far}) : scored[i].c);
   }
   return out;
 }
@@ -7364,17 +7449,33 @@ function midpointLL(a, b){
 // just the town candidates) to a given point -- used to insert a
 // realistic overnight stop when two chosen anchor stops are further apart
 // than the traveller's chosen daily limit.
-function nearestUnusedCamp(point, usedNames){
-  var best = null, bestDist = Infinity;
-  for(var i=0;i<camps.length;i++){
-    var c = camps[i];
-    if(!c.naam || usedNames[c.naam]) continue;
-    var ll = gpsToLatLng(c.gps);
-    if(!ll) continue;
-    var d = haversineKmLL(point, ll);
-    if(d!=null && d<bestDist){ bestDist=d; best=c; }
+function nearestUnusedCamp(point, usedNames, opts){
+  // opts (optional): {from, to, fromLL, toLL}. Then the stop must be in the
+  // same country as one of the two ends (Nelspruit -> Kgalagadi stays in SA,
+  // even though the straight line crosses Botswana), must lie roughly on the
+  // way (no big detour), and may not be a booking office.
+  opts = opts || {};
+  var countries = null;
+  if(opts.from && opts.to){ countries = {}; countries[aiCampCountry(opts.from)] = true; countries[aiCampCountry(opts.to)] = true; }
+  var direct = (opts.fromLL && opts.toLL) ? haversineKmLL(opts.fromLL, opts.toLL) : null;
+  function pick(maxDetour){
+    var best = null, bestDist = Infinity;
+    for(var i=0;i<camps.length;i++){
+      var c = camps[i];
+      if(!c.naam || usedNames[c.naam] || aiIsOffice(c)) continue;
+      if(countries && !countries[aiCampCountry(c)]) continue;
+      var ll = gpsToLatLng(c.gps);
+      if(!ll) continue;
+      if(direct && maxDetour){
+        var via = haversineKmLL(opts.fromLL, ll) + haversineKmLL(ll, opts.toLL);
+        if(via > direct * maxDetour + 40) continue;
+      }
+      var d = haversineKmLL(point, ll);
+      if(d!=null && d<bestDist){ bestDist=d; best=c; }
+    }
+    return best;
   }
-  return best;
+  return pick(1.25) || pick(1.6) || pick(null);
 }
 
 async function planTourAiOrder(towns, candidates){
@@ -7459,7 +7560,10 @@ function renderAiPlanChoices(){
       var id = 'aiTc' + ti + '_' + ci;
       return '<label for="'+id+'" class="ai-choice'+(on?' on':'')+'" data-ti="'+ti+'" data-ci="'+ci+'">'
         +'<input type="radio" id="'+id+'" name="townChoice'+ti+'" value="'+ci+'" '+(on?'checked':'')+'>'
-        +'<span style="font-size:.84rem;color:#333;">'+esc(c.naam)+(c.dorp?' <span style="color:#888;">('+esc(c.dorp)+')</span>':'')+'</span>'
+        +'<span style="font-size:.84rem;color:#333;">'+esc(c.naam)
+          +' <span style="color:#888;">('+esc([c.dorp, c.provinsie].filter(Boolean).join(' · '))+')</span>'
+          +(c._farKm ? '<br><span style="color:#b00;font-size:.72rem;">'+esc(tr('aiplan.farFromTown',{km:c._farKm}))+'</span>' : '')
+        +'</span>'
       +'</label>';
     }).join('');
     return '<div style="background:#f7f5ef;border:1px solid #e2ddc9;border-radius:8px;padding:10px 12px;margin-bottom:8px;">'
@@ -7633,7 +7737,7 @@ async function insertLegRespectingCap(stopsSoFar, nextAnchor, maxKm, usedNames, 
   // Too far for one day -- find a real campsite near the midpoint to
   // split it, then recurse on both new (shorter) halves.
   var mid = midpointLL(fromLL, toLL);
-  var foundSplit = nearestUnusedCamp(mid, usedNames);
+  var foundSplit = nearestUnusedCamp(mid, usedNames, {from: from, to: nextAnchor, fromLL: fromLL, toLL: toLL});
   // Copy, never the live `camps` entry: the same stopover can now appear on
   // both the outbound and return legs, and each visit needs its own _legKm.
   var splitCamp = foundSplit ? aiPlanStopCopy(foundSplit) : null;
