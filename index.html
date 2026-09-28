@@ -149,6 +149,7 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(180deg,#
 .bar-area .bar-val{background:rgba(255,255,255,.9);padding:0 3px;border-radius:3px;z-index:3;font-weight:700;color:#333;}
 .bar-area .bar{width:100%;}
 .bar-ref{position:absolute;left:-4px;right:-4px;height:0;border-top:2px dashed;pointer-events:none;z-index:2;}
+.bar-ref.grid{border-top:1px dotted #bbb;z-index:0;}
 .bar-cap{font-size:.66rem;color:#777;margin-top:6px;line-height:1.5;}
 .bar-cap .ref-key{display:inline-block;width:18px;height:0;border-top:2px dashed;vertical-align:middle;margin:0 3px 0 8px;}
 
@@ -267,7 +268,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.10 (28 Sep km/L grafiek)</div>
+  <div class="hdr-ver">v3.11 (28 Sep liter-skaal 90)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -898,6 +899,7 @@ Object.assign(I18N.af, {
   'fuel.costPh': 'bv. 1350.00',
   'fuel.addStopBtn': '+ Voeg Stop By',
   'fuel.clearBtn': '✕ Maak Skoon',
+  'fuel.litreScaleCap': 'Skaal: 0 tot {top} liter · hulplyne by {grid} L',
   'fuel.scaleCap': 'Skaal: {lo} tot {hi} (begin nie by nul nie, sodat die verskille sigbaar is)',
   'fuel.refPlan': 'Plan',
   'fuel.refAvg': 'Gemiddeld',
@@ -959,6 +961,7 @@ Object.assign(I18N.en, {
   'fuel.costPh': 'e.g. 1350.00',
   'fuel.addStopBtn': '+ Add Stop',
   'fuel.clearBtn': '✕ Clear',
+  'fuel.litreScaleCap': 'Scale: 0 to {top} litres · guide lines at {grid} L',
   'fuel.scaleCap': 'Scale: {lo} to {hi} (does not start at zero, so differences are visible)',
   'fuel.refPlan': 'Plan',
   'fuel.refAvg': 'Average',
@@ -1274,23 +1277,37 @@ function renderLog(){
 }
 
 // ── Render bar graph ──────────────────────────────────────────────────
+// Litres per stop: fixed scale 0–90 L (a full tank's worth), so every
+// fill-up is shown against the same yardstick and tours can be compared.
+// Only if a fill-up is bigger than 90 L does the top go up (to the next 10).
+// Light helper lines at every 30 L.
+var FUEL_LITRE_SCALE_MAX = 90;
 function renderGraph(){
   var chart = document.getElementById('barChart');
   if(!fuelLog.length){
     chart.innerHTML='<div style="color:#ccc;font-size:.8rem;margin:auto;">'+esc(tr('fuel.noStopsGraph'))+'</div>';
+    clearZoomCap(chart);
     return;
   }
   var maxL = Math.max.apply(null, fuelLog.map(function(e){return e.litres;}));
+  var top = Math.max(FUEL_LITRE_SCALE_MAX, Math.ceil(maxL / 10) * 10);
+  var grid = [];
+  for(var g = 30; g <= top; g += 30) grid.push(g);
   var h='';
   fuelLog.forEach(function(e){
-    var pct = (e.litres/maxL)*100;
+    var pct = Math.max(1, Math.min(100, e.litres / top * 100));
     var lbl = e.town.length>8 ? e.town.substring(0,7)+'…' : e.town;
-    h+='<div class="bar-col">'
-      +'<div class="bar" style="height:'+pct+'%"><span class="bar-val">'+e.litres.toFixed(0)+'L</span></div>'
+    var gridHtml = grid.map(function(v){ return '<div class="bar-ref grid" style="bottom:'+(v/top*100).toFixed(1)+'%;"></div>'; }).join('');
+    h+='<div class="bar-col"><div class="bar-area">'
+      +'<div class="bar" style="height:'+pct.toFixed(1)+'%"><span class="bar-val">'+e.litres.toFixed(0)+'L</span></div>'
+      + gridHtml + '</div>'
       +'<div class="bar-lbl">'+esc(lbl)+'</div>'
       +'</div>';
   });
   chart.innerHTML=h;
+  var cap = document.getElementById('barChartCap');
+  if(!cap){ cap = document.createElement('div'); cap.id = 'barChartCap'; cap.className = 'bar-cap'; chart.parentNode.insertBefore(cap, chart.nextSibling); }
+  cap.textContent = tr('fuel.litreScaleCap', {top: top, grid: grid.join(', ')});
 }
 
 // ── Zoomed bar chart (used for verbruik + prys) ─────────────────────────
