@@ -268,7 +268,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.14 (29 Sep AI soek rondom dorpe)</div>
+  <div class="hdr-ver">v3.15 (29 Sep AI afstande herbereken)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -674,6 +674,7 @@ Object.assign(I18N.af, {
   'aiplan.legWarning': '⚠️ Kon nie \'n kampeerterrein vind om hierdie afstand onder {max}km te hou nie — {km}km',
   'aiplan.resultsTitle': 'Voorgestelde Roete',
   'aiplan.legKm': '{km} km vanaf vorige stop',
+  'aiplan.legTooLongEdit': '⚠️ {km} km — langer as jou daglimiet van {max} km. Voeg \'n stop tussenin by, of bou die roete weer.',
   'aiplan.nightsN': '{n} nagte',
   'aiplan.firstStop': 'Eerste stop',
   'aiplan.removeStop': 'Verwyder hierdie stop',
@@ -803,6 +804,7 @@ Object.assign(I18N.en, {
   'aiplan.legWarning': '⚠️ Could not find a campsite to keep this leg under {max}km — {km}km',
   'aiplan.resultsTitle': 'Suggested Route',
   'aiplan.legKm': '{km} km from previous stop',
+  'aiplan.legTooLongEdit': '⚠️ {km} km — longer than your daily limit of {max} km. Add a stop in between, or build the route again.',
   'aiplan.nightsN': '{n} nights',
   'aiplan.firstStop': 'First stop',
   'aiplan.removeStop': 'Remove this stop',
@@ -7841,7 +7843,7 @@ async function insertLegRespectingCap(stopsSoFar, nextAnchor, maxKm, usedNames, 
 function renderAiPlanPreview(){
   var list = document.getElementById('aiPlanList');
   list.innerHTML = aiPlanState.stops.map(function(s, i){
-    var legText = (i===0) ? tr('aiplan.firstStop') : (s.legKm!=null ? tr('aiplan.legKm',{km:s.legKm}) : '?');
+    var legText = (i===0) ? tr('aiplan.firstStop') : (s.legKm==='…' ? '…' : (s.legKm!=null ? tr('aiplan.legKm',{km:s.legKm}) : '?'));
     if(s.nights > 1) legText += ' · ' + tr('aiplan.nightsN', {n: s.nights});
     var warnHtml = s.warning ? '<div style="color:#b00;font-size:.72rem;margin-top:2px;">'+esc(s.warning)+'</div>' : '';
     return '<div style="display:flex;align-items:center;gap:10px;background:#f7f5ef;border:1px solid #e2ddc9;border-radius:8px;padding:8px 10px;margin-bottom:6px;">'
@@ -7856,8 +7858,29 @@ function renderAiPlanPreview(){
   }).join('');
 }
 
-function removeAiPlanStop(i){
+// After removing or adding a stop, the distance INTO the stop that now
+// follows has changed -- recalculate it (it used to keep the old number, so
+// e.g. Kuruman -> Nelspruit showed the old ~530 km from Ventersdorp, and that
+// wrong km went into the Skedule and fuel plan).
+async function recalcAiPlanLeg(i){
+  var stops = aiPlanState.stops;
+  if(i <= 0 || i >= stops.length) { if(stops[0]){ stops[0].legKm = null; } return; }
+  var a = gpsToLatLng(stops[i-1].gps), b = gpsToLatLng(stops[i].gps);
+  var maxKm = parseInt((document.getElementById('aiPlanMaxKm')||{}).value) || 600;
+  stops[i].warning = null;
+  if(!a || !b){ stops[i].legKm = null; stops[i].warning = tr('aiplan.noGps',{name: !a ? stops[i-1].naam : stops[i].naam}); return; }
+  stops[i].legKm = '…';
+  renderAiPlanPreview();
+  var km;
+  try{ km = (await osrmDistanceMeters(a, b))/1000; }
+  catch(e){ km = haversineKmLL(a, b) * 1.25; }   // rough road estimate if the route service is unreachable
+  if(stops[i]){ stops[i].legKm = Math.round(km); if(km > maxKm) stops[i].warning = tr('aiplan.legTooLongEdit',{max:maxKm, km:Math.round(km)}); }
+}
+async function removeAiPlanStop(i){
   aiPlanState.stops.splice(i,1);
+  renderAiPlanPreview();
+  if(i < aiPlanState.stops.length) await recalcAiPlanLeg(i);
+  else if(i === 0 && aiPlanState.stops[0]) aiPlanState.stops[0].legKm = null;
   renderAiPlanPreview();
 }
 
@@ -7867,9 +7890,10 @@ function addAiPlanStopManual(){
   if(!name) return;
   var match = findCampsiteMatch(name) || findCampByName(name);
   if(!match){ toast(tr('aiplan.addNotFound')); return; }
-  aiPlanState.stops.push({naam:match.naam, dorp:match.dorp||'', provinsie:match.provinsie||'', gps:match.gps||'', legKm:null, warning:null});
+  aiPlanState.stops.push({naam:match.naam, dorp:match.dorp||'', provinsie:match.provinsie||'', gps:match.gps||'', legKm:null, warning:null, nights:1});
   input.value = '';
   renderAiPlanPreview();
+  recalcAiPlanLeg(aiPlanState.stops.length-1).then(renderAiPlanPreview);
 }
 
 function discardAiPlan(){
@@ -7913,7 +7937,7 @@ function applyAiPlanToTour(mode){
   var rates = getEffectiveFuelRates();
   var lastIdx = aiPlanState.stops.length - 1;
   var newStops = aiPlanState.stops.map(function(s, i){
-    var km = s.legKm || 0;
+    var km = (typeof s.legKm === 'number') ? s.legKm : 0;
     // A route that ends where it started is a trip home: the last row is
     // the return day, not another night's stay -- same shape addReturnLeg()
     // uses, so the schedule shows the green return badge and 0 nights.
