@@ -268,7 +268,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.16 (30 Sep Foto's by wenke)</div>
+  <div class="hdr-ver">v3.17 (30 Sep Wenke gedeel)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -9498,6 +9498,7 @@ I18N_REFRESH.push(function(){
       <label style="font-size:.72rem;font-weight:700;color:#5d4037;text-transform:uppercase;" data-i18n="tips.form.photos">Foto's (tot 4)</label>
       <div id="tipPhotoPicker" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;"></div>
     </div>
+    <div id="tipsSync" style="font-size:.72rem;color:#777;margin:6px 0 2px;"></div>
     <div class="btn-row">
       <button class="btn-tp btn-add" onclick="saveTip()" data-i18n="tips.form.saveBtn">💾 Stoor Wenk</button>
     </div>
@@ -9591,6 +9592,12 @@ Object.assign(I18N.af, {
   'tips.form.lblDetails': 'Besonderhede (opsioneel)',
   'tips.form.detailsPh': 'bv. Gewone reguit penne trek maklik uit in sanderige of winderige toestande — spiraal-/skroefpenne of ekstra tentlyne met sandpenne hou baie beter.',
   'tips.form.saveBtn': '💾 Stoor Wenk',
+  'tips.sync.ok': '☁️ Gedeel met alle lede — wenke en foto\'s wys lewendig op almal se toestelle.',
+  'tips.sync.denied': '⚠️ Wenke word nie gedeel nie: Firebase het toestemming geweier. Die admin moet die Firestore-reël vir tips en tipPhotos byvoeg. Tot dan bly dit op hierdie toestel.',
+  'tips.sync.error': '⚠️ Kan nie nou deel nie ({err}). Wenke bly op hierdie toestel.',
+  'tips.sync.local': 'Wenke en foto\'s word net op hierdie toestel gewys totdat jy aangemeld is.',
+  'tips.sync.saveError': 'Kon nie na die gedeelde wenke stoor nie',
+  'tips.byMember': '💡 Wenk van {who}',
   'tips.form.photos': "Foto's (tot 4)",
   'tips.photo.add': '📷 Foto',
   'tips.photo.added': 'Foto bygevoeg ✓',
@@ -9680,6 +9687,12 @@ Object.assign(I18N.en, {
   'tips.form.lblDetails': 'Details (optional)',
   'tips.form.detailsPh': 'e.g. Standard straight pegs pull out easily in sandy or windy conditions — spiral/screw pegs or extra guy ropes with sand pegs hold much better.',
   'tips.form.saveBtn': '💾 Save Tip',
+  'tips.sync.ok': '☁️ Shared with all members — tips and photos show live on everyone\'s devices.',
+  'tips.sync.denied': '⚠️ Tips are not shared: Firebase denied permission. The admin must add the Firestore rule for tips and tipPhotos. Until then they stay on this device.',
+  'tips.sync.error': '⚠️ Cannot share right now ({err}). Tips stay on this device.',
+  'tips.sync.local': 'Tips and photos are shown for this device only until you are logged in.',
+  'tips.sync.saveError': 'Could not save to the shared tips',
+  'tips.byMember': '💡 Tip from {who}',
   'tips.form.photos': 'Photos (up to 4)',
   'tips.photo.add': '📷 Photo',
   'tips.photo.added': 'Photo added ✓',
@@ -9821,14 +9834,16 @@ function tipCardKey(card){
 }
 // Draw the photo strip + "📷 Foto" button on every tip card.
 function renderAllTipPhotos(){
-  return loadTipPhotos().then(function(cache){
+  return (tipsCloudActive ? Promise.resolve(null) : loadTipPhotos()).then(function(cache){
     document.querySelectorAll('#pg-tips .tip-card').forEach(function(card){
       var key = tipCardKey(card); if(!key) return;
       var box = card.querySelector('.tip-photos');
       if(!box){ box = document.createElement('div'); box.className = 'tip-photos'; card.appendChild(box); }
-      var list = cache[key] || [];
-      var h = list.map(function(src, i){
-        return '<div class="tp-ph"><img src="'+src+'" data-i="'+i+'" alt=""><button type="button" data-rm="'+i+'" title="'+esc(tr('tips.photo.remove'))+'">✕</button></div>';
+      // cloud: [{id,data,addedBy}] ; local: [dataURL]
+      var list = tipsCloudActive ? (tipCloudPhotos[key] || []) : (cache[key] || []).map(function(d){ return {data:d}; });
+      var h = list.map(function(ph, i){
+        var del = tipCanDelete(ph.addedBy) ? '<button type="button" data-rm="'+i+'" title="'+esc(tr('tips.photo.remove'))+'">✕</button>' : '';
+        return '<div class="tp-ph"><img src="'+ph.data+'" data-i="'+i+'" alt=""'+(ph.addedBy?' title="'+esc(ph.addedBy)+'"':'')+'>'+del+'</div>';
       }).join('');
       if(list.length < TIP_PHOTO_MAX){
         h += '<label class="tp-add">'+esc(tr('tips.photo.add'))+'<input type="file" accept="image/*" multiple style="display:none;"></label>';
@@ -9838,24 +9853,74 @@ function renderAllTipPhotos(){
       box.querySelectorAll('button[data-rm]').forEach(function(btn){
         btn.addEventListener('click', function(){
           gConfirm(tr('tips.photo.removeConfirm'), function(){
-            var cur = (tipPhotoCache[key] || []).slice(); cur.splice(parseInt(btn.getAttribute('data-rm'),10), 1);
+            var idx = parseInt(btn.getAttribute('data-rm'),10);
+            if(tipsCloudActive){
+              var ph = list[idx];
+              if(ph && ph.id && typeof window.fbDeleteTipPhoto === 'function'){
+                window.fbDeleteTipPhoto(ph.id).catch(function(e){ toast(tr('tips.photo.error') + ' (' + e.message + ')'); });
+              }
+              return;
+            }
+            var cur = (tipPhotoCache[key] || []).slice(); cur.splice(idx, 1);
             setTipPhotos(key, cur).then(renderAllTipPhotos, function(e){ toast(tr('tips.photo.error') + ' (' + e.message + ')'); });
           });
         });
       });
       var inp = box.querySelector('input[type=file]');
       if(inp) inp.addEventListener('change', function(){
-        var cur = (tipPhotoCache[key] || []).slice();
-        var files = Array.prototype.slice.call(inp.files || []).slice(0, TIP_PHOTO_MAX - cur.length);
-        Promise.all(files.map(function(f){ return compressImageFile(f, 1000, 180000); })).then(function(datas){
-          return setTipPhotos(key, cur.concat(datas));
-        }).then(function(){ toast(tr('tips.photo.added')); renderAllTipPhotos(); })
+        var files = Array.prototype.slice.call(inp.files || []).slice(0, TIP_PHOTO_MAX - list.length);
+        Promise.all(files.map(function(f){ return compressImageFile(f, 1000, 150000); })).then(function(datas){
+          if(tipsCloudActive && typeof window.fbAddTipPhoto === 'function'){
+            return Promise.all(datas.map(function(d){ return window.fbAddTipPhoto(key, d); }));
+          }
+          var cur = (tipPhotoCache[key] || []).slice();
+          return setTipPhotos(key, cur.concat(datas)).then(renderAllTipPhotos);
+        }).then(function(){ toast(tr('tips.photo.added')); })
           .catch(function(e){ toast(tr('tips.photo.error') + ' (' + e.message + ')'); });
       });
     });
   });
 }
 function renderTipFormPhotos(){ if(typeof renderPhotoPicker === 'function') renderPhotoPicker('tipPhotoPicker', pendingTipPhotos, TIP_PHOTO_MAX); }
+
+// ── ☁️ Shared tips (all members) ─────────────────────────────────────
+// When logged in and allowed by the Firestore rules, own tips live in the
+// shared 'tips' collection and tip photos in 'tipPhotos' (one document per
+// photo: {tipKey, data, addedBy}). The Firebase module feeds them in via
+// window.onCloudTips / window.onCloudTipPhotos. Until then (or if the rules
+// are missing) everything keeps working on this device as before.
+var tipsCloudActive = false;
+var tipCloudPhotos = {};   // tipKey -> [{id, data, addedBy}]
+function tipMyEmail(){ var u = window.fbAuth && window.fbAuth.currentUser; return (u && u.email) || ''; }
+function tipCanDelete(addedBy){
+  if(!tipsCloudActive) return true;
+  if(typeof window.fbIsAdmin === 'function' && window.fbIsAdmin()) return true;
+  return !addedBy || addedBy === tipMyEmail();
+}
+function setTipsSyncStatus(state, msg){
+  window._tipsSync = {state: state, msg: msg || ''};
+  var el = document.getElementById('tipsSync'); if(!el) return;
+  if(state === 'ok'){ el.style.color = '#2e7d32'; el.textContent = tr('tips.sync.ok'); }
+  else if(state === 'denied'){ el.style.color = '#b00'; el.textContent = tr('tips.sync.denied'); }
+  else if(state === 'error'){ el.style.color = '#b26a00'; el.textContent = tr('tips.sync.error', {err: msg || ''}); }
+  else { el.style.color = '#777'; el.textContent = tr('tips.sync.local'); }
+}
+window.setTipsSyncStatus = setTipsSyncStatus;
+window.onCloudTips = function(arr){
+  tipsCloudActive = true;
+  tipsCustom = arr.slice().sort(function(a,b){ return String(a.created||'').localeCompare(String(b.created||'')); });
+  try{ localStorage.setItem('nayela_tips_custom', JSON.stringify(tipsCustom)); }catch(e){}
+  renderCustomTips(); updateTipsOwnBadge(); setTipsSyncStatus('ok');
+};
+window.onCloudTipPhotos = function(arr){
+  tipsCloudActive = true;
+  var m = {};
+  arr.sort(function(a,b){ return String(a.created||'').localeCompare(String(b.created||'')); })
+     .forEach(function(p){ (m[p.tipKey] = m[p.tipKey] || []).push(p); });
+  tipCloudPhotos = m;
+  renderAllTipPhotos();
+};
+I18N_REFRESH.push(function(){ var st = window._tipsSync; setTipsSyncStatus(st ? st.state : 'local', st ? st.msg : ''); });
 
 // ── Add a user's own tip ─────────────────────────────────────────────
 function saveTip(){
@@ -9864,13 +9929,16 @@ function saveTip(){
   var desc  = document.getElementById('tipDesc').value.trim();
   if(!title){ toast(tr('tips.toast.needTitle')); return; }
   var newId = 't'+Date.now()+Math.floor(Math.random()*1000);
-  tipsCustom.push({
-    id: newId,
-    cat: cat, title: title, desc: desc
-  });
+  var newTip = { id: newId, cat: cat, title: title, desc: desc, addedBy: tipMyEmail(), created: new Date().toISOString() };
+  tipsCustom.push(newTip);
   try{localStorage.setItem('nayela_tips_custom', JSON.stringify(tipsCustom));}catch(e){}
-  if(pendingTipPhotos.length){
-    setTipPhotos('own:' + newId, pendingTipPhotos.slice()).then(renderAllTipPhotos, function(e){ toast(tr('tips.photo.error') + ' (' + e.message + ')'); });
+  var photosNow = pendingTipPhotos.slice();
+  if(tipsCloudActive && typeof window.fbSaveTip === 'function'){
+    window.fbSaveTip(newTip).then(function(){
+      return Promise.all(photosNow.map(function(d){ return window.fbAddTipPhoto('own:' + newId, d); }));
+    }).catch(function(e){ toast(tr('tips.sync.saveError') + ' (' + e.message + ')'); });
+  } else if(photosNow.length){
+    setTipPhotos('own:' + newId, photosNow).then(renderAllTipPhotos, function(e){ toast(tr('tips.photo.error') + ' (' + e.message + ')'); });
   }
   pendingTipPhotos.length = 0; renderTipFormPhotos();
   document.getElementById('tipTitle').value = '';
@@ -9895,10 +9963,11 @@ function renderCustomTips(){
       card.innerHTML =
         '<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
           +'<h4>'+esc(t.title)+'</h4>'
-          +'<button class="tip-del" onclick="deleteTipBtn(this)" data-id="'+t.id+'" title="'+esc(tr('tips.delTitle'))+'">✕</button>'
+          +(tipCanDelete(t.addedBy) ? '<button class="tip-del" onclick="deleteTipBtn(this)" data-id="'+t.id+'" title="'+esc(tr('tips.delTitle'))+'">✕</button>'
+                                    : '<span class="tip-del" data-id="'+t.id+'" style="display:none;"></span>')
         +'</div>'
         +(t.desc ? '<p>'+esc(t.desc)+'</p>' : '')
-        +'<div class="tip-own-badge">'+esc(tr('tips.ownBadge'))+'</div>';
+        +'<div class="tip-own-badge">'+esc(t.addedBy && t.addedBy !== tipMyEmail() ? tr('tips.byMember',{who: t.addedBy.split('@')[0]}) : tr('tips.ownBadge'))+'</div>';
       grid.appendChild(card);
     });
   });
@@ -9913,6 +9982,9 @@ function deleteTip(id){
     tipsCustom = tipsCustom.filter(function(x){return x.id!==id;});
     try{localStorage.setItem('nayela_tips_custom', JSON.stringify(tipsCustom));}catch(e){}
     setTipPhotos('own:' + id, []).catch(function(){});
+    if(tipsCloudActive && typeof window.fbDeleteTip === 'function'){
+      window.fbDeleteTip(id).catch(function(e){ toast(tr('tips.sync.saveError') + ' (' + e.message + ')'); });
+    }
     renderCustomTips();
     updateTipsOwnBadge();
     toast(tr('tips.toast.deleted'));
@@ -11040,6 +11112,73 @@ window.fbDeleteRecipe = async function(id){
   await deleteDoc(doc(db,'recipes', id));
 };
 
+// ── ☁️ Shared Kampeer Wenke: 'tips' (member tips) + 'tipPhotos' ──────
+// Needs these Firestore rules (Firebase Console → Firestore → Rules):
+//   match /tips/{id} {
+//     allow read, write: if request.auth != null
+//       && exists(/databases/$(database)/documents/members/$(request.auth.token.email));
+//   }
+//   match /tipPhotos/{id} { ...same... }
+// One document per photo (≤ ~150 KB), so photos never hit Firestore's
+// 1 MB-per-document limit and two members adding photos can't overwrite
+// each other.
+var unsubTips = null, unsubTipPhotos = null;
+function tipClean(o){ return JSON.parse(JSON.stringify(o)); }
+window.fbSaveTip = async function(t){
+  await setDoc(doc(db,'tips', t.id), tipClean(Object.assign({}, t, {addedBy: t.addedBy || (auth.currentUser && auth.currentUser.email) || ''})));
+};
+window.fbDeleteTip = async function(id){
+  await deleteDoc(doc(db,'tips', id));
+  var snap = await getDocs(collection(db,'tipPhotos'));
+  var jobs = [];
+  snap.forEach(function(d){ if((d.data()||{}).tipKey === 'own:' + id) jobs.push(deleteDoc(doc(db,'tipPhotos', d.id))); });
+  await Promise.all(jobs);
+};
+window.fbAddTipPhoto = async function(tipKey, dataUrl){
+  var id = 'p' + Date.now() + Math.random().toString(36).slice(2,8);
+  await setDoc(doc(db,'tipPhotos', id), { tipKey: tipKey, data: dataUrl, addedBy: (auth.currentUser && auth.currentUser.email) || '', created: new Date().toISOString() });
+  return id;
+};
+window.fbDeleteTipPhoto = async function(id){ await deleteDoc(doc(db,'tipPhotos', id)); };
+// First login with sharing: upload this device's own tips and tip photos
+// (only ADDS; runs once per member per device for the photos).
+async function migrateLocalTipsIfNeeded(){
+  var me = (auth.currentUser && auth.currentUser.email) || '';
+  var local = []; try{ local = JSON.parse(localStorage.getItem('nayela_tips_custom') || '[]'); }catch(e){}
+  if(local.length){
+    var have = {}; (await getDocs(collection(db,'tips'))).forEach(function(d){ have[d.id] = true; });
+    for(var i=0;i<local.length;i++){ if(!have[local[i].id]) await window.fbSaveTip(Object.assign({addedBy: me, created: new Date().toISOString()}, local[i])); }
+  }
+  var flag = 'nayela_tip_photos_uploaded_' + me;
+  if(localStorage.getItem(flag)) return;
+  if(typeof loadTipPhotos === 'function'){
+    var cache = await loadTipPhotos();
+    var keys = Object.keys(cache || {});
+    for(var k=0;k<keys.length;k++){
+      var arr = cache[keys[k]] || [];
+      for(var j=0;j<arr.length;j++) await window.fbAddTipPhoto(keys[k], arr[j]);
+    }
+  }
+  try{ localStorage.setItem(flag, '1'); }catch(e){}
+}
+function subscribeTips(){
+  function fail(err){
+    console.error('tips sync error', err);
+    var denied = err && (err.code === 'permission-denied' || /permission/i.test(err.message||''));
+    if(typeof window.setTipsSyncStatus === 'function') window.setTipsSyncStatus(denied ? 'denied' : 'error', err && (err.code || err.message));
+  }
+  if(unsubTips) unsubTips();
+  unsubTips = onSnapshot(collection(db,'tips'), function(snap){
+    var arr = []; snap.forEach(function(d){ arr.push(Object.assign({}, d.data(), {id: d.id})); });
+    if(typeof window.onCloudTips === 'function') window.onCloudTips(arr);
+  }, fail);
+  if(unsubTipPhotos) unsubTipPhotos();
+  unsubTipPhotos = onSnapshot(collection(db,'tipPhotos'), function(snap){
+    var arr = []; snap.forEach(function(d){ arr.push(Object.assign({}, d.data(), {id: d.id})); });
+    if(typeof window.onCloudTipPhotos === 'function') window.onCloudTipPhotos(arr);
+  }, fail);
+}
+
 // ── Phase 6: shared road conditions ─────────────────────────────────
 var unsubRoad = null;
 function subscribeRoadConditions(){
@@ -11237,6 +11376,9 @@ onAuthStateChanged(auth, async function(user){
   if(!user){
     currentMember=null;
     if(unsubSavedTours){ try{ unsubSavedTours(); }catch(e){} unsubSavedTours = null; }
+    if(unsubTips){ try{ unsubTips(); }catch(e){} unsubTips = null; }
+    if(unsubTipPhotos){ try{ unsubTipPhotos(); }catch(e){} unsubTipPhotos = null; }
+    if(typeof window.setTipsSyncStatus === 'function') window.setTipsSyncStatus('local');
     if(typeof window.setSavedToursSyncStatus === 'function') window.setSavedToursSyncStatus('local');
     gateShow('');
     var acct0 = document.getElementById('hdrAcct');
@@ -11263,6 +11405,15 @@ onAuthStateChanged(auth, async function(user){
     await migrateRecipesIfEmpty();
     subscribeRecipes();
     subscribeRoadConditions();
+    // Shared tips: same isolation -- can never lock the app.
+    try{
+      await migrateLocalTipsIfNeeded();
+      subscribeTips();
+    }catch(e){
+      console.error('shared tips unavailable (tips stay on this device):', e);
+      var deniedT = e && (e.code === 'permission-denied' || /permission/i.test(e.message||''));
+      if(typeof window.setTipsSyncStatus === 'function') window.setTipsSyncStatus(deniedT ? 'denied' : 'error', e && (e.code || e.message));
+    }
     // Saved Tours sync is isolated in its OWN try/catch: if it fails for any
     // reason (rules not set yet, offline...) the app must still unlock and
     // saved tours simply stay on this device -- see Phase 23b.
