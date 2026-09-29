@@ -268,7 +268,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.17 (30 Sep Wenke gedeel)</div>
+  <div class="hdr-ver">v3.18 (1 Okt Badkamer-gradering)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -1881,12 +1881,17 @@ I18N_REFRESH.push(function(){
         <div id="mRatingStars" class="rate-stars"></div>
         <div id="mRatingInfo" style="font-size:.78rem;color:#777;margin-top:3px;"></div>
       </div>
+      <div class="mfr"><label data-i18n="cs.mBathRating">🚿 Badkamers — tik op die sterre</label>
+        <div id="mBathStars" class="rate-stars"></div>
+        <div id="mBathInfo" style="font-size:.78rem;color:#777;margin-top:3px;"></div>
+      </div>
       <style>
         .rate-stars{display:flex;gap:4px;align-items:center;flex-wrap:wrap;}
         .rate-stars button.rs{background:none;border:none;font-size:1.9rem;line-height:1;padding:2px 3px;cursor:pointer;color:#ccc;touch-action:manipulation;min-width:38px;min-height:38px;}
         .rate-stars button.rs.on{color:#f9a825;}
         .rate-stars button.rs-clear{background:#f3f3f3;border:1px solid #ddd;border-radius:12px;font-size:.72rem;padding:3px 10px;margin-left:6px;cursor:pointer;color:#555;}
         .ri-stars{color:#f9a825;font-size:.78rem;font-weight:700;margin-left:6px;white-space:nowrap;}
+        .ri-bath{color:#0277bd;font-size:.74rem;font-weight:700;margin-left:6px;white-space:nowrap;}
       </style>
       <div class="mfr"><label data-i18n="cs.mInfo">Info / E-pos</label><input id="mInfo" type="text"></div>
       <div class="mfr"><label data-i18n="cs.mGps">GPS Koordimate (lat,lon)</label>
@@ -2264,6 +2269,11 @@ Object.assign(I18N.af, {
   'cs.mRatingAvg': 'Gemiddeld {avg} ★ uit {n} gradering(s) deur lede',
   'cs.mRatingMine': 'Jou gradering: {n} ★ (word gestoor as jy Stoor tik)',
   'cs.mRatingClear': 'Verwyder my gradering',
+  'cs.mBathRating': '🚿 Badkamers — tik op die sterre',
+  'cs.mBathNone': 'Nog geen badkamer-gradering nie — wees die eerste!',
+  'cs.mBathAvg': 'Badkamers gemiddeld {avg} ★ uit {n} gradering(s) deur lede',
+  'cs.mBathMine': 'Jou badkamer-gradering: {n} ★ (word gestoor as jy Stoor tik)',
+  'cs.bathRating': '🚿 Badkamers',
   'cs.rating': 'Gradering',
   'cs.ratingCount': '{n} gradering(s)',
   'cs.mInfo': 'E-pos',
@@ -2401,6 +2411,11 @@ Object.assign(I18N.en, {
   'cs.mRatingAvg': 'Average {avg} ★ from {n} member rating(s)',
   'cs.mRatingMine': 'Your rating: {n} ★ (saved when you tap Save)',
   'cs.mRatingClear': 'Remove my rating',
+  'cs.mBathRating': '🚿 Bathrooms — tap the stars',
+  'cs.mBathNone': 'No bathroom rating yet — be the first!',
+  'cs.mBathAvg': 'Bathrooms average {avg} ★ from {n} member rating(s)',
+  'cs.mBathMine': 'Your bathroom rating: {n} ★ (saved when you tap Save)',
+  'cs.bathRating': '🚿 Bathrooms',
   'cs.rating': 'Rating',
   'cs.ratingCount': '{n} rating(s)',
   'cs.mInfo': 'Email',
@@ -2957,7 +2972,7 @@ function renderList(){
     var isAct=idx===curIdx;
     h+='<div class="ritem'+(isAct?' active':'')+(isSel?' ticked':'')+(isAct&&isSel?' active ticked':'')+'" data-idx="'+idx+'">'
       +'<input type="checkbox" class="ri-cb" data-cidx="'+idx+'"'+(isSel?' checked':'')+' onclick="event.stopPropagation();toggleSel('+idx+')">'
-      +'<div class="ri-body"><div class="ri-name">'+esc(c.naam)+(function(){ var st=campRatingStats(c); return st ? '<span class="ri-stars" title="'+tr('cs.ratingCount',{n:st.n})+'">★ '+st.avg.toFixed(1)+'</span>' : ''; })()+'</div>'
+      +'<div class="ri-body"><div class="ri-name">'+esc(c.naam)+(function(){ var st=campRatingStats(c), bt=campBathStats(c); return (st ? '<span class="ri-stars" title="'+tr('cs.ratingCount',{n:st.n})+'">★ '+st.avg.toFixed(1)+'</span>' : '') + (bt ? '<span class="ri-bath" title="'+tr('cs.bathRating')+' · '+tr('cs.ratingCount',{n:bt.n})+'">🚿 '+bt.avg.toFixed(1)+'</span>' : ''); })()+'</div>'
       +'<div class="ri-sub">'+esc(clean(c.dorp)||'&mdash;')+(c.provinsie?' &bull; '+esc(provLabel(c.provinsie)):'')+'</div>'
       +'</div></div>';
   });
@@ -2983,6 +2998,8 @@ function showDetail(idx){
   }
   var rst=campRatingStats(c);
   if(rst) h+='<div class="drow"><span class="dlbl">'+tr('cs.rating')+':</span><span class="dval"><span style="color:#f9a825;font-size:1.05em;letter-spacing:1px;">'+campStarsStr(rst.avg)+'</span> '+rst.avg.toFixed(1)+' <span style="color:#888;font-size:.85em;">('+tr('cs.ratingCount',{n:rst.n})+')</span></span></div>';
+  var bst=campBathStats(c);
+  if(bst) h+='<div class="drow"><span class="dlbl">'+tr('cs.bathRating')+':</span><span class="dval"><span style="color:#0277bd;font-size:1.05em;letter-spacing:1px;">'+campStarsStr(bst.avg)+'</span> '+bst.avg.toFixed(1)+' <span style="color:#888;font-size:.85em;">('+tr('cs.ratingCount',{n:bst.n})+')</span></span></div>';
   if(tel) h+='<div class="drow"><span class="dlbl">'+tr('cs.town')+':</span><span class="dval">'+esc(tel)+'</span></div>';
   if(cel) h+='<div class="drow"><span class="dlbl">'+tr('cs.cell')+':</span><span class="dval">'+esc(cel)+'</span></div>';
   if(url) h+='<div class="drow"><span class="dlbl">'+tr('cs.website')+':</span><span class="dval"><a href="'+esc(url)+'" target="_blank" rel="noopener">'+esc(url)+'</a></span></div>';
@@ -3592,12 +3609,63 @@ function renderRatingPicker(){
 }
 I18N_REFRESH.push(function(){ if(document.getElementById('modalBg') && document.getElementById('modalBg').classList.contains('show')) renderRatingPicker(); });
 
+// ── 🚿 Bathroom (ablutions) rating (1-5) per member ─────────────────────
+// Same idea as the campsite rating, in its own field so the two averages
+// stay separate: bathRatings[<member id>] = {stars, by, date}.
+var pendingMyBath = null;
+function campBathStats(c){
+  var r = c && c.bathRatings;
+  if(!r || typeof r !== 'object') return null;
+  var vals = Object.keys(r).map(function(k){ return r[k] ? parseInt(r[k].stars, 10) : 0; })
+    .filter(function(v){ return v >= 1 && v <= 5; });
+  if(!vals.length) return null;
+  return { avg: vals.reduce(function(a, b){ return a + b; }, 0) / vals.length, n: vals.length };
+}
+function campMyBath(c){
+  var r = c && c.bathRatings && c.bathRatings[campRatingKey()];
+  var v = r ? parseInt(r.stars, 10) : 0;
+  return (v >= 1 && v <= 5) ? v : null;
+}
+function campMergedBath(c){
+  var out = {}, old = c && c.bathRatings && typeof c.bathRatings === 'object' ? c.bathRatings : {};
+  Object.keys(old).forEach(function(k){ out[k] = old[k]; });
+  var key = campRatingKey();
+  if(pendingMyBath){
+    var u = window.fbAuth && window.fbAuth.currentUser;
+    out[key] = { stars: pendingMyBath, by: (u && u.email) || '', date: Date.now() };
+  } else { delete out[key]; }
+  return out;
+}
+function renderBathPicker(){
+  var box = document.getElementById('mBathStars'), info = document.getElementById('mBathInfo');
+  if(!box) return;
+  var h = '';
+  for(var i = 1; i <= 5; i++){
+    h += '<button type="button" class="rs' + (pendingMyBath && i <= pendingMyBath ? ' on' : '') + '" data-star="' + i + '" aria-label="' + i + '">★</button>';
+  }
+  if(pendingMyBath) h += '<button type="button" class="rs-clear" data-star="0">' + tr('cs.mRatingClear') + '</button>';
+  box.innerHTML = h;
+  box.querySelectorAll('button').forEach(function(b){
+    b.addEventListener('click', function(){
+      var v = parseInt(b.getAttribute('data-star'), 10);
+      pendingMyBath = v >= 1 ? v : null;
+      renderBathPicker();
+    });
+  });
+  var st = campBathStats(pendingRatingCamp), lines = [];
+  lines.push(st ? tr('cs.mBathAvg', {avg: st.avg.toFixed(1), n: st.n}) : tr('cs.mBathNone'));
+  if(pendingMyBath) lines.push(tr('cs.mBathMine', {n: pendingMyBath}));
+  info.innerHTML = lines.map(esc).join('<br>');
+}
+I18N_REFRESH.push(function(){ if(document.getElementById('modalBg') && document.getElementById('modalBg').classList.contains('show')) renderBathPicker(); });
+
 function openAddModal(){
   editIdx=-1;
   document.getElementById('modalTitle').textContent=tr('cs.addTitle');
   document.getElementById('btnDel').style.display='none';
   ['mNaam','mDorp','mTel','mSel','mInfo','mGps','mRem'].forEach(function(id){document.getElementById(id).value='';});
   pendingRatingCamp = null; pendingMyRating = null; renderRatingPicker();
+  pendingMyBath = null; renderBathPicker();
   document.getElementById('mProv').value='';
   pendingCampPhotos = [];
   renderPhotoPicker('mPhotoPicker', pendingCampPhotos, 4);
@@ -3614,6 +3682,7 @@ function openEditModal(idx){
   document.getElementById('mTel').value=c.tel||'';
   document.getElementById('mSel').value=c.sel||'';
   pendingRatingCamp = c; pendingMyRating = campMyRating(c); renderRatingPicker();
+  pendingMyBath = campMyBath(c); renderBathPicker();
   document.getElementById('mInfo').value=c.info||'';
   document.getElementById('mGps').value=c.gps||'';
   document.getElementById('mRem').value=c.notes||'';
@@ -4371,6 +4440,7 @@ if(window.matchMedia){
       // (older records use it for the website/booking e-mail) instead of blanking it.
       url:(editIdx>=0 && camps[editIdx] && camps[editIdx].url) || '',
       ratings:campMergedRatings(editIdx>=0 ? camps[editIdx] : null),
+      bathRatings:campMergedBath(editIdx>=0 ? camps[editIdx] : null),
       info:document.getElementById('mInfo').value.trim(),
       notes:document.getElementById('mRem').value.trim(),
       gps:gpsClean,
