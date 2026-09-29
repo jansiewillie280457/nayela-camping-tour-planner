@@ -268,7 +268,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.18 (1 Okt Badkamer-gradering)</div>
+  <div class="hdr-ver">v3.19 (2 Okt Lede-aanmeldings)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -11057,10 +11057,21 @@ async function loadMembership(user){
   // last active if the shared data ever looks like it's been changed.
   // Fire-and-forget: never blocks or delays login, and a failure here
   // (e.g. briefly offline) must never lock anyone out.
-  var newCount = (data.loginCount || 0) + 1;
-  setDoc(ref, { loginCount: newCount, lastActive: new Date().toISOString() }, { merge: true })
-    .catch(function(e){ console.error('Could not update login counter:', e); });
+  // Recorded in memberActivity/{email}, which every member may write for
+  // THEMSELVES only. (The old code wrote to members/{email}, but only the
+  // admin may change member records -- so everybody else's counter was
+  // silently refused and the admin could only ever see his own.)
+  // members/{email}.loginCount is kept as the historical starting count.
+  recordMemberActivity(user.email);
   return Object.assign({email:user.email}, data);
+}
+async function recordMemberActivity(email){
+  try{
+    var aref = doc(db,'memberActivity', email);
+    var asnap = await getDoc(aref);
+    var prev = (asnap.exists() && asnap.data().loginCount) || 0;
+    await setDoc(aref, { email: email, loginCount: prev + 1, lastActive: new Date().toISOString() }, { merge: true });
+  }catch(e){ console.error('Could not record login activity (add the memberActivity Firestore rule):', e); }
 }
 
 // One-time seed: only runs if the shared collection is completely empty,
@@ -11358,19 +11369,40 @@ async function renderMembers(){
   var wrap = document.getElementById('fbMemList');
   wrap.textContent = 'Laai...';
   var snap = await getDocs(collection(db,'members'));
+  // Login activity of every member (see recordMemberActivity). If the rule
+  // for memberActivity is missing, say so instead of silently showing nothing.
+  var activity = {}, activityErr = '';
+  try{
+    var asnap = await getDocs(collection(db,'memberActivity'));
+    asnap.forEach(function(a){ activity[a.id] = a.data() || {}; });
+  }catch(e){
+    activityErr = (e && (e.code === 'permission-denied' || /permission/i.test(e.message||''))) ? 'denied' : ((e && e.message) || 'error');
+  }
   wrap.innerHTML='';
+  if(activityErr){
+    var warn = document.createElement('div');
+    warn.style.cssText = 'font-size:.72rem;color:#b00;background:#fff3f0;border:1px solid #f0c9c0;border-radius:6px;padding:6px 8px;margin-bottom:8px;';
+    warn.textContent = activityErr === 'denied'
+      ? '⚠️ Die aanmeldings van ander lede kan nie gelees word nie: voeg die Firestore-reël vir memberActivity by (sien die gebruikersgids, hoofstuk 11).'
+      : '⚠️ Kon nie die aanmeld-aktiwiteit lees nie (' + activityErr + ').';
+    wrap.appendChild(warn);
+  }
   snap.forEach(function(d){
     var m = d.data();
+    var act = activity[d.id] || {};
     var row = document.createElement('div');
     row.className='fb-mem-row';
     var usageBits = [];
-    if(m.loginCount) usageBits.push(m.loginCount + (m.loginCount===1 ? ' aanmelding' : ' aanmeldings'));
-    if(m.lastActive){
+    var total = (m.loginCount || 0) + (act.loginCount || 0);
+    var last = [m.lastActive, act.lastActive].filter(Boolean).sort().pop();
+    if(total) usageBits.push(total + (total===1 ? ' aanmelding' : ' aanmeldings'));
+    if(last){
       try{
-        var dt = new Date(m.lastActive);
+        var dt = new Date(last);
         usageBits.push('Laaste: ' + dt.toLocaleDateString('af-ZA',{day:'numeric',month:'short',year:'numeric'}) + ', ' + dt.toLocaleTimeString('af-ZA',{hour:'2-digit',minute:'2-digit'}));
       }catch(e){}
     }
+    if(!total && !last && !activityErr) usageBits.push('Nog nie aangemeld nie');
     var usageLine = usageBits.length ? '<div style="font-size:.7rem;color:#888;margin-top:2px;">'+usageBits.join(' · ')+'</div>' : '';
     row.innerHTML =
       '<span style="flex:1;min-width:0;">'
@@ -11394,6 +11426,7 @@ async function renderMembers(){
       btn.disabled = true;
       try{
         await deleteDoc(doc(db,'members', d.id));
+        try{ await deleteDoc(doc(db,'memberActivity', d.id)); }catch(e2){}
         await renderMembers();
         err.style.color = '#2e7d32';
         err.textContent = d.id+' is heeltemal verwyder. Vergeet nie om sy aanmelding ook in Firebase Console \u2192 Authentication \u2192 Users te skrap nie.';
