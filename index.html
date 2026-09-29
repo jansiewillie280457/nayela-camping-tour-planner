@@ -142,6 +142,16 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(180deg,#
 .bar.consumption{background:linear-gradient(to top,#0d47a1,#1976d2);}
 .bar.price{background:linear-gradient(to top,#4a148c,#8e24aa);}
 .bar.kml{background:linear-gradient(to top,#00695c,#26a69a);}
+/* Share Tour rows */
+.share-row{padding:10px 0;border-bottom:1px solid #eee;}
+.share-row.fresh{background:#f1f8e9;border-radius:8px;padding:10px 8px;}
+.share-name{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:.9rem;}
+.fb-card .share-x{width:auto;background:#c62828;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:.8rem;cursor:pointer;}
+.share-link{width:100%;box-sizing:border-box;margin:6px 0;font-size:13px;font-family:monospace;padding:6px 8px;border:1px solid #ddd;border-radius:6px;background:#fafafa;color:#333;}
+.share-acts{display:flex;flex-wrap:wrap;gap:6px;}
+.share-btn,.fb-card .share-btn{display:inline-flex;align-items:center;gap:4px;width:auto;border:none;border-radius:16px;padding:7px 12px;font-size:.78rem;font-weight:700;color:#fff;text-decoration:none;cursor:pointer;touch-action:manipulation;}
+.fb-card .share-btn.mail,.share-btn.mail{background:#1565c0;} .fb-card .share-btn.wa,.share-btn.wa{background:#25a244;} .fb-card .share-btn.native,.share-btn.native{background:#6a1b9a;}
+.fb-card .share-btn.copy,.share-btn.copy{background:#607d8b;} .fb-card .share-btn.open,.share-btn.open{background:#8d6e63;}
 /* Zoomed fuel graphs (verbruik + prys): bars sit in a .bar-area so dashed
    reference lines (plan / gemiddeld) can be drawn at the same height in
    every column; the scale no longer starts at 0 so small differences show. */
@@ -268,7 +278,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.19 (2 Okt Lede-aanmeldings)</div>
+  <div class="hdr-ver">v3.20 (2 Okt Deel Toer e-pos)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -4963,13 +4973,22 @@ Object.assign(I18N.af, {
   'share.created': 'Deel-skakel geskep ✓',
   'share.createFail': 'Kon nie skep nie',
   'share.needName': 'Gee \'n naam vir hierdie persoon.',
-  'share.viewerAdded': '{name} se skakel geskep en gekopieer ✓',
+  'share.viewerAdded': '{name} se skakel is geskep ✓ — tik 📧 E-pos of 💬 WhatsApp om dit te stuur',
   'share.addFail': 'Kon nie skakel skep nie',
   'share.removeConfirm': 'Verwyder {name} se toegang? Sy skakel sal nie meer werk nie.',
   'share.removed': 'Toegang verwyder',
   'share.cancelConfirm': 'Kanselleer ALLE deel-skakels vir hierdie toer? Almal se skakels sal ophou werk.',
   'share.cancelled': 'Alle deel-skakels gekanselleer',
   'share.copied': 'Skakel gekopieer ✓',
+  'share.emailBtn': '📧 E-pos',
+  'share.waBtn': '💬 WhatsApp',
+  'share.nativeBtn': '📤 Deel',
+  'share.copyBtn': '📋 Kopieer',
+  'share.openBtn': '↗ Maak oop',
+  'share.removeTitle': 'Verwyder hierdie persoon se toegang',
+  'share.mailSubject': 'NAYELA toer: {tour}',
+  'share.mailBody': 'Hallo {name},\n\nHier is jou skakel na ons toer "{tour}" in NAYELA. Jy kan die skedule, kampeerplekke en besonderhede sien (jy kan niks verander nie), en dit werk vanself by as ons iets verander:\n\n{link}\n\nGroete',
+  'share.waText': 'Hallo {name}, hier is jou skakel na ons toer "{tour}" in NAYELA: {link}',
   'share.copyManually': 'Kopieer hierdie skakel:',
   'share.loadFail': 'Kon nie laai nie',
   'tour.hdr.aiFillAllNone': 'Elke stop het reeds inligting — niks om te genereer nie.',
@@ -5322,13 +5341,22 @@ Object.assign(I18N.en, {
   'share.created': 'Share link created ✓',
   'share.createFail': 'Could not create',
   'share.needName': 'Give this person a name.',
-  'share.viewerAdded': "{name}'s link created and copied ✓",
+  'share.viewerAdded': "{name}'s link created ✓ — tap 📧 Email or 💬 WhatsApp to send it",
   'share.addFail': 'Could not create link',
   'share.removeConfirm': "Remove {name}'s access? Their link will stop working.",
   'share.removed': 'Access removed',
   'share.cancelConfirm': "Cancel ALL share links for this tour? Everyone's link will stop working.",
   'share.cancelled': 'All share links cancelled',
   'share.copied': 'Link copied ✓',
+  'share.emailBtn': '📧 Email',
+  'share.waBtn': '💬 WhatsApp',
+  'share.nativeBtn': '📤 Share',
+  'share.copyBtn': '📋 Copy',
+  'share.openBtn': '↗ Open',
+  'share.removeTitle': 'Remove this person\'s access',
+  'share.mailSubject': 'NAYELA tour: {tour}',
+  'share.mailBody': 'Hi {name},\n\nHere is your link to our tour "{tour}" in NAYELA. You can see the schedule, campsites and details (you can\'t change anything), and it updates by itself when we change something:\n\n{link}\n\nRegards',
+  'share.waText': 'Hi {name}, here is your link to our tour "{tour}" in NAYELA: {link}',
   'share.copyManually': 'Copy this link:',
   'share.loadFail': 'Could not load',
   'tour.hdr.aiFillAllNone': 'Every stop already has info — nothing to generate.',
@@ -5740,12 +5768,25 @@ async function renderShareTourPanel(){
     if(!info.viewers.length){
       body.innerHTML = '<p style="color:#888;">'+tr('share.noViewers')+'</p>';
     } else {
+      // Per person: the link itself (visible, selectable) + direct send
+      // buttons. E-mail / WhatsApp / open are real links (<a>), so a tap
+      // always works -- the old copy-only 📋 silently failed on iPads.
       body.innerHTML = info.viewers.map(function(v){
         var link = location.origin+location.pathname+'?view='+info.shareId+'.'+v.token;
-        return '<div style="display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid #eee;">'
-          +'<span style="flex:1;overflow:hidden;text-overflow:ellipsis;">'+esc(v.name)+'</span>'
-          +'<button data-link="'+esc(link)+'" onclick="copyShareLink(this.getAttribute(&#39;data-link&#39;))" style="background:#1565c0;" title="Copy link">📋</button>'
-          +'<button data-token="'+esc(v.token)+'" data-name="'+esc(v.name)+'" onclick="removeShareViewerClick(this.getAttribute(&#39;data-token&#39;),this.getAttribute(&#39;data-name&#39;))" style="background:#c62828;" title="Remove">✕</button>'
+        var msg = shareMessage(v.name, link);
+        var mail = 'mailto:?subject=' + encodeURIComponent(msg.subject) + '&body=' + encodeURIComponent(msg.body);
+        var wa = 'https://wa.me/?text=' + encodeURIComponent(msg.short);
+        return '<div class="share-row">'
+          +'<div class="share-name"><b>'+esc(v.name)+'</b>'
+            +'<button data-token="'+esc(v.token)+'" data-name="'+esc(v.name)+'" onclick="removeShareViewerClick(this.getAttribute(&#39;data-token&#39;),this.getAttribute(&#39;data-name&#39;))" class="share-x" title="'+esc(tr('share.removeTitle'))+'">✕</button></div>'
+          +'<input class="share-link" readonly value="'+esc(link)+'" onclick="this.select()">'
+          +'<div class="share-acts">'
+            +'<a class="share-btn mail" href="'+esc(mail)+'">'+esc(tr('share.emailBtn'))+'</a>'
+            +'<a class="share-btn wa" href="'+esc(wa)+'" target="_blank" rel="noopener">'+esc(tr('share.waBtn'))+'</a>'
+            +(navigator.share ? '<button type="button" class="share-btn native" data-link="'+esc(link)+'" data-name="'+esc(v.name)+'" onclick="nativeShareLink(this.getAttribute(&#39;data-name&#39;),this.getAttribute(&#39;data-link&#39;))">'+esc(tr('share.nativeBtn'))+'</button>' : '')
+            +'<button type="button" class="share-btn copy" data-link="'+esc(link)+'" onclick="copyShareLink(this.getAttribute(&#39;data-link&#39;))">'+esc(tr('share.copyBtn'))+'</button>'
+            +'<a class="share-btn open" href="'+esc(link)+'" target="_blank" rel="noopener">'+esc(tr('share.openBtn'))+'</a>'
+          +'</div>'
           +'</div>';
       }).join('');
     }
@@ -5766,9 +5807,14 @@ async function addShareViewerClick(){
     nameEl.value='';
     var info = await window.getShareViewers();
     await renderShareTourPanel();
-    var link = location.origin+location.pathname+'?view='+info.shareId+'.'+token;
-    copyShareLink(link);
+    // Don't rely on the clipboard here (after the network round-trip iPads
+    // refuse it) -- the new row has E-pos / WhatsApp / Deel buttons.
     toast(tr('share.viewerAdded',{name:name}));
+    var rows = document.querySelectorAll('#shareTourBody .share-row');
+    for(var ri=0; ri<rows.length; ri++){
+      var nb = rows[ri].querySelector('.share-name b');
+      if(nb && nb.textContent === name){ rows[ri].classList.add('fresh'); rows[ri].scrollIntoView({block:'nearest'}); }
+    }
   }catch(e){ err.textContent = tr('share.addFail')+': '+e.message; }
 }
 function removeShareViewerClick(token,name){
@@ -5783,12 +5829,32 @@ function cancelShareClick(){
     catch(e){ document.getElementById('shareTourErr').textContent = e.message; }
   });
 }
+function shareMessage(name, link){
+  var tour = (typeof tourInfo !== 'undefined' && tourInfo && tourInfo.name) ? tourInfo.name : '';
+  return {
+    subject: tr('share.mailSubject', {tour: tour || 'NAYELA'}),
+    body: tr('share.mailBody', {name: name, tour: tour || 'NAYELA', link: link}),
+    short: tr('share.waText', {name: name, tour: tour || 'NAYELA', link: link})
+  };
+}
+function nativeShareLink(name, link){
+  var m = shareMessage(name, link);
+  navigator.share({ title: m.subject, text: m.short.replace(link, '').trim(), url: link })
+    .catch(function(e){ if(e && e.name !== 'AbortError') copyShareLink(link); });
+}
 function copyShareLink(link){
-  if(navigator.clipboard && navigator.clipboard.writeText){
-    navigator.clipboard.writeText(link).then(function(){ toast(tr('share.copied')); }).catch(function(){ prompt(tr('share.copyManually'), link); });
-  } else {
-    prompt(tr('share.copyManually'), link);
+  function fallback(){
+    // works where navigator.clipboard is refused (older Safari, no permission)
+    var ta = document.createElement('textarea');
+    ta.value = link; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;';
+    document.body.appendChild(ta); ta.focus(); ta.select(); ta.setSelectionRange(0, link.length);
+    var ok = false; try{ ok = document.execCommand('copy'); }catch(e){}
+    document.body.removeChild(ta);
+    if(ok) toast(tr('share.copied')); else prompt(tr('share.copyManually'), link);
   }
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(link).then(function(){ toast(tr('share.copied')); }).catch(fallback);
+  } else { fallback(); }
 }
 // Best-effort auto-sync: catches edits even if the admin never switches
 // tabs (showTab's hook is the primary path -- this is the fallback for a
