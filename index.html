@@ -285,7 +285,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.26 (3 Okt Swart roete)</div>
+  <div class="hdr-ver">v3.27 (4 Okt Spyskaart skoon)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -4958,6 +4958,7 @@ if(window.matchMedia){
   <!-- ── TAB 8: MENU (day-by-day meal plan) ── -->
   <div class="tab-pane" id="tb-menu">
     <button class="btn-tp btn-add" onclick="pullDaysToMenu()" data-i18n="tour.menu.pullBtn" style="margin-bottom:12px;">↓ Trek Dae vanaf Skedule</button>
+    <button class="btn-tp btn-clear" onclick="clearMenuAll()" data-i18n="tour.menu.clearBtn" style="margin-bottom:12px;">✕ Maak Spyskaart Skoon</button>
     <div class="tp-form">
       <h3 data-i18n="tour.menu.addHdr">+ Voeg Dag By</h3>
       <div class="fg">
@@ -5049,6 +5050,10 @@ Object.assign(I18N.af, {
   'tour.tab.menu': '🍽️ Spyskaart',
 
   'tour.menu.pullBtn': '↓ Trek Dae vanaf Skedule',
+  'tour.menu.clearBtn': '✕ Maak Spyskaart Skoon',
+  'tour.menu.clearConfirm': 'Maak die hele spyskaart skoon (alle dae)?',
+  'tour.menu.cleared': 'Spyskaart skoongemaak ✓',
+  'tour.menu.alreadyEmpty': 'Die spyskaart is reeds leeg.',
   'tour.menu.noStopsToPull': 'Geen stops in die Skedule om te trek nie.',
   'tour.menu.allAlreadyPulled': 'Al die Skedule se dae is reeds hier.',
   'tour.menu.staleNotInSchedule': 'Niks nuut om by te voeg nie. {n} dag/dae hier is nie in die Skedule nie (ou toer?) — verwyder hulle self met die asblik.',
@@ -5161,8 +5166,8 @@ Object.assign(I18N.af, {
   'tour.schedule.returnAdded': '🏠 Terugtrek na {name} bygevoeg ✓',
   'tour.schedule.removeConfirm': 'Verwyder "{name}" van skedule?',
   'tour.schedule.stopRemoved': 'Stop verwyder',
-  'tour.schedule.clearConfirm': 'Maak alle stops van skedule skoon? Die Deposito\'s en die Brandstof log van hierdie toer word ook skoongemaak. (Stoor eers die toer onder Gestoorde Toere as jy dit wil hou.)',
-  'tour.schedule.cleared': 'Skedule, deposito\'s en brandstof log skoongemaak',
+  'tour.schedule.clearConfirm': 'Maak alle stops van skedule skoon? Die Deposito\'s, die Spyskaart en die Brandstof log van hierdie toer word ook skoongemaak. (Stoor eers die toer onder Gestoorde Toere as jy dit wil hou.)',
+  'tour.schedule.cleared': 'Skedule, deposito\'s, spyskaart en brandstof log skoongemaak',
   'tour.schedule.noStops': 'Nog geen stops bygevoeg nie. Voeg jou eerste stop hierbo by.',
   'tour.schedule.notesLbl': '📝 Omgewing- & Kampplek-inligting — {name}',
   'tour.schedule.notesPh': 'bv. plek van belang, wandelroetes, watervlak, veiligheidsnotas, wat om te doen in die omgewing... (verskyn ook op die gedrukte Toer Plan)',
@@ -5422,6 +5427,10 @@ Object.assign(I18N.en, {
   'tour.tab.menu': '🍽️ Menu',
 
   'tour.menu.pullBtn': '↓ Pull Days from Schedule',
+  'tour.menu.clearBtn': '✕ Clear Menu',
+  'tour.menu.clearConfirm': 'Clear the whole menu (all days)?',
+  'tour.menu.cleared': 'Menu cleared ✓',
+  'tour.menu.alreadyEmpty': 'The menu is already empty.',
   'tour.menu.noStopsToPull': 'No stops in the Schedule to pull.',
   'tour.menu.allAlreadyPulled': "All the Schedule's days are already here.",
   'tour.menu.staleNotInSchedule': "Nothing new to add. {n} day(s) here are not in the Schedule (old tour?) — remove them yourself with the bin.",
@@ -5534,8 +5543,8 @@ Object.assign(I18N.en, {
   'tour.schedule.returnAdded': '🏠 Return leg to {name} added ✓',
   'tour.schedule.removeConfirm': 'Remove "{name}" from schedule?',
   'tour.schedule.stopRemoved': 'Stop removed',
-  'tour.schedule.clearConfirm': 'Clear all stops from the schedule? The Deposits and the Fuel log for this tour will be cleared too. (Save the tour under Saved Tours first if you want to keep it.)',
-  'tour.schedule.cleared': 'Schedule, deposits and fuel log cleared',
+  'tour.schedule.clearConfirm': 'Clear all stops from the schedule? The Deposits, the Menu and the Fuel log for this tour will be cleared too. (Save the tour under Saved Tours first if you want to keep it.)',
+  'tour.schedule.cleared': 'Schedule, deposits, menu and fuel log cleared',
   'tour.schedule.noStops': 'No stops added yet. Add your first stop above.',
   'tour.schedule.notesLbl': '📝 Area & Campsite Info — {name}',
   'tour.schedule.notesPh': 'e.g. points of interest, hiking trails, water levels, safety notes, things to do nearby... (also appears on the printed Tour Plan)',
@@ -7097,6 +7106,10 @@ function clearSchedule(){
     try{localStorage.setItem('nayela_deposits', JSON.stringify(depositList));}catch(e){}
     // New trip = new fuel log too (Brandstof Berekenaar + Beplan vs Werklik).
     resetFuelLogForNewTour();
+    // ...and a new Spyskaart: its days belonged to the old schedule.
+    menuList = [];
+    try{localStorage.setItem('nayela_menu', JSON.stringify(menuList));}catch(e){}
+    if(typeof renderMenu==='function') renderMenu();
     renderSchedule(); recalcFuel(); renderOverview();
     if(typeof renderDeposits==='function') renderDeposits();
     toast(tr('tour.schedule.cleared'));
@@ -8208,6 +8221,9 @@ function applyAiPlanToTour(mode){
     try{ localStorage.setItem('nayela_deposits', JSON.stringify(depositList)); }catch(e){}
     if(typeof renderDeposits==='function') renderDeposits();
     resetFuelLogForNewTour();
+    menuList = [];
+    try{ localStorage.setItem('nayela_menu', JSON.stringify(menuList)); }catch(e){}
+    if(typeof renderMenu==='function') renderMenu();
   } else {
     tourStops = tourStops.concat(newStops);
   }
@@ -8624,6 +8640,16 @@ function updateMenuField(i,field,val){
     menuList.sort(function(a,b){ return (a.date||'')<(b.date||'')?-1:((a.date||'')>(b.date||'')?1:0); });
     renderMenu();
   }
+}
+// Clear the whole Spyskaart at once (it used to be row by row only).
+function clearMenuAll(){
+  if(!menuList.length){ toast(tr('tour.menu.alreadyEmpty')); return; }
+  gConfirm(tr('tour.menu.clearConfirm'), function(){
+    menuList = [];
+    try{localStorage.setItem('nayela_menu', JSON.stringify(menuList));}catch(e){}
+    renderMenu();
+    toast(tr('tour.menu.cleared'));
+  });
 }
 function deleteMenuDay(i){
   gConfirm(tr('tour.menu.deleteConfirm'), function(){
