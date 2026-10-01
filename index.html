@@ -285,7 +285,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.23 (3 Okt Hele roete op kaart)</div>
+  <div class="hdr-ver">v3.24 (3 Okt GPS-leser)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -3925,6 +3925,10 @@ function openRoute(){
     // For a round trip, the anchor stop's coordinates are simply appended
     // again as the final point, closing the loop the same way the old
     // origin===destination trick did on Google Maps.
+    var badPts = sel.map(function(i){ return camps[i]; }).filter(function(c){ return c && clean(c.gps) && !gpsToLatLng(c.gps); });
+    if(badPts.length) csToast(tr('tour.schedule.wholeMapBad', {names: badPts.slice(0,4).map(function(c){ return c.naam; }).join(', ')}));
+    pts = pts.filter(function(c){ return gpsToLatLng(c.gps); });
+    if(pts.length < 2){ csToast(tr('cs.noGps')); return; }
     var coords=pts.map(function(c){return c.gps.trim();});
     var routePts = coords.slice();
     if(roundTrip) routePts.push(coords[0]);
@@ -5132,6 +5136,7 @@ Object.assign(I18N.af, {
   'tour.schedule.clearBtn': '✕ Maak Skedule Skoon',
   'tour.schedule.wholeMapBtn': '🗺️ Hele Toer op Kaart',
   'tour.schedule.wholeMapNeed2': 'Die skedule het ten minste twee stops met GPS nodig om die roete te wys.',
+  'tour.schedule.wholeMapBad': 'Nie op die kaart nie (geen of ongeldige GPS): {names}. Maak die GPS reg met die 📍 by die stop of via Soektog → Wysig.',
   'tour.schedule.wholeMapMissing': '{n} stop(s) sonder GPS word nie op die kaart gewys nie — voeg GPS by met die 📍 by die stop.',
   'tour.schedule.wholeMapRound': 'Rondte: die roete terug na die beginpunt word ook gewys.',
   'tour.schedule.returnHint': 'Vertrek van en keer terug na dieselfde kampeerterrein? Voeg jou eerste stop by, gebruik dan "Voeg Terugtrek By" om dit ook aan die einde van die skedule te sit.',
@@ -5504,6 +5509,7 @@ Object.assign(I18N.en, {
   'tour.schedule.clearBtn': '✕ Clear Schedule',
   'tour.schedule.wholeMapBtn': '🗺️ Whole Tour on Map',
   'tour.schedule.wholeMapNeed2': 'The schedule needs at least two stops with GPS to show the route.',
+  'tour.schedule.wholeMapBad': 'Not on the map (no or invalid GPS): {names}. Fix the GPS with the 📍 at the stop or via Search → Edit.',
   'tour.schedule.wholeMapMissing': '{n} stop(s) without GPS are not shown on the map — add GPS with the 📍 at the stop.',
   'tour.schedule.wholeMapRound': 'Round trip: the drive back to the start is shown too.',
   'tour.schedule.returnHint': 'Leaving from and returning to the same campsite? Add your first stop, then use "Add Return Leg" to put it at the end of the schedule too.',
@@ -7068,11 +7074,14 @@ function generateCampsiteInfoSilent(i){
 // too. The per-leg 🗺️ / 🚗 buttons in the table stay for day-to-day use.
 function openWholeTourMap(){
   var withGps = tourStops.filter(function(s){ return s && gpsToLatLng(s.gps); });
-  var missing = tourStops.length - withGps.length;
+  var bad = tourStops.filter(function(s){ return s && !gpsToLatLng(s.gps); }).map(function(s){ return s.name || '?'; });
   if(withGps.length < 2){ toast(tr('tour.schedule.wholeMapNeed2')); return; }
   var url = osrmRouteMapUrl(withGps.map(function(s){ return s.gps; }));
   if(!url){ toast(tr('tour.schedule.wholeMapNeed2')); return; }
-  if(missing > 0) toast(tr('tour.schedule.wholeMapMissing', {n: missing}));
+  // Name the stops that are left out (no GPS, or a GPS that can't be read /
+  // isn't in southern Africa) -- one bad point is enough to make the whole
+  // route map show nothing, so they're skipped and the user is told which.
+  if(bad.length) toast(tr('tour.schedule.wholeMapBad', {names: bad.slice(0, 4).join(', ') + (bad.length > 4 ? ' …' : '')}));
   else {
     var first = withGps[0], last = withGps[withGps.length-1];
     if(withGps.length > 2 && first.name === last.name) toast(tr('tour.schedule.wholeMapRound'));
@@ -7393,39 +7402,84 @@ function stopGps(stop){
 }
 
 // "lat,lng" string -> {lat,lng} numbers.
+// Reads a GPS value in any of the ways people type/copy it:
+//   -22.5609, 17.0658   -22.5609 17.0658   (-22.5609; 17.0658)
+//   22.5609S 17.0658E   S22.5609 E17.0658
+//   S 22°33.654' E 17°03.948'            (degrees + decimal minutes)
+//   22°33'39"S 17°03'57"E                 (degrees, minutes, seconds)
+//   -22,5609 17,0658                      (comma as decimal sign)
+//   17.0658, -22.5609                     (longitude first -> swapped)
+// The old version misread several of these (e.g. lng 33.65 or 3339170357),
+// which made a whole-tour route impossible so the map showed nothing.
+// Everything this app covers is south of the equator and east of
+// Greenwich, so a positive latitude is a missing minus sign and a negative
+// longitude means the two numbers were swapped. Returns null if the result
+// still isn't a sensible southern-African point.
 function gpsToLatLng(gps){
-  if(!gps) return null;
+  if(gps == null) return null;
   var str = String(gps).trim();
-  // GPS values get typed by hand sometimes -- accept ';' as well as ','
-  // between lat/lng, and strip stray characters (degree symbols, N/S/E/W
-  // letters, extra spaces) that would otherwise make parseFloat choke or
-  // silently misread the number, breaking routing for that leg with no
-  // obvious explanation.
-  var parts = str.split(/[,;]/);
-  if(parts.length < 2){
-    // No comma/semicolon at all -- e.g. "17.0015°13.2441°", where the only
-    // thing separating the two numbers is a degree symbol sitting between
-    // them (not a proper separator, but recoverable: split right after
-    // the first ° and treat that as the boundary between lat and lng).
-    var degIdx = str.indexOf('°');
-    if(degIdx > -1 && degIdx < str.length - 1){
-      parts = [str.slice(0, degIdx+1), str.slice(degIdx+1)];
+  if(!str) return null;
+  var u = str.toUpperCase()
+    .replace(/[’′‘`´]/g, "'").replace(/[″“”]|''/g, '"').replace(/º|˚/g, '°')
+    .replace(/[()\[\]]/g, ' ').trim();
+
+  function dmsPart(txt){
+    // degrees [minutes [seconds]] from one half, symbols optional
+    var nums = txt.match(/\d+(?:[.,]\d+)?/g);
+    if(!nums) return null;
+    var v = nums.map(function(n){ return parseFloat(n.replace(',', '.')); });
+    var d = v[0] + (v[1] != null ? v[1]/60 : 0) + (v[2] != null ? v[2]/3600 : 0);
+    if(/-/.test(txt)) d = -d;
+    return d;
+  }
+  var lat = null, lng = null;
+  var hasHemi = /[NSEW]/.test(u), hasDms = /[°'"]/.test(u) && /\d\s*['"]|°\s*\d/.test(u);
+
+  if(hasHemi || hasDms){
+    // Split into the latitude half and the longitude half.
+    var halves = null;
+    if(hasHemi){
+      var letters = []; u.replace(/[NSEW]/g, function(ch, i){ letters.push(i); });
+      if(letters.length >= 2){
+        var prefix = /^[NSEW]/.test(u);               // "S 22° ... E 17°" (letter before number)
+        var cutAt = prefix ? letters[1] : letters[0] + 1; // else "22°...S 17°...E" (letter after number)
+        var a = u.slice(0, cutAt), bb = u.slice(cutAt);
+        // the half with N/S is latitude, the half with E/W is longitude
+        halves = /[NS]/.test(a) ? [a, bb] : [bb, a];
+      }
+    }
+    if(!halves){
+      var degs = []; u.replace(/°/g, function(_, i){ degs.push(i); });
+      if(degs.length >= 2){
+        var cut = u.lastIndexOf(' ', degs[1]); if(cut < 0) cut = degs[0] + 1;
+        var sep = u.slice(0, degs[1]).search(/[,;]\s*[-+]?\d+(?:[.,]\d+)?\s*°?\s*$/);
+        halves = [u.slice(0, sep > 0 ? sep : cut), u.slice(sep > 0 ? sep + 1 : cut)];
+      }
+    }
+    if(!halves){ var sp = u.split(/[,;]|\s{2,}/); if(sp.length >= 2) halves = [sp[0], sp.slice(1).join(' ')]; }
+    if(halves){
+      lat = dmsPart(halves[0]); lng = dmsPart(halves[1]);
+      if(lat != null && /S/.test(halves[0]) && lat > 0) lat = -lat;
+      if(lng != null && /W/.test(halves[1]) && lng > 0) lng = -lng;
     }
   }
-  if(parts.length < 2) return null;
-  var lat = parseFloat(parts[0].replace(/[^0-9.\-]/g,''));
-  var lng = parseFloat(parts[1].replace(/[^0-9.\-]/g,''));
+  if(lat == null || lng == null || isNaN(lat) || isNaN(lng)){
+    // plain decimals: separators , ; or space (and comma decimals "-22,56 17,06")
+    var plain = u;
+    if(!/\./.test(plain) && /^-?\d+,\d+\s+-?\d+,\d+$/.test(plain)) plain = plain.replace(/,/g, '.');
+    var nums2 = plain.match(/[-+]?\d+(?:\.\d+)?/g);
+    if(!nums2 || nums2.length < 2) return null;
+    lat = parseFloat(nums2[0]); lng = parseFloat(nums2[1]);
+  }
   if(isNaN(lat) || isNaN(lng)) return null;
-  // Every place this app covers (South Africa, Namibia, Botswana,
-  // Mozambique, Zimbabwe, Zambia...) sits below the equator, so a
-  // genuinely positive latitude never legitimately occurs here -- it's
-  // always a missing minus sign from someone typing "17.00" instead of
-  // "-17.00" (a surprisingly common mistake when copying a coordinate
-  // that was originally shown as "17.00°S"). Auto-correcting this is
-  // safe specifically because of that geographic constraint; it would
-  // NOT be a safe assumption for an app covering the northern hemisphere.
+  // longitude first? (negative "longitude" here can only be a swapped latitude)
+  if(lng < 0 && lat > 0){ var t2 = lat; lat = lng; lng = t2; }
   if(lat > 0) lat = -lat;
-  return {lat:lat, lng:lng};
+  if(Math.abs(lat) > Math.abs(lng) && Math.abs(lng) <= 36 && Math.abs(lat) >= 8 && Math.abs(lat) <= 45 && lng < 8){ var t3 = lat; lat = -Math.abs(lng); lng = Math.abs(t3); }
+  if(lng < 0) lng = -lng;
+  // southern Africa (incl. Malawi/Zambia) sanity check
+  if(lat < -36 || lat > -4 || lng < 5 || lng > 52) return null;
+  return {lat: lat, lng: lng};
 }
 
 // Straight-line ("as the crow flies") distance in km between two
