@@ -285,7 +285,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.22 (3 Okt Vrywaring)</div>
+  <div class="hdr-ver">v3.23 (3 Okt Hele roete op kaart)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -3879,6 +3879,23 @@ function openSygicRoute(){
   openSygicFor(pts[0].gps);
 }
 
+// ── Whole-route map (many stops) ───────────────────────────────────────
+// openstreetmap.org/directions only supports TWO points (start + end):
+// any stops in between are dropped, and a round trip (end = start)
+// collapses to almost nothing -- "only one leg". The OSRM route map
+// (map.project-osrm.org, same free OSM routing we already use for the
+// distances) takes any number of ?loc=lat,lon points in order, so the
+// whole tour -- including the drive back to the start -- is drawn.
+function osrmRouteMapUrl(gpsList){
+  var lls = gpsList.map(function(g){ return gpsToLatLng(g); }).filter(Boolean);
+  if(!lls.length) return null;
+  var lat = lls.reduce(function(a,p){ return a + p.lat; }, 0) / lls.length;
+  var lng = lls.reduce(function(a,p){ return a + p.lng; }, 0) / lls.length;
+  return 'https://map.project-osrm.org/?z=6&center=' + encodeURIComponent(lat.toFixed(5) + ',' + lng.toFixed(5))
+    + lls.map(function(p){ return '&loc=' + encodeURIComponent(p.lat.toFixed(6) + ',' + p.lng.toFixed(6)); }).join('')
+    + '&hl=en&alt=0&srv=0';
+}
+
 // ── Route ─────────────────────────────────────────────────────────────
 function openRoute(){
   if(!sel.length){csToast(tr('cs.selectFirst'));return;}
@@ -3911,9 +3928,10 @@ function openRoute(){
     var coords=pts.map(function(c){return c.gps.trim();});
     var routePts = coords.slice();
     if(roundTrip) routePts.push(coords[0]);
-    url='https://www.openstreetmap.org/directions'
-      +'?engine=fossgis_osrm_car'
-      +'&route='+routePts.map(encodeURIComponent).join(';');
+    // All stops (and the return to #1 for a round trip) on the OSRM route
+    // map -- see osrmRouteMapUrl() for why not openstreetmap.org.
+    url = osrmRouteMapUrl(routePts);
+    if(!url){ csToast(tr('cs.noGps')); return; }
   }
   // window.open() from a tap can be silently blocked by some mobile
   // browsers' popup handling -- when that happens it returns null/undefined
@@ -4774,6 +4792,7 @@ if(window.matchMedia){
 
     <div class="tp-actions">
       <button class="btn-tp btn-add" id="btnReturnLeg" onclick="addReturnLeg()" data-i18n="tour.schedule.returnLegBtn">🔁 Voeg Terugtrek By (dieselfde as begin)</button>
+      <button class="btn-tp btn-add" onclick="openWholeTourMap()" style="background:#1565c0;border-color:#1565c0;" data-i18n="tour.schedule.wholeMapBtn">🗺️ Hele Toer op Kaart</button>
       <button class="btn-tp btn-clear" onclick="clearSchedule()" data-i18n="tour.schedule.clearBtn">✕ Maak Skedule Skoon</button>
       <div style="font-size:.72rem;color:#888;margin-top:6px;width:100%;" data-i18n="tour.schedule.returnHint">Vertrek van en keer terug na dieselfde kampeerterrein? Voeg jou eerste stop by, gebruik dan "Voeg Terugtrek By" om dit ook aan die einde van die skedule te sit.</div>
     </div>
@@ -5111,6 +5130,10 @@ Object.assign(I18N.af, {
   'tour.schedule.addBtn': '+ Voeg by Skedule',
   'tour.schedule.returnLegBtn': '🔁 Voeg Terugtrek By (dieselfde as begin)',
   'tour.schedule.clearBtn': '✕ Maak Skedule Skoon',
+  'tour.schedule.wholeMapBtn': '🗺️ Hele Toer op Kaart',
+  'tour.schedule.wholeMapNeed2': 'Die skedule het ten minste twee stops met GPS nodig om die roete te wys.',
+  'tour.schedule.wholeMapMissing': '{n} stop(s) sonder GPS word nie op die kaart gewys nie — voeg GPS by met die 📍 by die stop.',
+  'tour.schedule.wholeMapRound': 'Rondte: die roete terug na die beginpunt word ook gewys.',
   'tour.schedule.returnHint': 'Vertrek van en keer terug na dieselfde kampeerterrein? Voeg jou eerste stop by, gebruik dan "Voeg Terugtrek By" om dit ook aan die einde van die skedule te sit.',
   'tour.schedule.thDate': 'Begin Datum',
   'tour.schedule.thEndDate': 'Eind Datum',
@@ -5479,6 +5502,10 @@ Object.assign(I18N.en, {
   'tour.schedule.addBtn': '+ Add to Schedule',
   'tour.schedule.returnLegBtn': '🔁 Add Return Leg (same as start)',
   'tour.schedule.clearBtn': '✕ Clear Schedule',
+  'tour.schedule.wholeMapBtn': '🗺️ Whole Tour on Map',
+  'tour.schedule.wholeMapNeed2': 'The schedule needs at least two stops with GPS to show the route.',
+  'tour.schedule.wholeMapMissing': '{n} stop(s) without GPS are not shown on the map — add GPS with the 📍 at the stop.',
+  'tour.schedule.wholeMapRound': 'Round trip: the drive back to the start is shown too.',
   'tour.schedule.returnHint': 'Leaving from and returning to the same campsite? Add your first stop, then use "Add Return Leg" to put it at the end of the schedule too.',
   'tour.schedule.thDate': 'Start Date',
   'tour.schedule.thEndDate': 'End Date',
@@ -7032,6 +7059,25 @@ function generateCampsiteInfoSilent(i){
     console.error('generateCampsiteInfoSilent failed for stop', i, err);
     window._aiLastError = (err && err.message) || String(err);
   });
+}
+
+// ── 🗺️ Whole tour on one map ───────────────────────────────────────────
+// Every stop of the Skedule in order on the OSRM route map. A round trip
+// (return leg added with "Voeg Terugtrek By", or the AI planner's "Ry terug
+// huis toe") already ends with the start stop, so the drive home is drawn
+// too. The per-leg 🗺️ / 🚗 buttons in the table stay for day-to-day use.
+function openWholeTourMap(){
+  var withGps = tourStops.filter(function(s){ return s && gpsToLatLng(s.gps); });
+  var missing = tourStops.length - withGps.length;
+  if(withGps.length < 2){ toast(tr('tour.schedule.wholeMapNeed2')); return; }
+  var url = osrmRouteMapUrl(withGps.map(function(s){ return s.gps; }));
+  if(!url){ toast(tr('tour.schedule.wholeMapNeed2')); return; }
+  if(missing > 0) toast(tr('tour.schedule.wholeMapMissing', {n: missing}));
+  else {
+    var first = withGps[0], last = withGps[withGps.length-1];
+    if(withGps.length > 2 && first.name === last.name) toast(tr('tour.schedule.wholeMapRound'));
+  }
+  openUrlWithFallback(url);
 }
 
 function clearSchedule(){
