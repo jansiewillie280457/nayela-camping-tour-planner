@@ -285,7 +285,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.24 (3 Okt GPS-leser)</div>
+  <div class="hdr-ver">v3.25 (3 Okt Roete in app)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -3932,10 +3932,11 @@ function openRoute(){
     var coords=pts.map(function(c){return c.gps.trim();});
     var routePts = coords.slice();
     if(roundTrip) routePts.push(coords[0]);
-    // All stops (and the return to #1 for a round trip) on the OSRM route
-    // map -- see osrmRouteMapUrl() for why not openstreetmap.org.
-    url = osrmRouteMapUrl(routePts);
-    if(!url){ csToast(tr('cs.noGps')); return; }
+    // All stops (and the return to #1 for a round trip), drawn in the app
+    // on the road map leg by leg -- see showRouteOnMap() for why.
+    var routeLL = routePts.map(function(g, k){ var ll = gpsToLatLng(g); var c = pts[k < pts.length ? k : 0]; return {name: c.naam, lat: ll.lat, lng: ll.lng}; });
+    showRouteOnMap(routeLL, tr('cs.zoomTitle'));
+    return;
   }
   // window.open() from a tap can be silently blocked by some mobile
   // browsers' popup handling -- when that happens it returns null/undefined
@@ -7076,17 +7077,13 @@ function openWholeTourMap(){
   var withGps = tourStops.filter(function(s){ return s && gpsToLatLng(s.gps); });
   var bad = tourStops.filter(function(s){ return s && !gpsToLatLng(s.gps); }).map(function(s){ return s.name || '?'; });
   if(withGps.length < 2){ toast(tr('tour.schedule.wholeMapNeed2')); return; }
-  var url = osrmRouteMapUrl(withGps.map(function(s){ return s.gps; }));
-  if(!url){ toast(tr('tour.schedule.wholeMapNeed2')); return; }
   // Name the stops that are left out (no GPS, or a GPS that can't be read /
   // isn't in southern Africa) -- one bad point is enough to make the whole
   // route map show nothing, so they're skipped and the user is told which.
   if(bad.length) toast(tr('tour.schedule.wholeMapBad', {names: bad.slice(0, 4).join(', ') + (bad.length > 4 ? ' …' : '')}));
-  else {
-    var first = withGps[0], last = withGps[withGps.length-1];
-    if(withGps.length > 2 && first.name === last.name) toast(tr('tour.schedule.wholeMapRound'));
-  }
-  openUrlWithFallback(url);
+  // Drawn in the app on the road map, leg by leg (see showRouteOnMap).
+  var pts = withGps.map(function(s){ var ll = gpsToLatLng(s.gps); return {name: s.name, lat: ll.lat, lng: ll.lng}; });
+  showRouteOnMap(pts, (tourInfo && tourInfo.name) || tr('tour.schedule.wholeMapBtn').replace(/^\S+\s/, ''));
 }
 
 function clearSchedule(){
@@ -10819,7 +10816,92 @@ function closeRoadViewer(){
   var v = document.getElementById('roadViewer');
   if(v) v.classList.remove('show');
   var st = document.getElementById('rvStage'); if(st) st.innerHTML = '';
+  rvRouteToken++;   // stop any route still being drawn
+  var t = document.querySelector('#roadViewer .rv-t'); if(t) t.textContent = tr('cs.zoomTitle');
 }
+
+// ── 🗺️ Whole route drawn IN the app (on our own road map) ─────────────
+// External route pages have limits: openstreetmap.org only does 2 points,
+// and the free OSRM demo page showed nothing for a big tour (29 stops,
+// ~7 000 km -- the Namibia tour) even though the data was correct (BaseCamp
+// showed the GPX fine). So the app now asks the route service for EACH LEG
+// separately -- exactly like the distance calculation that already works --
+// and draws the legs on the Padkaart itself, with numbered stops and the
+// total km. A leg that can't be fetched (no signal...) is drawn as a dashed
+// straight line, so there is always a complete picture.
+var rvRouteToken = 0;
+function rvLL2XY(lat, lng){ var p = gpsXY(lat, lng); return {x: p.x, y: p.y}; }
+function showRouteOnMap(points, title){
+  // points: [{name, lat, lng}] in driving order (a round trip ends with the start again)
+  if(!points || points.length < 2){ toast(tr('tour.schedule.wholeMapNeed2')); return; }
+  var token = ++rvRouteToken;
+  var st = document.getElementById('rvStage');
+  var roadImg = document.getElementById('mapImgRoad');
+  var src = (roadImg && roadImg.getAttribute('src')) || (roadImg && roadImg.getAttribute('data-src')) || 'padkaart.jpg';
+  var fallback = (document.getElementById('mapImg') || {}).src || '';
+  var legsSvg = '', i;
+  for(i = 0; i < points.length - 1; i++){
+    var a = rvLL2XY(points[i].lat, points[i].lng), b = rvLL2XY(points[i+1].lat, points[i+1].lng);
+    legsSvg += '<g class="rv-leg" data-i="'+i+'"><path d="M'+a.x.toFixed(1)+','+a.y.toFixed(1)+' L'+b.x.toFixed(1)+','+b.y.toFixed(1)+'" stroke="#90a4ae" stroke-width="1.6" stroke-dasharray="4,3" fill="none"/></g>';
+  }
+  var marks = '', seen = {};
+  points.forEach(function(p, k){
+    var key = p.lat.toFixed(4)+','+p.lng.toFixed(4);
+    if(seen[key] != null){ return; }          // round trip: last = first, one marker
+    seen[key] = k;
+    var xy = rvLL2XY(p.lat, p.lng);
+    var lbl = String(k + 1);
+    marks += '<g><title>'+esc((k+1)+'. '+p.name)+'</title><circle cx="'+xy.x.toFixed(1)+'" cy="'+xy.y.toFixed(1)+'" r="6.5" fill="#c62828" stroke="#fff" stroke-width="1.6"/>'
+      + '<text x="'+xy.x.toFixed(1)+'" y="'+(xy.y+2.4).toFixed(1)+'" text-anchor="middle" font-size="'+(lbl.length > 1 ? 6 : 7)+'" font-weight="700" fill="#fff" font-family="Arial,sans-serif">'+lbl+'</text></g>';
+  });
+  st.innerHTML = '<img alt="" src="'+src+'"><svg viewBox="0 0 950 570" preserveAspectRatio="none">'
+    + '<g id="rvLegs">'+legsSvg+'</g><g id="rvMarks">'+marks+'</g></svg>';
+  var im = st.querySelector('img');
+  im.onerror = function(){ if(fallback && im.src !== fallback) im.src = fallback; };
+  var head = document.querySelector('#roadViewer .rv-t');
+  function setHead(txt){ if(head) head.textContent = txt; }
+  setHead((title || tr('cs.zoomTitle')) + ' · ' + tr('route.calc', {done: 0, total: points.length - 1}));
+  document.getElementById('roadViewer').classList.add('show');
+  rvLevel = window.innerWidth < 900 ? 1 : 1;
+  rvApply(true);
+
+  var totalKm = 0, done = 0, failed = 0, next = 0;
+  function legDone(){
+    done++;
+    if(token !== rvRouteToken) return;
+    if(done < points.length - 1) setHead((title || '') + ' · ' + tr('route.calc', {done: done, total: points.length - 1}));
+    else setHead((title || '') + ' · ' + tr('route.total', {km: Math.round(totalKm).toLocaleString(LANG === 'af' ? 'af-ZA' : 'en-ZA'), stops: Object.keys(seen).length})
+                 + (failed ? ' · ' + tr('route.someStraight', {n: failed}) : ''));
+  }
+  function fetchLeg(idx){
+    var a = points[idx], b = points[idx+1];
+    var url = OSRM_BASE + a.lng+','+a.lat+';'+b.lng+','+b.lat + '?overview=simplified&geometries=geojson';
+    var to = new Promise(function(_, rej){ setTimeout(function(){ rej(new Error('TIMEOUT')); }, 20000); });
+    return Promise.race([fetch(url).then(function(r){ if(!r.ok) throw new Error('HTTP_'+r.status); return r.json(); }), to])
+      .then(function(data){
+        if(token !== rvRouteToken) return;
+        var rt = data && data.code === 'Ok' && data.routes && data.routes[0];
+        if(!rt || !rt.geometry || !rt.geometry.coordinates) throw new Error('NO_ROUTE');
+        totalKm += (rt.distance || 0) / 1000;
+        var d = rt.geometry.coordinates.map(function(c, n){ var xy = rvLL2XY(c[1], c[0]); return (n ? 'L' : 'M') + xy.x.toFixed(1) + ',' + xy.y.toFixed(1); }).join(' ');
+        var g = document.querySelector('#rvLegs .rv-leg[data-i="'+idx+'"]');
+        if(g) g.innerHTML = '<path d="'+d+'" stroke="#fff" stroke-width="4" fill="none" stroke-linejoin="round" stroke-linecap="round" opacity=".85"/>'
+                          + '<path d="'+d+'" stroke="#0d47a1" stroke-width="2.2" fill="none" stroke-linejoin="round" stroke-linecap="round"/>';
+      })
+      .catch(function(){
+        if(token !== rvRouteToken) return;
+        failed++;
+        totalKm += haversineKmLL(a, b) * 1.25;   // rough road estimate for this leg
+        var g = document.querySelector('#rvLegs .rv-leg path'); // keep the dashed straight line
+      })
+      .then(legDone);
+  }
+  // a few legs at a time -- friendly to the free route service
+  function worker(){ if(token !== rvRouteToken || next >= points.length - 1) return Promise.resolve(); var k = next++; return fetchLeg(k).then(worker); }
+  for(var w = 0; w < 4; w++) worker();
+}
+Object.assign(I18N.af, {'route.calc': 'roete word bereken… {done}/{total}', 'route.total': '{km} km · {stops} stops', 'route.someStraight': '{n} stuk(ke) as reguit lyn (geen verbinding)'});
+Object.assign(I18N.en, {'route.calc': 'calculating route… {done}/{total}', 'route.total': '{km} km · {stops} stops', 'route.someStraight': '{n} leg(s) as straight line (no connection)'});
 document.addEventListener('keydown', function(e){ if(e.key === 'Escape') closeRoadViewer(); });
 applyLanguage();
 </script>
