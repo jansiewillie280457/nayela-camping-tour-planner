@@ -142,6 +142,13 @@ body{font-family:'Segoe UI',Arial,sans-serif;background:linear-gradient(180deg,#
 .bar.consumption{background:linear-gradient(to top,#0d47a1,#1976d2);}
 .bar.price{background:linear-gradient(to top,#4a148c,#8e24aa);}
 .bar.kml{background:linear-gradient(to top,#00695c,#26a69a);}
+/* Disclaimer on the main page */
+.disclaimer-box{margin:18px auto 10px;max-width:900px;background:#faf8f3;border:1px solid #e5dccb;border-radius:10px;padding:10px 14px;font-size:.76rem;color:#5d4e3a;}
+.disclaimer-box summary{cursor:pointer;font-weight:700;color:#795548;list-style-position:inside;touch-action:manipulation;}
+.disclaimer-box .disc-body{margin-top:8px;line-height:1.55;}
+.disclaimer-box .disc-body ul{margin:6px 0 6px 18px;padding:0;}
+.disclaimer-box .disc-body li{margin-bottom:5px;}
+.disclaimer-box .disc-body .disc-small{font-size:.68rem;color:#8d7f6b;margin-top:8px;}
 /* Share Tour rows */
 .share-row{padding:10px 0;border-bottom:1px solid #eee;}
 .share-row.fresh{background:#f1f8e9;border-radius:8px;padding:10px 8px;}
@@ -278,7 +285,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.21 (2 Okt Deel Toer e-pos)</div>
+  <div class="hdr-ver">v3.22 (3 Okt Vrywaring)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -400,6 +407,12 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
       <div id="savedToursSync" style="font-size:.74rem;margin-top:8px;color:#777;"></div>
       <div id="savedToursList" style="margin-top:14px;"><div class="saved-tours-empty">Nog geen gestoorde toere nie. Beplan 'n toer, en tik dan "Stoor Huidige Toer" om 'n kopie hier te hou.</div></div>
     </div>
+
+    <!-- DISCLAIMER -->
+    <details class="disclaimer-box">
+      <summary data-i18n="disc.title">⚠️ Vrywaring — tik om te lees</summary>
+      <div class="disc-body" data-i18n-html="disc.body"></div>
+    </details>
   </div>
 </div>
 
@@ -10234,6 +10247,8 @@ applyLanguage();
 // doesn't use Netlify bandwidth again. The list itself is also cached in
 // localStorage so it still shows when there's no signal.
 Object.assign(I18N.af, {
+  'disc.title': '⚠️ Vrywaring — tik om te lees',
+  'disc.body': "NAYELA is 'n privaat hulpmiddel waarmee lede kampeertoere beplan. Alle inligting word <b>\"soos dit is\"</b> verskaf, sonder enige waarborg dat dit akkuraat, volledig of op datum is.<ul><li><b>Kampeerplekke:</b> besonderhede, pryse, kontakbesonderhede, GPS-ligginge, sterre-graderings, padtoestande, wenke en resepte word deur lede bygedra en kan verouderd of verkeerd wees. <b>Bevestig altyd direk by die kampeerterrein</b> voordat jy bespreek, betaal of ry.</li><li><b>AI-inligting</b> (omgewingsnotas, geriewe, roetevoorstelle) word deur kunsmatige intelligensie geskryf en kan foute bevat. Gebruik dit as 'n beginpunt, nie as feite nie.</li><li><b>Afstande, roetes en brandstofberamings</b> is benaderings. Die kaarte is <b>nie vir navigasie</b> bedoel nie — gebruik 'n erkende GPS of padkaart en hou altyd by verkeersreëls en padtekens.</li><li><b>Handleidings</b> en dokumente wat lede oplaai, bly die eiendom van hul eienaars en is net vir persoonlike gebruik. Volg altyd die vervaardiger se amptelike instruksies vir jou voertuig, karavaan en toerusting.</li><li><b>Gebruik op eie risiko:</b> die eienaars en ontwikkelaars van NAYELA aanvaar geen aanspreeklikheid vir enige verlies, skade, besering, koste of ongerief wat uit die gebruik van hierdie program of sy inligting voortspruit nie.</li><li><b>Jou data:</b> jou aanmelding en die inligting wat jy invoer, word in Google Firebase gestoor. Gedeelde inligting (kampeerplekke, wenke, resepte, padtoestande, handleidings) is vir alle lede sigbaar; jou gestoorde toere net vir jou.</li></ul><div class=\"disc-small\">Kaartdata: Natural Earth (publieke domein) · Dorpligginge: GeoNames (CC BY 4.0) · Roete-afstande: OpenStreetMap / OSRM.</div>",
   'menu.man.title': 'Handleidings',
   'menu.man.desc': 'Jou karavaan- en programhandleidings (PDF, video\'s en skakels) — altyd byderhand op jou foon, tablet of rekenaar.',
   'menu.man.badge': '★ Nuut',
@@ -10283,6 +10298,8 @@ Object.assign(I18N.af, {
   'man.busy': 'Wag asseblief — iets word nog op- of afgelaai.'
 });
 Object.assign(I18N.en, {
+  'disc.title': '⚠️ Disclaimer — tap to read',
+  'disc.body': "NAYELA is a private tool members use to plan camping tours. All information is provided <b>\"as is\"</b>, without any guarantee that it is accurate, complete or up to date.<ul><li><b>Campsites:</b> details, prices, contact details, GPS locations, star ratings, road conditions, tips and recipes are contributed by members and may be outdated or wrong. <b>Always confirm directly with the campsite</b> before you book, pay or travel.</li><li><b>AI information</b> (area notes, amenities, route suggestions) is written by artificial intelligence and may contain errors. Use it as a starting point, not as fact.</li><li><b>Distances, routes and fuel estimates</b> are approximations. The maps are <b>not intended for navigation</b> — use a recognised GPS or road map and always obey traffic rules and road signs.</li><li><b>Manuals</b> and documents uploaded by members remain the property of their owners and are for personal use only. Always follow the manufacturer's official instructions for your vehicle, caravan and equipment.</li><li><b>Use at your own risk:</b> the owners and developers of NAYELA accept no liability for any loss, damage, injury, cost or inconvenience arising from the use of this app or its information.</li><li><b>Your data:</b> your login and the information you enter are stored in Google Firebase. Shared information (campsites, tips, recipes, road conditions, manuals) is visible to all members; your saved tours only to you.</li></ul><div class=\"disc-small\">Map data: Natural Earth (public domain) · Town locations: GeoNames (CC BY 4.0) · Route distances: OpenStreetMap / OSRM.</div>",
   'menu.man.title': 'Manuals',
   'menu.man.desc': 'Your caravan and program manuals (PDFs, videos and links) — always at hand on your phone, tablet or computer.',
   'menu.man.badge': '★ New',
