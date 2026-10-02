@@ -285,7 +285,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.27 (4 Okt Spyskaart skoon)</div>
+  <div class="hdr-ver">v3.28 (4 Okt Spyskaart datums)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -5055,6 +5055,7 @@ Object.assign(I18N.af, {
   'tour.menu.cleared': 'Spyskaart skoongemaak ✓',
   'tour.menu.alreadyEmpty': 'Die spyskaart is reeds leeg.',
   'tour.menu.noStopsToPull': 'Geen stops in die Skedule om te trek nie.',
+  'tour.menu.noDates': 'Die stops het nog geen datums nie — vul die Begindatum op die Oorsig in, of die eerste stop se datum in die Skedule.',
   'tour.menu.allAlreadyPulled': 'Al die Skedule se dae is reeds hier.',
   'tour.menu.staleNotInSchedule': 'Niks nuut om by te voeg nie. {n} dag/dae hier is nie in die Skedule nie (ou toer?) — verwyder hulle self met die asblik.',
   'tour.menu.pulled': '{n} dag/dae vanaf Skedule bygevoeg ✓',
@@ -5432,6 +5433,7 @@ Object.assign(I18N.en, {
   'tour.menu.cleared': 'Menu cleared ✓',
   'tour.menu.alreadyEmpty': 'The menu is already empty.',
   'tour.menu.noStopsToPull': 'No stops in the Schedule to pull.',
+  'tour.menu.noDates': 'The stops have no dates yet — fill in the Start Date on the Overview, or the first stop\'s date in the Schedule.',
   'tour.menu.allAlreadyPulled': "All the Schedule's days are already here.",
   'tour.menu.staleNotInSchedule': "Nothing new to add. {n} day(s) here are not in the Schedule (old tour?) — remove them yourself with the bin.",
   'tour.menu.pulled': '{n} day(s) added from Schedule ✓',
@@ -5769,7 +5771,12 @@ function showTab(id){
   document.querySelectorAll('#pg-tour .tab-pane').forEach(function(p){p.classList.remove('active');});
   document.querySelectorAll('#pg-tour .tab-btn').forEach(function(b){b.classList.remove('active');});
   document.getElementById(id).classList.add('active');
-  event.currentTarget.classList.add('active');
+  // Highlight the tab's button without relying on the global "event"
+  // (not set the same way in every browser -- an exception here could stop
+  // the tab from rendering its content).
+  var tabBtn = document.querySelector('#pg-tour .tab-btn[onclick*="\''+id+'\'"]');
+  if(!tabBtn && window.event && window.event.currentTarget) tabBtn = window.event.currentTarget;
+  if(tabBtn) tabBtn.classList.add('active');
   if(id==='tb-schedule') renderSchedule();
   if(id==='tb-members'){renderMembers();}
   if(id==='tb-vehicle'){loadVehicleForm();renderVehicleTable();}
@@ -8570,11 +8577,23 @@ function renderDeposits(){
 // directly per stop).
 function computeTourDayList(){
   var days = [];
+  // A new tour (AI planner, pulled from the Soektog...) often has stops
+  // without dates yet. Then the Spyskaart stayed empty with a misleading
+  // "no stops" message. Stops without a date now follow on from the
+  // previous stop (its date + nights), and the first one from the
+  // Oorsig's Begindatum.
+  var cursor = (tourInfo && tourInfo.start) ? tourInfo.start : null;
   tourStops.forEach(function(s){
-    if(!s.date) return;
-    var span = stopNights(s); if(!span) span = 1; // 0-night stop (e.g. a return leg) still gets one meal day
+    var start = s.date || cursor;
+    var span = stopNights(s);
+    if(start){
+      var nd = new Date(start); nd.setDate(nd.getDate() + (span || 0));
+      cursor = nd.toISOString().split('T')[0];
+    }
+    if(!start) return;
+    if(!span) span = 1; // 0-night stop (e.g. a return leg) still gets one meal day
     for(var k=0;k<span;k++){
-      var d = new Date(s.date); d.setDate(d.getDate()+k);
+      var d = new Date(start); d.setDate(d.getDate()+k);
       days.push({date: d.toISOString().split('T')[0], camp: s.name});
     }
   });
@@ -8592,7 +8611,7 @@ function menuDayLabel(dateStr){
 }
 function pullDaysToMenu(){
   var days = computeTourDayList();
-  if(!days.length){ toast(tr('tour.menu.noStopsToPull')); return; }
+  if(!days.length){ toast(tr(tourStops.length ? 'tour.menu.noDates' : 'tour.menu.noStopsToPull')); return; }
   var existingDates = menuList.map(function(m){ return m.date; });
   var added = 0;
   days.forEach(function(d){
