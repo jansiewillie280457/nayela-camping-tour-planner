@@ -285,7 +285,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.28 (4 Okt Spyskaart datums)</div>
+  <div class="hdr-ver">v3.29 (4 Okt Brandstof lyngrafiek)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -10959,6 +10959,11 @@ applyLanguage();
 // half-way through the tour; plus a projection for the whole tour.
 Object.assign(I18N.af, {
   'fuel.cmp.hdr': '⚖️ Beplan vs Werklik',
+  'fuel.cmp.chartHdr': '📈 Brandstof gebruik: beplan vs werklik',
+  'fuel.cmp.chartX': 'km gery',
+  'fuel.cmp.chartY': 'liter',
+  'fuel.cmp.chartPlan': 'Beplan (Voertuig-oortjie)',
+  'fuel.cmp.chartActual': 'Werklik (brandstof log)',
   'fuel.cmp.noPlan': 'Nog geen beplande roete nie. Voeg stops met afstande (km) by in die Toer Beplanner se Skedule — dan word jou werklike brandstof hier daarteen vergelyk.',
   'fuel.cmp.noActual': 'Beplan vir die hele toer: {km} km · {lit} L · R {cost}. Voeg ten minste twee brandstofstops by (met die reisafstandmeter) om werklike verbruik te vergelyk.',
   'fuel.cmp.driven': 'Gery: {km} km van {total} km beplan ({pct}%)',
@@ -10984,6 +10989,11 @@ Object.assign(I18N.af, {
 });
 Object.assign(I18N.en, {
   'fuel.cmp.hdr': '⚖️ Planned vs Actual',
+  'fuel.cmp.chartHdr': '📈 Fuel used: planned vs actual',
+  'fuel.cmp.chartX': 'km driven',
+  'fuel.cmp.chartY': 'litres',
+  'fuel.cmp.chartPlan': 'Planned (Vehicle tab)',
+  'fuel.cmp.chartActual': 'Actual (fuel log)',
   'fuel.cmp.noPlan': 'No planned route yet. Add stops with distances (km) in the Tour Planner\'s Schedule — then your actual fuel is compared against it here.',
   'fuel.cmp.noActual': 'Planned for the whole tour: {km} km · {lit} L · R {cost}. Add at least two fuel stops (with the odometer) to compare actual consumption.',
   'fuel.cmp.driven': 'Driven: {km} km of {total} km planned ({pct}%)',
@@ -11083,7 +11093,56 @@ function renderFuelPlanCompare(){
     + '<div style="color:' + col + ';font-weight:700;margin-top:3px;">' + esc(verdict) + '</div>'
     + '<div style="color:#666;margin-top:3px;">' + esc(remKm > 0 ? tr('fuel.cmp.remaining', {km: fuelCmpFmt(remKm), lit: fuelCmpFmt(remKm / actKmL), cost: fuelCmpFmt(remKm / actKmL * actPrice)}) : tr('fuel.cmp.done')) + '</div>'
     + '</div>';
+  h += fuelCmpLineChart(legs, totalKm, planKmL);
   el.innerHTML = h + note;
+}
+// ── Line graph: litres used, planned vs actual, over the km driven ──────
+// X = km (the whole planned tour, so it also shows progress), Y = total
+// litres used. Orange dashed = plan (Vehicle tab's km/L), black = actual
+// from the fuel log (a dot per fill-up, town on hover/tap), with the
+// difference at the end of the actual line.
+function fuelCmpLineChart(legs, totalKm, planKmL){
+  if(!legs.length || !(planKmL > 0)) return '';
+  var W = 600, H = 250, L = 46, R = 16, T = 14, B = 34;
+  var cumKm = 0, cumLit = 0, pts = [{km:0, lit:0, town:''}];
+  legs.forEach(function(e){ cumKm += e.dist; cumLit += e.litres; pts.push({km:cumKm, lit:cumLit, town:e.town||''}); });
+  var maxKm = Math.max(totalKm || 0, cumKm);
+  var maxLit = Math.max(maxKm / planKmL, cumLit) * 1.08;
+  function niceStep(max, n){ var raw = max / n, p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p; }
+  var xs = niceStep(maxKm, 7), ys = niceStep(maxLit, 4);
+  maxKm = Math.ceil(maxKm / xs) * xs; maxLit = Math.ceil(maxLit / ys) * ys;
+  function X(km){ return L + (W - L - R) * km / maxKm; }
+  function Y(lit){ return H - B - (H - T - B) * lit / maxLit; }
+  var g = '';
+  for(var yv = 0; yv <= maxLit + 1e-9; yv += ys){
+    g += '<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(yv).toFixed(1)+'" y2="'+Y(yv).toFixed(1)+'" stroke="#eee"/>'
+       + '<text x="'+(L-6)+'" y="'+(Y(yv)+3.5).toFixed(1)+'" text-anchor="end" font-size="10" fill="#888">'+fuelCmpFmt(yv)+'</text>';
+  }
+  for(var xv = 0; xv <= maxKm + 1e-9; xv += xs){
+    g += '<line x1="'+X(xv).toFixed(1)+'" x2="'+X(xv).toFixed(1)+'" y1="'+T+'" y2="'+(H-B)+'" stroke="#f3f3f3"/>'
+       + '<text x="'+X(xv).toFixed(1)+'" y="'+(H-B+14)+'" text-anchor="middle" font-size="10" fill="#888">'+fuelCmpFmt(xv)+'</text>';
+  }
+  g += '<text x="'+((L+W-R)/2)+'" y="'+(H-4)+'" text-anchor="middle" font-size="10.5" fill="#666">'+esc(tr('fuel.cmp.chartX'))+'</text>'
+     + '<text x="12" y="'+((T+H-B)/2)+'" text-anchor="middle" font-size="10.5" fill="#666" transform="rotate(-90 12 '+((T+H-B)/2)+')">'+esc(tr('fuel.cmp.chartY'))+'</text>';
+  // planned: straight line over the whole tour
+  g += '<line x1="'+X(0)+'" y1="'+Y(0)+'" x2="'+X(maxKm).toFixed(1)+'" y2="'+Y(maxKm / planKmL).toFixed(1)+'" stroke="#e65100" stroke-width="2.4" stroke-dasharray="7,5"/>';
+  // actual
+  g += '<polyline fill="none" stroke="#111" stroke-width="2.6" stroke-linejoin="round" points="'+pts.map(function(p){ return X(p.km).toFixed(1)+','+Y(p.lit).toFixed(1); }).join(' ')+'"/>';
+  pts.slice(1).forEach(function(p){
+    var pl = p.km / planKmL, d = p.lit - pl;
+    g += '<circle cx="'+X(p.km).toFixed(1)+'" cy="'+Y(p.lit).toFixed(1)+'" r="4" fill="#111" stroke="#fff" stroke-width="1.5"><title>'
+       + esc(p.town + ': ' + fuelCmpFmt(p.km) + ' km · ' + fuelCmpFmt(p.lit, 1) + ' L (' + tr('fuel.cmp.colPlan') + ' ' + fuelCmpFmt(pl, 1) + ' L, ' + (d >= 0 ? '+' : '−') + fuelCmpFmt(Math.abs(d), 1) + ' L)') + '</title></circle>';
+  });
+  var last = pts[pts.length-1], dl = last.lit - last.km / planKmL;
+  var lx = X(last.km), ly = Y(last.lit), anchor = lx > W - 120 ? 'end' : 'start';
+  g += '<text x="'+(lx + (anchor === 'end' ? -8 : 8)).toFixed(1)+'" y="'+(ly - 8).toFixed(1)+'" text-anchor="'+anchor+'" font-size="11.5" font-weight="700" stroke="#fff" stroke-width="3.5" paint-order="stroke" fill="'+(dl > 0 ? '#c62828' : '#2e7d32')+'">'
+     + (dl >= 0 ? '+' : '−') + fuelCmpFmt(Math.abs(dl), 1) + ' L</text>';
+  var legend = '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:.72rem;color:#555;margin:4px 2px 0;">'
+    + '<span><span style="display:inline-block;width:22px;border-top:2.4px dashed #e65100;vertical-align:middle;margin-right:5px;"></span>' + esc(tr('fuel.cmp.chartPlan')) + '</span>'
+    + '<span><span style="display:inline-block;width:22px;border-top:2.6px solid #111;vertical-align:middle;margin-right:5px;"></span>' + esc(tr('fuel.cmp.chartActual')) + '</span></div>';
+  return '<div style="margin-top:12px;"><div style="font-weight:700;font-size:.82rem;color:#5d4037;margin-bottom:4px;">' + esc(tr('fuel.cmp.chartHdr')) + '</div>'
+    + '<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;height:auto;display:block;background:#fff;border:1px solid #f0e6d6;border-radius:8px;">' + g + '</svg>'
+    + legend + '</div>';
 }
 I18N_REFRESH.push(renderFuelPlanCompare);
 renderFuelPlanCompare();
