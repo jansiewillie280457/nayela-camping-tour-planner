@@ -285,7 +285,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.29 (4 Okt Brandstof lyngrafiek)</div>
+  <div class="hdr-ver">v3.30 (5 Okt Bygevoeg deur)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -1893,6 +1893,7 @@ I18N_REFRESH.push(function(){
       <button id="xModal">✕</button>
     </div>
     <div class="modal-body">
+      <div id="mAddedBy" style="display:none;font-size:.74rem;color:#6d4c41;background:#fbf6ee;border:1px solid #eadfcb;border-radius:6px;padding:5px 8px;margin-bottom:8px;"></div>
       <div class="mfr"><label data-i18n="cs.mNaam">Naam *</label><input id="mNaam" type="text" placeholder="Naam van kampeerterrein" data-i18n-ph="cs.mNaamPh"></div>
       <div class="mfr"><label data-i18n="cs.lblTown">Dorp / Stad</label><input id="mDorp" type="text"></div>
       <div class="mfr"><label data-i18n="cs.lblProv">Provinsie / Land</label>
@@ -2297,6 +2298,9 @@ Object.assign(I18N.af, {
   'cs.mBathAvg': 'Badkamers gemiddeld {avg} ★ uit {n} gradering(s) deur lede',
   'cs.mBathMine': 'Jou badkamer-gradering: {n} ★ (word gestoor as jy Stoor tik)',
   'cs.bathRating': '🚿 Badkamers',
+  'cs.addedBy': 'Bygevoeg deur {who} op {date}',
+  'cs.editedBy': 'laaste wysiging deur {who} op {date}',
+  'cs.addedByUnknown': '👤 Onbekend wie hierdie kampeerplek bygevoeg het (bygevoeg voor dit aangeteken is).',
   'cs.rating': 'Gradering',
   'cs.ratingCount': '{n} gradering(s)',
   'cs.mInfo': 'E-pos',
@@ -2439,6 +2443,9 @@ Object.assign(I18N.en, {
   'cs.mBathAvg': 'Bathrooms average {avg} ★ from {n} member rating(s)',
   'cs.mBathMine': 'Your bathroom rating: {n} ★ (saved when you tap Save)',
   'cs.bathRating': '🚿 Bathrooms',
+  'cs.addedBy': 'Added by {who} on {date}',
+  'cs.editedBy': 'last changed by {who} on {date}',
+  'cs.addedByUnknown': '👤 Unknown who added this campsite (added before this was recorded).',
   'cs.rating': 'Rating',
   'cs.ratingCount': '{n} rating(s)',
   'cs.mInfo': 'Email',
@@ -3683,6 +3690,7 @@ function renderBathPicker(){
 I18N_REFRESH.push(function(){ if(document.getElementById('modalBg') && document.getElementById('modalBg').classList.contains('show')) renderBathPicker(); });
 
 function openAddModal(){
+  var abx = document.getElementById('mAddedBy'); if(abx){ abx.style.display = 'none'; abx.textContent = ''; }
   editIdx=-1;
   document.getElementById('modalTitle').textContent=tr('cs.addTitle');
   document.getElementById('btnDel').style.display='none';
@@ -3694,9 +3702,20 @@ function openAddModal(){
   renderPhotoPicker('mPhotoPicker', pendingCampPhotos, 4);
   document.getElementById('modalBg').classList.add('show');
 }
+// Admin only: show who added / last changed this campsite.
+function campAddedByLine(c){
+  if(!(typeof window.fbIsAdmin === 'function' && window.fbIsAdmin())) return '';
+  var bits = [];
+  function d(x){ try{ var dt = new Date(x); return dt.toLocaleDateString(LANG==='af'?'af-ZA':'en-ZA',{day:'numeric',month:'short',year:'numeric'}); }catch(e){ return ''; } }
+  if(c && c.addedBy) bits.push(tr('cs.addedBy', {who: c.addedBy, date: c.addedAt ? d(c.addedAt) : '?'}));
+  if(c && c.editedBy) bits.push(tr('cs.editedBy', {who: c.editedBy, date: c.editedAt ? d(c.editedAt) : '?'}));
+  return bits.length ? '👤 ' + bits.join(' · ') : tr('cs.addedByUnknown');
+}
 function openEditModal(idx){
   editIdx=idx;
   var c=camps[idx];
+  var ab = document.getElementById('mAddedBy');
+  if(ab){ var line = campAddedByLine(c); ab.textContent = line; ab.style.display = line ? '' : 'none'; }
   document.getElementById('modalTitle').textContent=tr('cs.editTitle',{name:c.naam});
   document.getElementById('btnDel').style.display='';
   document.getElementById('mNaam').value=c.naam||'';
@@ -4486,6 +4505,8 @@ if(window.matchMedia){
       // (older records use it for the website/booking e-mail) instead of blanking it.
       url:(editIdx>=0 && camps[editIdx] && camps[editIdx].url) || '',
       ratings:campMergedRatings(editIdx>=0 ? camps[editIdx] : null),
+      addedBy:(editIdx>=0 && camps[editIdx] && camps[editIdx].addedBy) || ((window.fbAuth && window.fbAuth.currentUser && window.fbAuth.currentUser.email) || ''),
+      addedAt:(editIdx>=0 && camps[editIdx] && camps[editIdx].addedAt) || (editIdx>=0 ? '' : new Date().toISOString()),
       bathRatings:campMergedBath(editIdx>=0 ? camps[editIdx] : null),
       info:document.getElementById('mInfo').value.trim(),
       notes:document.getElementById('mRem').value.trim(),
@@ -11660,6 +11681,24 @@ window.fbDeleteRoadCondition = async function(id){
 window.fbSaveCampsite = async function(rec){
   var id = rec._id || slugId(rec.naam, rec.dorp);
   var clean = Object.assign({}, rec); delete clean._id;
+  // Who added this campsite (kept forever) and who last changed it.
+  // The edit form only sends its own fields and setDoc replaces the whole
+  // record, so read the existing one first and carry addedBy/addedAt over.
+  var me = (currentMember && currentMember.email) || (auth.currentUser && auth.currentUser.email) || '';
+  var now = new Date().toISOString();
+  try{
+    var prev = await getDoc(doc(db,'campsites', id));
+    if(prev.exists()){
+      var pd = prev.data() || {};
+      if(pd.addedBy) clean.addedBy = pd.addedBy;
+      if(pd.addedAt) clean.addedAt = pd.addedAt;
+      clean.editedBy = me; clean.editedAt = now;
+    } else {
+      clean.addedBy = me; clean.addedAt = now;
+    }
+  }catch(e){
+    if(!clean.addedBy && !rec._id){ clean.addedBy = me; clean.addedAt = now; }
+  }
   await setDoc(doc(db,'campsites', id), clean);
   return id;
 };
@@ -11734,6 +11773,7 @@ function subscribeSavedTours(){
 }
 
 // ── Members admin panel ────────────────────────────────────────────
+function escHtmlM(x){ return String(x).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 async function renderMembers(){
   var wrap = document.getElementById('fbMemList');
   wrap.textContent = 'Laai...';
@@ -11756,6 +11796,27 @@ async function renderMembers(){
       : '⚠️ Kon nie die aanmeld-aktiwiteit lees nie (' + activityErr + ').';
     wrap.appendChild(warn);
   }
+  // Campsites added by members (newest first) -- only the admin sees this panel.
+  setTimeout(function(){
+    var added = (window.camps || []).filter(function(c){ return c && c.addedBy; })
+      .sort(function(a, b){ return String(b.addedAt || '').localeCompare(String(a.addedAt || '')); });
+    var box = document.createElement('div');
+    box.style.cssText = 'margin-top:14px;border-top:2px solid #eee;padding-top:10px;';
+    var h = '<div style="font-weight:700;font-size:.85rem;color:#5d4037;margin-bottom:6px;">📍 Kampeerplekke bygevoeg deur lede (' + added.length + ')</div>';
+    if(!added.length){
+      h += '<div style="font-size:.74rem;color:#888;">Nog geen nie. Kampeerplekke wat van nou af met "+ Voeg Toe" bygevoeg word, verskyn hier met wie dit bygevoeg het.</div>';
+    } else {
+      h += added.slice(0, 50).map(function(c){
+        var dt = ''; try{ dt = c.addedAt ? new Date(c.addedAt).toLocaleDateString('af-ZA',{day:'numeric',month:'short',year:'numeric'}) : ''; }catch(e){}
+        return '<div style="font-size:.76rem;padding:4px 0;border-bottom:1px solid #f3f3f3;"><b>' + escHtmlM(c.naam || '') + '</b>'
+          + (c.dorp ? ' <span style="color:#888;">(' + escHtmlM(c.dorp) + ')</span>' : '')
+          + '<br><span style="color:#555;">' + escHtmlM(c.addedBy) + (dt ? ' · ' + dt : '') + '</span></div>';
+      }).join('');
+      if(added.length > 50) h += '<div style="font-size:.72rem;color:#888;margin-top:4px;">… en ' + (added.length - 50) + ' meer</div>';
+    }
+    box.innerHTML = h;
+    wrap.appendChild(box);
+  }, 0);
   snap.forEach(function(d){
     var m = d.data();
     var act = activity[d.id] || {};
@@ -11772,6 +11833,8 @@ async function renderMembers(){
       }catch(e){}
     }
     if(!total && !last && !activityErr) usageBits.push('Nog nie aangemeld nie');
+    var nAdded = (window.camps || []).filter(function(c){ return c && c.addedBy === d.id; }).length;
+    if(nAdded) usageBits.push('📍 ' + nAdded + (nAdded === 1 ? ' kampeerplek bygevoeg' : ' kampeerplekke bygevoeg'));
     var usageLine = usageBits.length ? '<div style="font-size:.7rem;color:#888;margin-top:2px;">'+usageBits.join(' · ')+'</div>' : '';
     row.innerHTML =
       '<span style="flex:1;min-width:0;">'
