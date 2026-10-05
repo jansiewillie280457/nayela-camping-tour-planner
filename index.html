@@ -285,7 +285,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.30 (5 Okt Bygevoeg deur)</div>
+  <div class="hdr-ver">v3.31 (5 Okt Lid met wagwoord)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -11219,10 +11219,17 @@ applyLanguage();
   <div class="fb-card" style="max-width:420px;max-height:80vh;overflow-y:auto;">
     <h2>👥 Lede</h2>
     <p>Voeg lede by of verwyder hulle. Verwyder = permanent geskrap (geen herstel-knoppie nie). Om 'n lid terug te bring, voeg hom van voor af by.</p>
-    <input id="fbNewMemEmail" type="email" placeholder="Nuwe lid se e-pos">
-    <button id="fbAddMemBtn" style="margin-bottom:14px;">➕ Voeg lid by</button>
+    <input id="fbNewMemName" type="text" placeholder="Naam" autocomplete="off">
+    <input id="fbNewMemSurname" type="text" placeholder="Van" autocomplete="off">
+    <input id="fbNewMemEmail" type="email" placeholder="Nuwe lid se e-pos" autocomplete="off">
+    <div style="position:relative;">
+      <input id="fbNewMemPass" type="password" placeholder="Wagwoord (minstens 6 karakters)" autocomplete="new-password" style="padding-right:64px;">
+      <span id="fbNewMemPassShow" style="position:absolute;right:10px;top:50%;transform:translateY(-60%);font-size:.78rem;color:#1565c0;cursor:pointer;user-select:none;">wys</span>
+    </div>
+    <div style="font-size:.7rem;color:#888;text-align:left;margin:-4px 0 8px;">Die wagwoord skep die persoon se aanmelding direk. Laat dit leeg as hy reeds 'n aanmelding het. Gee die wagwoord privaat vir hom (bv. per WhatsApp).</div>
+    <button id="fbAddMemBtn" style="margin-bottom:6px;">➕ Voeg lid by</button>
+    <div id="fbMemErr" style="color:#c62828;font-size:.82rem;margin:0 0 12px;text-align:left;"></div>
     <div id="fbMemList" style="text-align:left;"></div>
-    <div id="fbMemErr" style="color:#c62828;font-size:.82rem;margin-top:8px;"></div>
     <button style="margin-top:14px;background:#888;" onclick="document.getElementById(&#39;fbMemBg&#39;).classList.remove(&#39;show&#39;)">Sluit</button>
   </div>
 </div>
@@ -11241,7 +11248,7 @@ applyLanguage();
 // campsites shipped in this file, the first time it's ever empty.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import {
-  getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut
+  getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, doc, getDoc, getDocs, setDoc, deleteDoc,
@@ -11838,7 +11845,8 @@ async function renderMembers(){
     var usageLine = usageBits.length ? '<div style="font-size:.7rem;color:#888;margin-top:2px;">'+usageBits.join(' · ')+'</div>' : '';
     row.innerHTML =
       '<span style="flex:1;min-width:0;">'
-        +'<span class="fb-mem-email">'+d.id+(m.role==='admin'?' 👑':'')+'</span>'
+        +((m.name || m.surname) ? '<span style="display:block;font-weight:700;font-size:.85rem;">'+escHtmlM(((m.name||'')+' '+(m.surname||'')).trim())+(m.role==='admin'?' 👑':'')+'</span>' : '')
+        +'<span class="fb-mem-email">'+d.id+((m.role==='admin' && !(m.name || m.surname))?' 👑':'')+'</span>'
         +usageLine
       +'</span>'+
       '<span class="fb-mem-badge'+(m.active?'':' inactive')+'">'+(m.active?'aktief':'gedeaktiveer')+'</span>';
@@ -11872,17 +11880,61 @@ async function renderMembers(){
     wrap.appendChild(row);
   });
 }
+// Creating someone ELSE's login: createUserWithEmailAndPassword signs the
+// new user in on whichever auth instance it runs on. Doing it on the main
+// app would log the admin out, so it runs on a separate, throw-away
+// Firebase app instance and that one is signed out straight after.
+// The password is never stored by NAYELA -- it only goes to Firebase Auth.
+var memberCreatorAuth = null;
+function getMemberCreatorAuth(){
+  if(!memberCreatorAuth) memberCreatorAuth = getAuth(initializeApp(firebaseConfig, 'nayela-member-creator'));
+  return memberCreatorAuth;
+}
+document.getElementById('fbNewMemPassShow').addEventListener('click', function(){
+  var f = document.getElementById('fbNewMemPass');
+  f.type = f.type === 'password' ? 'text' : 'password';
+  this.textContent = f.type === 'password' ? 'wys' : 'versteek';
+});
 document.getElementById('fbAddMemBtn').addEventListener('click', async function(){
   var email = document.getElementById('fbNewMemEmail').value.trim().toLowerCase();
+  var name = document.getElementById('fbNewMemName').value.trim();
+  var surname = document.getElementById('fbNewMemSurname').value.trim();
+  var pass = document.getElementById('fbNewMemPass').value;
   var err = document.getElementById('fbMemErr'); err.textContent=''; err.style.color='#c62828';
   if(!email || email.indexOf('@')<0){ err.textContent='Gee \'n geldige e-posadres.'; return; }
+  if(pass && pass.length < 6){ err.textContent='Die wagwoord moet minstens 6 karakters wees.'; return; }
+  var btn = this; btn.disabled = true;
   try{
-    await setDoc(doc(db,'members', email), {active:true, role:'member'}, {merge:true});
-    document.getElementById('fbNewMemEmail').value='';
+    var rec = {active:true, role:'member'};
+    if(name) rec.name = name;
+    if(surname) rec.surname = surname;
+    await setDoc(doc(db,'members', email), rec, {merge:true});
+    var msg = 'Bygevoeg' + (name || surname ? ': ' + (name + ' ' + surname).trim() : '') + '. ';
+    if(pass){
+      try{
+        var a2 = getMemberCreatorAuth();
+        await createUserWithEmailAndPassword(a2, email, pass);
+        try{ await signOut(a2); }catch(e3){}
+        msg += 'Aanmelding geskep \u2713 \u2014 gee die wagwoord privaat vir hom.';
+      }catch(e2){
+        var code = (e2 && e2.code) || '';
+        if(code === 'auth/email-already-in-use') msg += 'Hierdie e-pos het reeds \'n aanmelding \u2014 hy kan met sy bestaande wagwoord aanmeld.';
+        else if(code === 'auth/weak-password') msg += 'Wagwoord te swak (minstens 6 karakters) \u2014 aanmelding NIE geskep nie.';
+        else if(code === 'auth/operation-not-allowed' || code === 'auth/admin-restricted-operation') msg += 'Firebase laat nie toe dat aanmeldings so geskep word nie \u2014 skep dit in Firebase Console \u2192 Authentication \u2192 Users.';
+        else msg += 'Aanmelding NIE geskep nie (' + (e2 && e2.message || code) + ') \u2014 skep dit in Firebase Console \u2192 Authentication \u2192 Users.';
+        err.style.color = '#b26a00'; err.textContent = msg;
+        ['fbNewMemName','fbNewMemSurname','fbNewMemEmail','fbNewMemPass'].forEach(function(id){ document.getElementById(id).value=''; });
+        renderMembers(); btn.disabled = false; return;
+      }
+    } else {
+      msg += 'Geen wagwoord gegee nie \u2014 skep sy aanmelding in Firebase Console \u2192 Authentication \u2192 Users (of voeg hom weer by met \'n wagwoord).';
+    }
+    ['fbNewMemName','fbNewMemSurname','fbNewMemEmail','fbNewMemPass'].forEach(function(id){ document.getElementById(id).value=''; });
     err.style.color='#2e7d32';
-    err.textContent = 'Bygevoeg. Skep nou hierdie persoon se aanmelding in Firebase Console \u2192 Authentication \u2192 Users, en gee hulle die wagwoord.';
+    err.textContent = msg;
     renderMembers();
   }catch(e){ err.textContent = 'Kon nie byvoeg nie: '+e.message; }
+  btn.disabled = false;
 });
 window.openMembersPanel = function(){
   if(!window.fbIsAdmin()){ alert('Net die admin kan lede bestuur.'); return; }
