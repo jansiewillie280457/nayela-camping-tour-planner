@@ -285,7 +285,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.32 (7 Okt E-pos aan lede)</div>
+  <div class="hdr-ver">v3.33 (7 Okt Maak admin)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -11870,6 +11870,42 @@ async function renderMembers(){
     // admin re-adds him from scratch with "Voeg lid by" (fresh record, login
     // counter starts at zero). Legacy rows that were merely deactivated under
     // the old behaviour get this delete button too, so they can be cleaned out.
+    // 👑 Make / remove admin (v3.33). Firestore rules already treat any
+    // active member with role 'admin' as admin, so only the role field
+    // changes. You can't change your own role (no locking yourself out).
+    if(d.id !== currentMember.email){
+      var isAdm = m.role === 'admin';
+      var abtn = document.createElement('button');
+      abtn.type = 'button';
+      abtn.className = 'fb-adm-btn';
+      abtn.textContent = isAdm ? '\u2716 Haal admin weg' : '\ud83d\udc51 Maak admin';
+      abtn.style.cssText = 'width:auto;margin-top:5px;padding:4px 9px;font-size:.72rem;font-weight:600;border-radius:6px;'
+        + (isAdm ? 'background:#fff;color:#b26a00;border:1px solid #e0b46a;' : 'background:#fff8e1;color:#8d6e00;border:1px solid #e6c65c;');
+      abtn.addEventListener('click', async function(){
+        var err = document.getElementById('fbMemErr'); err.textContent='';
+        var who = ((m.name||'') + ' ' + (m.surname||'')).trim() || d.id;
+        var q = isAdm
+          ? 'Haal admin-regte weg by ' + who + ' (' + d.id + ')?\n\nHy bly \'n gewone lid.'
+          : 'Maak ' + who + ' (' + d.id + ') \'n ADMIN?\n\n\'n Admin kan presies wat jy kan: lede byvoeg en permanent verwyder, ander admin maak of afhaal (ook jou), aan alle lede e-pos stuur, en die hele kampeerplek-databasis uitvoer, invoer of terugstel. Gee dit net aan iemand wat jy vertrou.';
+        if(!confirm(q)) return;
+        abtn.disabled = true;
+        try{
+          await setDoc(doc(db,'members', d.id), {role: isAdm ? 'member' : 'admin'}, {merge:true});
+          await renderMembers();
+          err.style.color = '#2e7d32';
+          err.textContent = isAdm
+            ? who + ' is nie meer admin nie (dit geld sodra hy weer aanmeld of die app herlaai).'
+            : who + ' is nou admin \ud83d\udc51 \u2014 hy moet afteken en weer aanmeld om die admin-knoppies te sien.'
+              + (m.active ? '' : ' Let wel: hy is gedeaktiveer, so admin-regte werk eers as hy weer aktief is.');
+        }catch(e){
+          abtn.disabled = false;
+          err.style.color = '#c62828';
+          err.textContent = 'Kon nie verander nie: ' + e.message;
+        }
+      });
+      row.firstChild.appendChild(document.createElement('br'));
+      row.firstChild.appendChild(abtn);
+    }
     var btn = document.createElement('button');
     btn.textContent = 'Verwyder';
     btn.style.background = '#c62828';
