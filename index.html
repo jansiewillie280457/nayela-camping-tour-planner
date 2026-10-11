@@ -270,6 +270,28 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
   .main-menu{margin:16px auto;}
   .menu-grid{grid-template-columns:1fr 1fr;}
 }
+
+/* v3.34: admin-only menu in the campsite header */
+#cs-overlay .cs-adm-toggle{background:#ffd54f;color:#4e3b00;border:1px solid #ffca28;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:1rem;font-weight:700;white-space:nowrap;}
+#cs-overlay .cs-adm-toggle.open{background:#ffca28;}
+#cs-overlay .cs-adm-menu{display:none;position:fixed;z-index:3000;min-width:230px;background:#fff;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.25);padding:6px;}
+#cs-overlay .cs-adm-menu.show{display:block;}
+#cs-overlay .cs-adm-head{font-size:.72rem;font-weight:700;color:#8d6e00;text-transform:uppercase;padding:6px 10px 4px;letter-spacing:.03em;}
+#cs-overlay .cs-adm-item{display:block;width:100%;box-sizing:border-box;text-align:left;background:none;border:none;border-radius:6px;padding:10px 12px;font-size:.95rem;font-weight:600;color:#1b5e20;cursor:pointer;font-family:inherit;touch-action:manipulation;}
+#cs-overlay .cs-adm-item:hover{background:#eef6ee;}
+/* v3.34: tabs as a left-hand side menu */
+.page.has-side{max-width:1200px;}
+.side-layout{display:flex;gap:18px;align-items:flex-start;}
+.side-nav{width:200px;flex-shrink:0;position:sticky;top:12px;}
+.side-main{flex:1;min-width:0;}
+#pg-tour .side-nav .tab-bar,#pg-recipes .side-nav .tab-bar,#pg-tips .side-nav .tab-bar{flex-direction:column;flex-wrap:nowrap;gap:4px;margin:0;padding:8px;}
+#pg-tour .side-nav .tab-btn,#pg-recipes .side-nav .tab-btn,#pg-tips .side-nav .tab-btn{flex:none;min-width:0;width:100%;text-align:left;font-size:.88rem;padding:11px 12px;white-space:normal;line-height:1.25;}
+@media (max-width:760px){
+  .side-layout{display:block;}
+  .side-nav{width:auto;position:static;margin-bottom:12px;}
+  #pg-tour .side-nav .tab-bar,#pg-recipes .side-nav .tab-bar,#pg-tips .side-nav .tab-bar{flex-direction:row;overflow-x:auto;-webkit-overflow-scrolling:touch;}
+  #pg-tour .side-nav .tab-btn,#pg-recipes .side-nav .tab-btn,#pg-tips .side-nav .tab-btn{width:auto;flex:0 0 auto;white-space:nowrap;font-size:.8rem;}
+}
 </style>
 </head>
 <body>
@@ -285,7 +307,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.33 (7 Okt Maak admin)</div>
+  <div class="hdr-ver">v3.34 (11 Okt Oortjies links + Admin)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -1801,11 +1823,17 @@ I18N_REFRESH.push(function(){
     <button type="button" class="lang-btn" id="langBtnEn2" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
   <button style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:1rem;font-weight:600;flex-shrink:0;white-space:nowrap;" id="addBtn" data-i18n="cs.addBtn">+ Voeg Toe</button>
-  <button style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:1rem;font-weight:600;flex-shrink:0;white-space:nowrap;" id="resetCampsBtn" data-i18n="cs.resetBtn" data-i18n-title="cs.resetTitle" title="Wis enige plaaslik-gestoorde kampeerdata en gebruik weer die jongste ingeboude databasis (behalwe jou eie bygevoegde plekke)">🔄 Herstel Data</button>
-  <button style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:1rem;font-weight:600;flex-shrink:0;white-space:nowrap;" id="exportCampsBtn" data-i18n="cs.exportBtn" data-i18n-title="cs.exportTitle" title="Laai 'n Excel/CSV-lys af van al jou kampeerplekke (provinsie, dorp, naam, GPS, foon, webwerf)">📊 Voer uit na Excel</button>
-  <label style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:1rem;font-weight:600;flex-shrink:0;white-space:nowrap;display:inline-block;touch-action:manipulation;" for="importCampsFile" id="importCampsBtn" data-i18n="cs.importBtn" data-i18n-title="cs.importTitle" title="Voer 'n Excel/CSV-lys van kampeerplekke in — vervang AL die huidige data hiermee (herstelfunksie as iets verkeerd geloop het)">📥 Voer Data In</label>
+  <div id="csAdminWrap" style="display:none;margin-left:8px;flex-shrink:0;">
+  <button type="button" id="csAdminBtn" class="cs-adm-toggle" onclick="toggleCsAdminMenu(event)">👑 Admin ▾</button>
+  <div id="csAdminMenu" class="cs-adm-menu" onclick="event.stopPropagation()">
+    <div class="cs-adm-head" data-i18n="cs.adminHead">👑 Net vir admin</div>
+    <button class="cs-adm-item" onclick="closeCsAdminMenu();window.openMembersPanel &amp;&amp; window.openMembersPanel()" title="Bestuur wie toegang het (net vir admin)" data-i18n="cs.membersBtn">👥 Lede</button>
+    <button class="cs-adm-item" id="resetCampsBtn" data-i18n="cs.resetBtn" data-i18n-title="cs.resetTitle" title="Wis enige plaaslik-gestoorde kampeerdata en gebruik weer die jongste ingeboude databasis (behalwe jou eie bygevoegde plekke)">🔄 Herstel Data</button>
+  <button class="cs-adm-item" id="exportCampsBtn" data-i18n="cs.exportBtn" data-i18n-title="cs.exportTitle" title="Laai 'n Excel/CSV-lys af van al jou kampeerplekke (provinsie, dorp, naam, GPS, foon, webwerf)">📊 Voer uit na Excel</button>
+  <label class="cs-adm-item" for="importCampsFile" id="importCampsBtn" data-i18n="cs.importBtn" data-i18n-title="cs.importTitle" title="Voer 'n Excel/CSV-lys van kampeerplekke in — vervang AL die huidige data hiermee (herstelfunksie as iets verkeerd geloop het)">📥 Voer Data In</label>
   <input type="file" id="importCampsFile" accept=".csv,text/csv" style="display:none">
-  <button style="margin-left:8px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);color:#fff;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:1rem;font-weight:600;flex-shrink:0;white-space:nowrap;" onclick="window.openMembersPanel &amp;&amp; window.openMembersPanel()" title="Bestuur wie toegang het (net vir admin)">👥 Lede</button>
+  </div>
+</div>
 </div>
 
 <div class="app">
@@ -2221,6 +2249,8 @@ Object.assign(I18N.af, {
   'cs.subtitle': 'SA & Buurlande — 687 kampeerplekke',
   'cs.selBadge': '☰ Keuse:',
   'cs.addBtn': '+ Voeg Toe',
+  'cs.adminHead': '👑 Net vir admin',
+  'cs.membersBtn': '👥 Lede',
   'cs.resetBtn': '🔄 Herstel Data',
   'cs.resetTitle': 'Wis enige plaaslik-gestoorde kampeerdata en gebruik weer die jongste ingeboude databasis (behalwe jou eie bygevoegde plekke)',
   'cs.exportBtn': '📊 Voer uit na Excel',
@@ -2366,6 +2396,8 @@ Object.assign(I18N.en, {
   'cs.subtitle': 'SA & Neighbours — 687 campsites',
   'cs.selBadge': '☰ Selected:',
   'cs.addBtn': '+ Add',
+  'cs.adminHead': '👑 Admin only',
+  'cs.membersBtn': '👥 Members',
   'cs.resetBtn': '🔄 Reset Data',
   'cs.resetTitle': 'Clear any locally-cached campsite data and use the freshest built-in database again (except your own added places)',
   'cs.exportBtn': '📊 Export to Excel',
@@ -12149,6 +12181,8 @@ onAuthStateChanged(auth, async function(user){
     if(exportBtn) exportBtn.style.display = isAdmin ? '' : 'none';
     if(importBtn) importBtn.style.display = isAdmin ? '' : 'none';
     if(resetBtn) resetBtn.style.display = isAdmin ? '' : 'none';
+    var csAdmWrap = document.getElementById('csAdminWrap');
+    if(csAdmWrap) csAdmWrap.style.display = isAdmin ? '' : 'none';
   }catch(e){
     gateShow('Kon nie kampplek-data laai nie: '+e.message);
   }
@@ -12172,5 +12206,46 @@ window.appLogout = function(){
 // Afrikaans until you toggled AF/EN. Translate once more now that the whole
 // page exists.
 try{ applyLanguage(); }catch(e){ console.error(e); }
+</script>
+<script>
+/* v3.34: admin menu + left-hand tabs */
+function closeCsAdminMenu(){
+  var m=document.getElementById('csAdminMenu'), b=document.getElementById('csAdminBtn');
+  if(m) m.classList.remove('show'); if(b) b.classList.remove('open');
+}
+function toggleCsAdminMenu(ev){
+  if(ev) ev.stopPropagation();
+  var m=document.getElementById('csAdminMenu'), b=document.getElementById('csAdminBtn');
+  if(m.classList.contains('show')){ closeCsAdminMenu(); return; }
+  var r=b.getBoundingClientRect();
+  m.classList.add('show'); b.classList.add('open');
+  var w=m.offsetWidth, left=Math.min(r.right-w, window.innerWidth-w-8);
+  m.style.left=Math.max(8,left)+'px'; m.style.top=(r.bottom+6)+'px';
+}
+document.addEventListener('click', closeCsAdminMenu);
+window.addEventListener('resize', closeCsAdminMenu);
+document.addEventListener('DOMContentLoaded', function(){
+  // "Voer Data In" is a <label for=file>; close the menu once a file is chosen.
+  var f=document.getElementById('importCampsFile'); if(f) f.addEventListener('change', closeCsAdminMenu);
+  document.querySelectorAll('#csAdminMenu .cs-adm-item').forEach(function(it){
+    if(it.tagName==='BUTTON') it.addEventListener('click', function(){ setTimeout(closeCsAdminMenu,0); });
+  });
+  // Move each page's tab bar into a left-hand column; the rest of the page
+  // (after the header) goes into the right-hand column. Same elements, same
+  // ids and handlers -- only their position on the screen changes.
+  ['pg-tour','pg-recipes','pg-tips'].forEach(function(id){
+    var pg=document.getElementById(id); if(!pg) return;
+    var bar=pg.querySelector(':scope > .tab-bar'); var hdr=pg.querySelector(':scope > .page-hdr');
+    if(!bar || !hdr) return;
+    var lay=document.createElement('div'); lay.className='side-layout';
+    var nav=document.createElement('div'); nav.className='side-nav';
+    var main=document.createElement('div'); main.className='side-main';
+    var n=hdr.nextSibling, move=[];
+    while(n){ move.push(n); n=n.nextSibling; }
+    move.forEach(function(x){ if(x===bar) nav.appendChild(x); else main.appendChild(x); });
+    lay.appendChild(nav); lay.appendChild(main); pg.appendChild(lay);
+    pg.classList.add('has-side');
+  });
+});
 </script>
 </body></html>
