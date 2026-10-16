@@ -307,7 +307,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.34 (11 Okt Oortjies links + Admin)</div>
+  <div class="hdr-ver">v3.35 (16 Okt Sygic oopmaak)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -1906,7 +1906,7 @@ I18N_REFRESH.push(function(){
       <select id="legToSel"></select>
       <button class="btn-route" id="btnLegRoute" data-i18n="cs.legRouteBtn">🗺 Roeteer</button>
     </div>
-    <button class="btn-route" id="btnSygicRoute" data-i18n="cs.sygicRoute" style="margin-left:6px;background:#1565c0;">📍 Kopieer Koördinate (Sygic)</button>
+    <button class="btn-route" id="btnSygicRoute" data-i18n="cs.sygicRoute" style="margin-left:6px;background:#1565c0;">📍 Na Sygic</button>
     <button class="btn-pdf" id="btnPdf" data-i18n="cs.printPdf">🖶 Druk / PDF</button>
     <button class="btn-route" onclick="pullFromCampsite()" data-i18n="cs.pullToTour">↓ Trek na Tour Planner</button>
     <button class="btn-ca" id="btnCA" data-i18n="cs.clearSelection">✕ Maak Keuse Leeg</button>
@@ -2294,8 +2294,14 @@ Object.assign(I18N.af, {
   'cs.legRouteBtn': '🗺 Roeteer',
   'cs.legRouteSame': 'Kies twee verskillende plekke om tussen te roeteer.',
   'cs.legRouteNoGps': 'Een of albei van hierdie plekke het geen GPS-koördinate nie.',
-  'cs.sygicRoute': '📍 Kopieer Koördinate (Sygic)',
-  'cs.openSygic': '📍 Kopieer Koördinate',
+  'cs.sygicRoute': '📍 Na Sygic',
+  'cs.openSygic': '📍 Na Sygic',
+  'cs.sygicTitle': '📍 Navigeer met Sygic',
+  'cs.sygicOpenBtn': '🧭 Maak Sygic oop en navigeer hierheen',
+  'cs.sygicCopyBtn': '📋 Kopieer koördinate',
+  'cs.sygicCopyOk': '✓ Gekopieer. Maak Sygic oop, tik op die soekbalk en plak.',
+  'cs.sygicCopyManual': 'Kon nie outomaties kopieer nie. Hou jou vinger op die getalle hierbo (of kies dit met die muis) en kies Kopieer.',
+  'cs.sygicHint': 'Maak die knoppie Sygic nie oop nie? Kopieer die koördinate en plak dit in Sygic se soekbalk.',
   'cs.sygicOpening': 'Maak Sygic oop... koördinate ({coords}) is ook gekopieer — as Sygic nie vanself oopmaak nie, plak dit in Sygic se soekbalk.',
   'cs.sygicCopied': 'Koördinate gekopieer: {coords} — maak Sygic self oop en plak dit in die soekbalk.',
   'cs.sygicCopyFail': 'Kon nie outomaties kopieer nie. Koördinate: {coords} — tik dit self in Sygic se soekbalk in.',
@@ -2441,8 +2447,14 @@ Object.assign(I18N.en, {
   'cs.legRouteBtn': '🗺 Route',
   'cs.legRouteSame': 'Choose two different places to route between.',
   'cs.legRouteNoGps': 'One or both of these places has no GPS coordinates.',
-  'cs.sygicRoute': '📍 Copy Coordinates (Sygic)',
-  'cs.openSygic': '📍 Copy Coordinates',
+  'cs.sygicRoute': '📍 To Sygic',
+  'cs.openSygic': '📍 To Sygic',
+  'cs.sygicTitle': '📍 Navigate with Sygic',
+  'cs.sygicOpenBtn': '🧭 Open Sygic and navigate here',
+  'cs.sygicCopyBtn': '📋 Copy coordinates',
+  'cs.sygicCopyOk': '✓ Copied. Open Sygic, tap the search bar and paste.',
+  'cs.sygicCopyManual': 'Couldn\'t copy automatically. Press and hold the numbers above (or select them with the mouse) and choose Copy.',
+  'cs.sygicHint': 'Button doesn\'t open Sygic? Copy the coordinates and paste them into Sygic\'s search bar.',
   'cs.sygicOpening': 'Opening Sygic... coordinates ({coords}) were also copied — if Sygic doesn\'t open automatically, paste them into Sygic\'s search bar.',
   'cs.sygicCopied': 'Coordinates copied: {coords} — open Sygic yourself and paste them into its search bar.',
   'cs.sygicCopyFail': 'Couldn\'t copy automatically. Coordinates: {coords} — type them into Sygic\'s search bar yourself.',
@@ -3839,31 +3851,54 @@ function generateCampsiteFacilityInfo(){
 function openSygicFor(gpsStr){
   var ll = parseGPS(gpsStr);
   if(!ll){ csToast(tr('cs.noGps')); return; }
+  showSygicModal(ll);
+}
+// v3.35 (2026-10-16): "Sygic copy coordinates is not copying". Copying ran
+// silently and only showed a toast, so when the copy didn't really reach the
+// clipboard (some tablets report success without copying) there was nothing
+// to fall back on. Now one panel shows the coordinates on screen and offers:
+//  1. Sygic's own link (com.sygic.aura://coordinate|LON|LAT|drive -- note the
+//     longitude comes first), as a plain link the user taps, so Sygic opens
+//     and starts navigating. The app runs from https:// (Netlify) now, so the
+//     browser can hand the link to the Sygic app.
+//  2. Copy, done directly inside the button tap (what browsers require),
+//     with a clear message, and the numbers selectable as a last resort.
+function showSygicModal(ll){
   var plain = ll.lat.toFixed(6)+', '+ll.lon.toFixed(6);
-  // We used to also try window.location.href = 'com.sygic.aura://...' to
-  // launch Sygic automatically. On some tablets that navigation attempt
-  // itself leaves the browser in a frozen, unresponsive state (tabs stop
-  // reacting to taps) until the page is fully closed and reopened -- and
-  // it was never actually succeeding in opening Sygic there in the first
-  // place, likely because this app runs as a local file rather than a
-  // hosted https:// page, which many mobile browsers require for that
-  // kind of app hand-off. So this now does the one thing that reliably
-  // works everywhere: copies "lat, lon" to the clipboard, ready to paste
-  // straight into Sygic's own search bar -- an officially supported way
-  // to navigate to exact coordinates in Sygic.
-  //
-  // BUGFIX (2026-08-13): "we cannot copy the sygic coordinates" —
-  // navigator.clipboard is only available in a "secure context" (https://
-  // or localhost). This app is opened as a plain local file
-  // (file://.../NAYELA....html), which browsers do NOT treat as secure,
-  // so navigator.clipboard is simply undefined there and the old code
-  // fell straight to the "couldn't copy" toast every single time, with
-  // no way to actually get the coordinates. Added two more fallback
-  // layers below so copying works regardless of how the file was opened.
-  copyTextWithFallback(plain,
-    function(){ csToast(tr('cs.sygicCopied',{coords:plain}), 5000); },
-    function(){ showCopyFallbackModal(plain); }
-  );
+  var sygicUrl = 'com.sygic.aura://coordinate|' + ll.lon.toFixed(6) + '|' + ll.lat.toFixed(6) + '|drive';
+  var old = document.getElementById('sygicModal'); if(old) old.remove();
+  var wrap = document.createElement('div');
+  wrap.id = 'sygicModal';
+  wrap.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:99999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  wrap.innerHTML =
+    '<div style="background:#fff;border-radius:12px;padding:18px;max-width:380px;width:100%;box-shadow:0 10px 40px rgba(0,0,0,.3);font-family:inherit;">'
+    +'<div style="font-weight:700;font-size:1.05rem;margin-bottom:12px;color:#0d47a1;">'+tr('cs.sygicTitle')+'</div>'
+    +'<input id="sygicCoords" readonly style="width:100%;padding:12px;font-size:1.1rem;font-weight:600;text-align:center;border:1px solid #b0bec5;border-radius:8px;box-sizing:border-box;background:#f5f8fa;-webkit-user-select:text;user-select:text;" value="'+plain+'">'
+    +'<a id="sygicOpenLink" href="'+sygicUrl+'" style="display:block;margin-top:12px;padding:13px;border-radius:8px;background:#1565c0;color:#fff;text-align:center;font-weight:700;text-decoration:none;touch-action:manipulation;">'+tr('cs.sygicOpenBtn')+'</a>'
+    +'<button id="sygicCopyBtn" type="button" style="display:block;width:100%;margin-top:8px;padding:12px;border-radius:8px;border:1px solid #1565c0;background:#fff;color:#1565c0;font-weight:700;font-size:.95rem;cursor:pointer;touch-action:manipulation;">'+tr('cs.sygicCopyBtn')+'</button>'
+    +'<div id="sygicMsg" style="font-size:.82rem;margin-top:8px;min-height:1em;"></div>'
+    +'<div style="font-size:.74rem;color:#777;margin-top:6px;">'+tr('cs.sygicHint')+'</div>'
+    +'<div style="margin-top:12px;text-align:right;"><button id="sygicClose" type="button" style="padding:8px 16px;border-radius:6px;border:none;background:#888;color:#fff;cursor:pointer;">'+tr('cs.closeBtn')+'</button></div>'
+    +'</div>';
+  document.body.appendChild(wrap);
+  var msg = document.getElementById('sygicMsg');
+  var input = document.getElementById('sygicCoords');
+  function ok(){ msg.style.color='#2e7d32'; msg.textContent = tr('cs.sygicCopyOk'); }
+  function manual(){
+    msg.style.color='#b26a00'; msg.textContent = tr('cs.sygicCopyManual');
+    try{ input.focus(); input.select(); input.setSelectionRange(0, plain.length); }catch(e){}
+  }
+  document.getElementById('sygicCopyBtn').addEventListener('click', function(){
+    msg.textContent = '';
+    // Called straight from the tap, so the browser allows the clipboard.
+    if(navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext){
+      navigator.clipboard.writeText(plain).then(ok).catch(function(){ legacyCopy(plain, ok, manual); });
+    } else {
+      legacyCopy(plain, ok, manual);
+    }
+  });
+  document.getElementById('sygicClose').addEventListener('click', function(){ wrap.remove(); });
+  wrap.addEventListener('click', function(e){ if(e.target===wrap) wrap.remove(); });
 }
 // Tries, in order: (1) the modern async clipboard API, (2) the older
 // execCommand('copy') via a temporary offscreen textarea — this one still
