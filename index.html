@@ -279,6 +279,33 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
 #cs-overlay .cs-adm-head{font-size:.72rem;font-weight:700;color:#8d6e00;text-transform:uppercase;padding:6px 10px 4px;letter-spacing:.03em;}
 #cs-overlay .cs-adm-item{display:block;width:100%;box-sizing:border-box;text-align:left;background:none;border:none;border-radius:6px;padding:10px 12px;font-size:.95rem;font-weight:600;color:#1b5e20;cursor:pointer;font-family:inherit;touch-action:manipulation;}
 #cs-overlay .cs-adm-item:hover{background:#eef6ee;}
+/* v3.36: recommended campsites */
+.rec-tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
+.rec-tools input,.rec-tools select{flex:1;min-width:160px;padding:9px 10px;border:1px solid #ccc;border-radius:8px;font-size:.95rem;font-family:inherit;}
+.rec-intro{background:#fff8e1;border:1px solid #ffe082;color:#5d4300;border-radius:10px;padding:10px 14px;font-size:.88rem;margin-bottom:14px;line-height:1.45;}
+.rec-prov{font-size:1rem;font-weight:800;color:#1b5e20;margin:18px 0 8px;padding-bottom:4px;border-bottom:2px solid #c8e6c9;}
+.rec-card{background:#fff;border-radius:12px;box-shadow:0 2px 10px rgba(0,0,0,.08);padding:14px 16px;margin-bottom:12px;border-left:5px solid #f9a825;}
+.rec-card h3{margin:0;font-size:1.08rem;color:#2e2e2e;}
+.rec-sub{font-size:.84rem;color:#6d4c41;margin:2px 0 8px;}
+.rec-count{display:inline-block;background:#fff3c4;color:#8d6e00;border-radius:12px;padding:2px 10px;font-size:.78rem;font-weight:700;margin-bottom:8px;}
+.rec-row{font-size:.88rem;margin:3px 0;line-height:1.4;word-break:break-word;}
+.rec-row b{color:#555;font-weight:700;}
+.rec-photos{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0;}
+.rec-photos img{width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid #ddd;cursor:zoom-in;}
+.rec-reasons{margin:10px 0 4px;padding:0;list-style:none;}
+.rec-reasons li{background:#f7f9f4;border-radius:8px;padding:7px 10px;margin-bottom:5px;font-size:.86rem;line-height:1.4;}
+.rec-reasons .who{display:block;font-size:.74rem;color:#888;margin-top:2px;}
+.rec-btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;}
+.rec-btns a,.rec-btns button{background:#eef6ee;color:#1b5e20;border:1px solid #c8e6c9;border-radius:8px;padding:8px 11px;font-size:.82rem;font-weight:700;text-decoration:none;cursor:pointer;font-family:inherit;touch-action:manipulation;}
+.rec-btns .on{background:#1b5e20;color:#fff;border-color:#1b5e20;}
+.rec-empty{text-align:center;color:#888;padding:30px 10px;font-size:.92rem;line-height:1.5;}
+.ri-rec{color:#e65100;font-size:.74rem;font-weight:700;margin-left:6px;white-space:nowrap;}
+.mrec-box{background:#fff8e1;border:1px solid #ffe082;border-radius:8px;padding:10px;}
+.mrec-box label.mrec-cb{display:flex;align-items:center;gap:8px;font-weight:700;color:#5d4300;cursor:pointer;}
+.mrec-box label.mrec-cb input{width:22px;height:22px;}
+#cs-overlay .mfr .mrec-box label.mrec-cb{display:flex;align-items:center;gap:10px;font-size:.95rem;font-weight:700;color:#5d4300;margin:0;}
+#cs-overlay .mfr .mrec-box label.mrec-cb input{width:24px;height:24px;flex:0 0 24px;padding:0;margin:0;}
+.mrec-box textarea{width:100%;box-sizing:border-box;margin-top:8px;font-family:inherit;}
 /* v3.34: tabs as a left-hand side menu */
 .page.has-side{max-width:1200px;}
 .side-layout{display:flex;gap:18px;align-items:flex-start;}
@@ -307,7 +334,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.35 (16 Okt Sygic oopmaak)</div>
+  <div class="hdr-ver">v3.36 (24 Okt Aanbevole kampplekke)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -344,6 +371,16 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
           <h3 data-i18n="menu.cs.title">Kampeerterrein Soektog</h3>
           <p data-i18n="menu.cs.desc">Soek 685 kampeerterreine regoor SA, Namibië, Botswana en Mosambiek. Beplan jou roete op die kaart.</p>
           <span class="mc-badge badge-done" data-i18n="menu.cs.badge">✓ Fase 1 Voltooi</span>
+        </div>
+      </div>
+
+      <!-- Recommended Campsites (v3.36) -->
+      <div class="menu-card" onclick="showPage(&#39;pg-recs&#39;)">
+        <div class="mc-icon" style="background:#f9a825;">⭐</div>
+        <div class="mc-body">
+          <h3 data-i18n="menu.recs.title">Aanbevole Kampplekke</h3>
+          <p data-i18n="menu.recs.desc">Kampplekke wat lede aanbeveel — met al die inligting, GPS en hoekom hulle dit aanbeveel.</p>
+          <span class="mc-badge badge-new" id="menuRecsBadge" data-i18n="menu.recs.badge">★ Nuut</span>
         </div>
       </div>
 
@@ -1072,6 +1109,7 @@ function showPage(id){
   if(id==='pg-recipes'){initRecipesPage();}
   if(id==='pg-road'){initRoadPage();}
   if(id==='pg-manuals'){initManualsPage();}
+  if(id==='pg-recs' && typeof renderRecsPage==='function'){renderRecsPage();}
   if(id==='pg-fuel' && typeof renderFuelPlanCompare==='function'){renderFuelPlanCompare(); try{ renderAllFuelGraphs(); }catch(e){}}
   if(id!=='pg-manuals' && typeof manualsCloseViewer==='function'){manualsCloseViewer();}
 }
@@ -1937,6 +1975,11 @@ I18N_REFRESH.push(function(){
         <div id="mBathStars" class="rate-stars"></div>
         <div id="mBathInfo" style="font-size:.78rem;color:#777;margin-top:3px;"></div>
       </div>
+      <div class="mfr" id="mRecWrap"><div class="mrec-box">
+        <label class="mrec-cb"><input type="checkbox" id="mRecCb"> <span data-i18n="rec.mTick">⭐ Ek beveel hierdie kampplek aan</span></label>
+        <textarea id="mRecReason" rows="2" maxlength="300" placeholder="Hoekom? bv. Lekker skaduwee, skoon badkamers, kinders geniet die rivier" data-i18n-ph="rec.mReasonPh" style="display:none;"></textarea>
+        <div id="mRecInfo" style="font-size:.78rem;color:#777;margin-top:4px;"></div>
+      </div></div>
       <style>
         .rate-stars{display:flex;gap:4px;align-items:center;flex-wrap:wrap;}
         .rate-stars button.rs{background:none;border:none;font-size:1.9rem;line-height:1;padding:2px 3px;cursor:pointer;color:#ccc;touch-action:manipulation;min-width:38px;min-height:38px;}
@@ -3046,7 +3089,7 @@ function renderList(){
     var isAct=idx===curIdx;
     h+='<div class="ritem'+(isAct?' active':'')+(isSel?' ticked':'')+(isAct&&isSel?' active ticked':'')+'" data-idx="'+idx+'">'
       +'<input type="checkbox" class="ri-cb" data-cidx="'+idx+'"'+(isSel?' checked':'')+' onclick="event.stopPropagation();toggleSel('+idx+')">'
-      +'<div class="ri-body"><div class="ri-name">'+esc(c.naam)+(function(){ var st=campRatingStats(c), bt=campBathStats(c); return (st ? '<span class="ri-stars" title="'+tr('cs.ratingCount',{n:st.n})+'">★ '+st.avg.toFixed(1)+'</span>' : '') + (bt ? '<span class="ri-bath" title="'+tr('cs.bathRating')+' · '+tr('cs.ratingCount',{n:bt.n})+'">🚿 '+bt.avg.toFixed(1)+'</span>' : ''); })()+'</div>'
+      +'<div class="ri-body"><div class="ri-name">'+esc(c.naam)+(function(){ var st=campRatingStats(c), bt=campBathStats(c); return (st ? '<span class="ri-stars" title="'+tr('cs.ratingCount',{n:st.n})+'">★ '+st.avg.toFixed(1)+'</span>' : '') + (bt ? '<span class="ri-bath" title="'+tr('cs.bathRating')+' · '+tr('cs.ratingCount',{n:bt.n})+'">🚿 '+bt.avg.toFixed(1)+'</span>' : '') + (function(){ var rn=campRecCount(c); return rn ? '<span class="ri-rec" title="'+tr('rec.countTitle',{n:rn})+'">⭐ '+rn+'</span>' : ''; })(); })()+'</div>'
       +'<div class="ri-sub">'+esc(clean(c.dorp)||'&mdash;')+(c.provinsie?' &bull; '+esc(provLabel(c.provinsie)):'')+'</div>'
       +'</div></div>';
   });
@@ -3074,6 +3117,12 @@ function showDetail(idx){
   if(rst) h+='<div class="drow"><span class="dlbl">'+tr('cs.rating')+':</span><span class="dval"><span style="color:#f9a825;font-size:1.05em;letter-spacing:1px;">'+campStarsStr(rst.avg)+'</span> '+rst.avg.toFixed(1)+' <span style="color:#888;font-size:.85em;">('+tr('cs.ratingCount',{n:rst.n})+')</span></span></div>';
   var bst=campBathStats(c);
   if(bst) h+='<div class="drow"><span class="dlbl">'+tr('cs.bathRating')+':</span><span class="dval"><span style="color:#0277bd;font-size:1.05em;letter-spacing:1px;">'+campStarsStr(bst.avg)+'</span> '+bst.avg.toFixed(1)+' <span style="color:#888;font-size:.85em;">('+tr('cs.ratingCount',{n:bst.n})+')</span></span></div>';
+  var drecs=campRecList(c);
+  if(drecs.length){
+    h+='<div class="drow"><span class="dlbl">⭐ '+tr('rec.lbl')+':</span><span class="dval">'+tr('rec.countTitle',{n:drecs.length})
+      +drecs.filter(function(r){return r.reason;}).map(function(r){ return '<br><i>“'+esc(r.reason)+'”</i> <span style="color:#888;font-size:.85em;">— '+esc(recWho(r.by))+'</span>'; }).join('')
+      +'</span></div>';
+  }
   if(tel) h+='<div class="drow"><span class="dlbl">'+tr('cs.town')+':</span><span class="dval">'+esc(tel)+'</span></div>';
   if(cel) h+='<div class="drow"><span class="dlbl">'+tr('cs.cell')+':</span><span class="dval">'+esc(cel)+'</span></div>';
   if(url) h+='<div class="drow"><span class="dlbl">'+tr('cs.website')+':</span><span class="dval"><a href="'+esc(url)+'" target="_blank" rel="noopener">'+esc(url)+'</a></span></div>';
@@ -3085,6 +3134,7 @@ function showDetail(idx){
     +'<label for="dtCb">'+(isSel?'&#10003; '+tr('cs.inSelection'):tr('cs.addToSelection'))+'</label></div>'
     +'<div class="dedit">'
     +'<button class="btn-edit" onclick="openEditModal('+idx+')">'+tr('cs.edit')+'</button>'
+    +' <button class="btn-edit" style="background:#f9a825;color:#3e2a00;" onclick="recommendFromDetail('+idx+')">'+(campMyRec(c)?tr('rec.btnMine'):tr('rec.btnRecommend'))+'</button>'
     +'</div>'
     +'</div></div>';
   var detailEl = document.getElementById('detail');
@@ -3733,6 +3783,65 @@ function renderBathPicker(){
 }
 I18N_REFRESH.push(function(){ if(document.getElementById('modalBg') && document.getElementById('modalBg').classList.contains('show')) renderBathPicker(); });
 
+// ── ⭐ Recommendations per member (v3.36) ───────────────────────────────
+// Same idea as ratings: recs[<member id>] = {by, reason, date} on the shared
+// campsite record. Any member can recommend (and give a short reason);
+// unticking removes only your own recommendation. The "Aanbevole
+// Kampplekke" page lists every campsite with at least one, straight from
+// the campsite list, so GPS and details are always the current ones.
+function campRecList(c){
+  var r = c && c.recs;
+  if(!r || typeof r !== 'object') return [];
+  return Object.keys(r).map(function(k){ return r[k]; }).filter(function(x){ return x && typeof x === 'object'; })
+    .sort(function(a, b){ return (b.date||0) - (a.date||0); });
+}
+function campRecCount(c){ return campRecList(c).length; }
+function campMyRec(c){
+  var r = c && c.recs && c.recs[campRatingKey()];
+  return (r && typeof r === 'object') ? r : null;
+}
+function campMergedRecs(c){
+  var out = {}, old = c && c.recs && typeof c.recs === 'object' ? c.recs : {};
+  Object.keys(old).forEach(function(k){ out[k] = old[k]; });
+  var key = campRatingKey();
+  var cb = document.getElementById('mRecCb');
+  if(cb && cb.checked){
+    var u = window.fbAuth && window.fbAuth.currentUser;
+    var prev = old[key];
+    out[key] = { by: (u && u.email) || '', reason: (document.getElementById('mRecReason').value || '').trim().slice(0, 300),
+                 date: (prev && prev.date) || Date.now() };
+  } else { delete out[key]; }
+  return out;
+}
+function recWho(email){ return email ? String(email).split('@')[0] : '?'; }
+function renderRecPicker(c){
+  var cb = document.getElementById('mRecCb'), ta = document.getElementById('mRecReason'), info = document.getElementById('mRecInfo');
+  if(!cb) return;
+  var mine = campMyRec(c);
+  cb.checked = !!mine;
+  ta.value = mine ? (mine.reason || '') : '';
+  ta.style.display = cb.checked ? '' : 'none';
+  var n = campRecCount(c) - (mine ? 1 : 0);
+  info.textContent = n > 0 ? tr('rec.mOthers', {n: n}) : '';
+}
+document.addEventListener('change', function(e){
+  if(e.target && e.target.id === 'mRecCb'){
+    var ta = document.getElementById('mRecReason');
+    ta.style.display = e.target.checked ? '' : 'none';
+    if(e.target.checked) setTimeout(function(){ try{ ta.focus(); }catch(_){} }, 30);
+  }
+});
+function recommendFromDetail(idx){
+  openEditModal(idx);
+  var cb = document.getElementById('mRecCb');
+  if(cb && !cb.checked){ cb.checked = true; document.getElementById('mRecReason').style.display = ''; }
+  setTimeout(function(){
+    var w = document.getElementById('mRecWrap');
+    if(w) w.scrollIntoView({behavior:'smooth', block:'center'});
+    try{ document.getElementById('mRecReason').focus(); }catch(_){}
+  }, 80);
+}
+
 function openAddModal(){
   var abx = document.getElementById('mAddedBy'); if(abx){ abx.style.display = 'none'; abx.textContent = ''; }
   editIdx=-1;
@@ -3741,6 +3850,7 @@ function openAddModal(){
   ['mNaam','mDorp','mTel','mSel','mInfo','mGps','mRem'].forEach(function(id){document.getElementById(id).value='';});
   pendingRatingCamp = null; pendingMyRating = null; renderRatingPicker();
   pendingMyBath = null; renderBathPicker();
+  renderRecPicker(null);
   document.getElementById('mProv').value='';
   pendingCampPhotos = [];
   renderPhotoPicker('mPhotoPicker', pendingCampPhotos, 4);
@@ -3769,6 +3879,7 @@ function openEditModal(idx){
   document.getElementById('mSel').value=c.sel||'';
   pendingRatingCamp = c; pendingMyRating = campMyRating(c); renderRatingPicker();
   pendingMyBath = campMyBath(c); renderBathPicker();
+  renderRecPicker(c);
   document.getElementById('mInfo').value=c.info||'';
   document.getElementById('mGps').value=c.gps||'';
   document.getElementById('mRem').value=c.notes||'';
@@ -4575,6 +4686,7 @@ if(window.matchMedia){
       addedBy:(editIdx>=0 && camps[editIdx] && camps[editIdx].addedBy) || ((window.fbAuth && window.fbAuth.currentUser && window.fbAuth.currentUser.email) || ''),
       addedAt:(editIdx>=0 && camps[editIdx] && camps[editIdx].addedAt) || (editIdx>=0 ? '' : new Date().toISOString()),
       bathRatings:campMergedBath(editIdx>=0 ? camps[editIdx] : null),
+      recs:campMergedRecs(editIdx>=0 ? camps[editIdx] : null),
       info:document.getElementById('mInfo').value.trim(),
       notes:document.getElementById('mRem').value.trim(),
       gps:gpsClean,
@@ -9380,6 +9492,236 @@ Bedien in &#39;n rolletjie" data-i18n-ph="recipes.form.instructionsPh"></textare
 .rc-del{background:none;border:none;color:#c62828;cursor:pointer;font-size:.75rem;}
 .no-road{text-align:center;color:#aaa;padding:30px;font-size:.85rem;}
 </style>
+<!-- ⭐ RECOMMENDED CAMPSITES PAGE (v3.36) -->
+<div class="page" id="pg-recs">
+  <div class="page-hdr">
+    <button class="back-btn" onclick="showPage(&#39;pg-menu&#39;)" data-i18n="nav.backMenu">← Kieslys</button>
+    <h2 data-i18n="rec.title">⭐ Aanbevole Kampplekke</h2>
+    <div class="date-auto">⭐ <span id="recCountBadge">0</span></div>
+  </div>
+  <div class="rec-intro" data-i18n-html="rec.intro">Hierdie lys word outomaties uit die <b>Kampeerterrein Soektog</b> gevul. Om 'n kampplek aan te beveel: maak dit oop in die soektog, tik <b>⭐ Beveel aan</b>, merk die blokkie, skryf hoekom, en tik <b>Stoor</b>.</div>
+  <div class="rec-tools">
+    <input id="recSearch" type="search" placeholder="Soek naam of dorp…" data-i18n-ph="rec.searchPh" oninput="renderRecsPage()">
+    <select id="recProv" onchange="renderRecsPage()"><option value="" data-i18n="rec.allProv">Alle provinsies / lande</option></select>
+    <select id="recSort" onchange="renderRecsPage()">
+      <option value="prov" data-i18n="rec.sortProv">Volgens provinsie</option>
+      <option value="most" data-i18n="rec.sortMost">Meeste aanbevelings</option>
+      <option value="new" data-i18n="rec.sortNew">Nuutste eerste</option>
+    </select>
+  </div>
+  <div id="recList"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════════════
+// v3.36 — ⭐ AANBEVOLE KAMPPLEKKE / RECOMMENDED CAMPSITES
+// Read-only view over the shared campsite list: every campsite with at
+// least one member recommendation (recs{} on the record). Nothing is
+// copied, so edits/GPS fixes in the Campsite Search show here at once.
+// ══════════════════════════════════════════════════════
+Object.assign(I18N.af, {
+  'menu.recs.title': 'Aanbevole Kampplekke',
+  'menu.recs.desc': 'Kampplekke wat lede aanbeveel — met al die inligting, GPS en hoekom hulle dit aanbeveel.',
+  'menu.recs.badge': '★ Nuut',
+  'rec.title': '⭐ Aanbevole Kampplekke',
+  'rec.intro': "Hierdie lys word outomaties uit die <b>Kampeerterrein Soektog</b> gevul. Om 'n kampplek aan te beveel: maak dit oop in die soektog, tik <b>⭐ Beveel aan</b>, merk die blokkie, skryf hoekom, en tik <b>Stoor</b>.",
+  'rec.searchPh': 'Soek naam of dorp…',
+  'rec.allProv': 'Alle provinsies / lande',
+  'rec.sortProv': 'Volgens provinsie',
+  'rec.sortMost': 'Meeste aanbevelings',
+  'rec.sortNew': 'Nuutste eerste',
+  'rec.empty': "Nog geen aanbevole kampplekke nie.<br>Maak 'n kampplek oop in die Kampeerterrein Soektog en tik <b>⭐ Beveel aan</b>.",
+  'rec.noMatch': 'Geen aanbevole kampplekke pas by jou soektog nie.',
+  'rec.countTitle': 'Aanbeveel deur {n} lid(e)',
+  'rec.lbl': 'Aanbeveel',
+  'rec.mTick': '⭐ Ek beveel hierdie kampplek aan',
+  'rec.mReasonPh': 'Hoekom? bv. Lekker skaduwee, skoon badkamers, kinders geniet die rivier',
+  'rec.mOthers': '{n} ander lid(e) beveel dit ook aan.',
+  'rec.btnRecommend': '⭐ Beveel aan',
+  'rec.btnMine': '⭐ Jy beveel aan — wysig',
+  'rec.tel': 'Tel', 'rec.cell': 'Sel', 'rec.email': 'Info / E-pos', 'rec.web': 'Webtuiste', 'rec.gps': 'GPS', 'rec.notes': 'Aantekeninge',
+  'rec.rating': 'Gradering', 'rec.bath': 'Badkamers',
+  'rec.open': '🔎 Wys in soektog',
+  'rec.addSel': '➕ Voeg by keuse lys',
+  'rec.inSel': '✓ In keuse lys',
+  'rec.noGps': 'Geen GPS vir hierdie kampplek nie.',
+  'rec.copied': 'Koördinate gekopieer',
+  'rec.copy': '📋 Kopieer GPS'
+});
+Object.assign(I18N.en, {
+  'menu.recs.title': 'Recommended Campsites',
+  'menu.recs.desc': 'Campsites members recommend — with all the details, GPS and why they recommend them.',
+  'menu.recs.badge': '★ New',
+  'rec.title': '⭐ Recommended Campsites',
+  'rec.intro': 'This list fills itself from the <b>Campsite Search</b>. To recommend a campsite: open it in the search, tap <b>⭐ Recommend</b>, tick the box, say why, and tap <b>Save</b>.',
+  'rec.searchPh': 'Search name or town…',
+  'rec.allProv': 'All provinces / countries',
+  'rec.sortProv': 'By province',
+  'rec.sortMost': 'Most recommended',
+  'rec.sortNew': 'Newest first',
+  'rec.empty': 'No recommended campsites yet.<br>Open a campsite in the Campsite Search and tap <b>⭐ Recommend</b>.',
+  'rec.noMatch': 'No recommended campsites match your search.',
+  'rec.countTitle': 'Recommended by {n} member(s)',
+  'rec.lbl': 'Recommended',
+  'rec.mTick': '⭐ I recommend this campsite',
+  'rec.mReasonPh': 'Why? e.g. Lovely shade, clean ablutions, kids love the river',
+  'rec.mOthers': '{n} other member(s) also recommend it.',
+  'rec.btnRecommend': '⭐ Recommend',
+  'rec.btnMine': '⭐ You recommend — edit',
+  'rec.tel': 'Tel', 'rec.cell': 'Cell', 'rec.email': 'Info / Email', 'rec.web': 'Website', 'rec.gps': 'GPS', 'rec.notes': 'Notes',
+  'rec.rating': 'Rating', 'rec.bath': 'Ablutions',
+  'rec.open': '🔎 Show in search',
+  'rec.addSel': '➕ Add to selection',
+  'rec.inSel': '✓ In selection',
+  'rec.noGps': 'No GPS for this campsite.',
+  'rec.copied': 'Coordinates copied',
+  'rec.copy': '📋 Copy GPS'
+});
+
+function recCamps(){
+  var all = (typeof camps !== 'undefined' && camps) ? camps : (window.camps || []);
+  return all.filter(function(c){ return c && campRecCount(c) > 0; });
+}
+function recDate(ts){
+  if(!ts) return '';
+  try{ return new Date(ts).toLocaleDateString(LANG==='af'?'af-ZA':'en-ZA',{day:'numeric',month:'short',year:'numeric'}); }catch(e){ return ''; }
+}
+function recFindIdx(id){
+  for(var i=0;i<camps.length;i++){ if((camps[i]._id||camps[i].naam)===id) return i; }
+  return -1;
+}
+function recKey(c){ return c._id || c.naam; }
+
+function renderRecsPage(fromSync){
+  var page = document.getElementById('pg-recs');
+  var list = recCamps();
+  var badge = document.getElementById('recCountBadge');
+  if(badge) badge.textContent = list.length;
+  if(fromSync && page && !page.classList.contains('active')) return;
+  var el = document.getElementById('recList');
+  if(!el) return;
+
+  // Province dropdown, from what's actually recommended
+  var ps = document.getElementById('recProv'), cur = ps.value;
+  var provs = {};
+  list.forEach(function(c){ if(c.provinsie) provs[c.provinsie] = 1; });
+  var opts = '<option value="">'+esc(tr('rec.allProv'))+'</option>';
+  Object.keys(provs).sort().forEach(function(p){ opts += '<option value="'+esc(p)+'">'+esc(provLabel(p))+'</option>'; });
+  ps.innerHTML = opts;
+  ps.value = provs[cur] ? cur : '';
+
+  if(!list.length){ el.innerHTML = '<div class="rec-empty">'+tr('rec.empty')+'</div>'; return; }
+
+  var q = (document.getElementById('recSearch').value || '').trim().toLowerCase();
+  var pf = ps.value, sort = document.getElementById('recSort').value;
+  var shown = list.filter(function(c){
+    if(pf && c.provinsie !== pf) return false;
+    if(q && ((c.naam||'')+' '+(c.dorp||'')+' '+provLabel(c.provinsie||'')).toLowerCase().indexOf(q) < 0) return false;
+    return true;
+  });
+  if(!shown.length){ el.innerHTML = '<div class="rec-empty">'+esc(tr('rec.noMatch'))+'</div>'; return; }
+
+  function newest(c){ var l = campRecList(c); return l.length ? (l[0].date||0) : 0; }
+  if(sort === 'most') shown.sort(function(a,b){ return campRecCount(b)-campRecCount(a) || (a.naam||'').localeCompare(b.naam||''); });
+  else if(sort === 'new') shown.sort(function(a,b){ return newest(b)-newest(a); });
+  // 'prov': camps is already sorted province → town → name
+
+  var selIds = (typeof sel !== 'undefined') ? sel.map(function(i){ return camps[i] ? recKey(camps[i]) : null; }) : [];
+  var h = '', lastProv = null;
+  shown.forEach(function(c){
+    if(sort === 'prov' && c.provinsie !== lastProv){
+      lastProv = c.provinsie;
+      h += '<div class="rec-prov">'+esc(provLabel(c.provinsie||'') || '—')+'</div>';
+    }
+    h += recCardHtml(c, selIds.indexOf(recKey(c)) >= 0);
+  });
+  el.innerHTML = h;
+  el.querySelectorAll('[data-rec-photo]').forEach(function(img){
+    img.addEventListener('click', function(){ openLightbox(img.getAttribute('src')); });
+  });
+}
+
+function recCardHtml(c, isSel){
+  var key = esc(recKey(c)).replace(/'/g,"\\'");
+  var tel=clean(c.tel), cel=clean(c.sel), url=clean(c.url), info=clean(c.info), gps=clean(c.gps), notes=clean(c.notes||'');
+  var ll = gps ? parseGPS(gps) : null;
+  var recs = campRecList(c);
+  var h = '<div class="rec-card">'
+    + '<h3>'+esc(c.naam)+'</h3>'
+    + '<div class="rec-sub">'+esc(clean(c.dorp)||'')+(c.provinsie?' — '+esc(provLabel(c.provinsie)):'')+'</div>'
+    + '<span class="rec-count">⭐ '+esc(tr('rec.countTitle',{n:recs.length}))+'</span>';
+  var rst = campRatingStats(c), bst = campBathStats(c);
+  if(rst) h += '<div class="rec-row"><b>'+tr('rec.rating')+':</b> <span style="color:#f9a825;">'+campStarsStr(rst.avg)+'</span> '+rst.avg.toFixed(1)+' ('+rst.n+')</div>';
+  if(bst) h += '<div class="rec-row"><b>'+tr('rec.bath')+':</b> <span style="color:#0277bd;">'+campStarsStr(bst.avg)+'</span> '+bst.avg.toFixed(1)+' ('+bst.n+')</div>';
+  if(tel) h += '<div class="rec-row"><b>'+tr('rec.tel')+':</b> <a href="tel:'+esc(tel.split('/')[0].replace(/[^0-9+]/g,''))+'">'+esc(tel)+'</a></div>';
+  if(cel) h += '<div class="rec-row"><b>'+tr('rec.cell')+':</b> <a href="tel:'+esc(cel.split('/')[0].replace(/[^0-9+]/g,''))+'">'+esc(cel)+'</a></div>';
+  if(info) h += '<div class="rec-row"><b>'+tr('rec.email')+':</b> '+esc(info)+'</div>';
+  if(url) h += '<div class="rec-row"><b>'+tr('rec.web')+':</b> <a href="'+esc(url)+'" target="_blank" rel="noopener">'+esc(url)+'</a></div>';
+  if(gps) h += '<div class="rec-row"><b>'+tr('rec.gps')+':</b> '+esc(gps)+'</div>';
+  if(notes) h += '<div class="rec-row"><b>'+tr('rec.notes')+':</b> '+esc(notes).replace(/\n/g,'<br>')+'</div>';
+  if(c.photos && c.photos.length){
+    h += '<div class="rec-photos">' + c.photos.map(function(p){ return '<img data-rec-photo="1" src="'+p+'" alt="">'; }).join('') + '</div>';
+  }
+  if(recs.length){
+    h += '<ul class="rec-reasons">' + recs.map(function(r){
+      return '<li>'+(r.reason ? '“'+esc(r.reason)+'”' : '⭐')
+        + '<span class="who">— '+esc(recWho(r.by))+(r.date?' · '+esc(recDate(r.date)):'')+'</span></li>';
+    }).join('') + '</ul>';
+  }
+  h += '<div class="rec-btns">';
+  if(ll){
+    var lls = ll.lat.toFixed(6)+','+ll.lon.toFixed(6);
+    h += '<a href="https://www.google.com/maps/dir/?api=1&destination='+lls+'" target="_blank" rel="noopener">🗺 Google Maps</a>'
+      +  '<a href="https://waze.com/ul?ll='+lls+'&navigate=yes" target="_blank" rel="noopener">🚗 Waze</a>'
+      +  '<button type="button" onclick="openSygicFor(\''+lls+'\')">🧭 Sygic</button>'
+      +  '<button type="button" onclick="recCopyGps(\''+lls+'\')">'+tr('rec.copy')+'</button>';
+  }
+  h += '<button type="button" class="'+(isSel?'on':'')+'" onclick="recToggleSel(\''+key+'\')">'+(isSel?tr('rec.inSel'):tr('rec.addSel'))+'</button>'
+    +  '<button type="button" onclick="recOpenInSearch(\''+key+'\')">'+tr('rec.open')+'</button>'
+    +  '</div></div>';
+  return h;
+}
+
+function recCopyGps(lls){
+  function done(){ toast(tr('rec.copied')+': '+lls); }
+  try{
+    if(navigator.clipboard && window.isSecureContext){ navigator.clipboard.writeText(lls).then(done, function(){ recCopyFallback(lls); done(); }); return; }
+  }catch(e){}
+  recCopyFallback(lls); done();
+}
+function recCopyFallback(t){
+  var ta = document.createElement('textarea'); ta.value = t; ta.setAttribute('readonly','');
+  ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select();
+  try{ document.execCommand('copy'); }catch(e){}
+  document.body.removeChild(ta);
+}
+
+// Add/remove from the Campsite Search selection ("keuse lys") without
+// leaving this page -- the Tour Planner pulls from that same list.
+function recToggleSel(id){
+  var idx = recFindIdx(id);
+  if(idx < 0) return;
+  var pos = sel.indexOf(idx);
+  if(pos >= 0){ sel.splice(pos,1); toast(tr('cs.removedTick',{name:camps[idx].naam})); }
+  else { sel.push(idx); toast(tr('cs.pickedTick',{name:camps[idx].naam})); }
+  try{ saveSel(); }catch(e){}
+  ['selCnt','panCnt'].forEach(function(i){ var e = document.getElementById(i); if(e) e.textContent = sel.length; });
+  if(typeof campsiteReady !== 'undefined'){
+    try{ renderList(); plotDots(true); }catch(e){}
+  }
+  renderRecsPage();
+}
+
+function recOpenInSearch(id){
+  var idx = recFindIdx(id);
+  if(idx < 0) return;
+  openCampsite();
+  setTimeout(function(){ try{ showDetail(idx); }catch(e){ console.error(e); } }, 60);
+}
+
+I18N_REFRESH.push(function(){ var p = document.getElementById('pg-recs'); if(p && p.classList.contains('active')) renderRecsPage(); });
+</script>
+
 <div class="page" id="pg-road">
   <div class="page-hdr">
     <button class="back-btn" onclick="showPage(&#39;pg-menu&#39;)" data-i18n="nav.backMenu">← Kieslys</button>
@@ -11624,6 +11966,7 @@ function subscribeCampsites(){
 
     if(typeof window.filt !== 'undefined') window.filt = arr.slice();
     if(typeof window.doFilter === 'function') window.doFilter();
+    if(typeof window.renderRecsPage === 'function'){ try{ window.renderRecsPage(true); }catch(e){ console.error(e); } }
   }, function(err){
     console.error('campsites sync error', err);
   });
@@ -11778,6 +12121,18 @@ window.fbSaveCampsite = async function(rec){
       if(pd.addedBy) clean.addedBy = pd.addedBy;
       if(pd.addedAt) clean.addedAt = pd.addedAt;
       clean.editedBy = me; clean.editedAt = now;
+      // v3.36: someone else may have recommended this campsite while this
+      // form was open -- keep everyone's entries from the live record and
+      // only change this member's own one.
+      if(pd.recs && typeof pd.recs === 'object'){
+        var myKey = auth.currentUser && auth.currentUser.uid;
+        var mergedRecs = Object.assign({}, pd.recs);
+        if(myKey){
+          if(clean.recs && clean.recs[myKey]) mergedRecs[myKey] = clean.recs[myKey];
+          else delete mergedRecs[myKey];
+        }
+        clean.recs = mergedRecs;
+      }
     } else {
       clean.addedBy = me; clean.addedAt = now;
     }
