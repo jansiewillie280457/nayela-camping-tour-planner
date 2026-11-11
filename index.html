@@ -334,7 +334,7 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     <button type="button" class="lang-btn active" id="langBtnAf" onclick="setLang(&#39;af&#39;)">AF</button>
     <button type="button" class="lang-btn" id="langBtnEn" onclick="setLang(&#39;en&#39;)">EN</button>
   </div>
-  <div class="hdr-ver">v3.36 (24 Okt Aanbevole kampplekke)</div>
+  <div class="hdr-ver">v3.38 (11 Nov Lid verwyder)</div>
   <div id="hdrAcct" style="display:none;align-items:center;gap:8px;margin-left:8px;">
     <span id="hdrAcctEmail" style="font-size:.72rem;color:rgba(255,255,255,.85);max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
     <button type="button" onclick="appLogout()" style="background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:12px;padding:3px 10px;font-size:.72rem;color:#fff;cursor:pointer;" data-i18n="app.logout">🚪 Teken uit</button>
@@ -645,6 +645,25 @@ body.view-only-mode #pg-tour textarea:disabled{opacity:.85;cursor:default;backgr
     </div>
   </div>
 </div>
+
+<!-- v3.37: "Maak Reisinligting Skoon" choice dialog -->
+<div class="gc-bg" id="ctBg">
+  <div class="gc-box">
+    <p id="ctMsg" style="margin-bottom:12px;"></p>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      <button type="button" id="ctDetails" class="ct-opt"></button>
+      <button type="button" id="ctAll" class="ct-opt ct-danger"></button>
+      <button type="button" id="ctCancel" class="ct-opt ct-plain"></button>
+    </div>
+    <p id="ctTip" style="font-size:.76rem;color:#777;margin:12px 0 0;"></p>
+  </div>
+</div>
+<style>
+.ct-opt{width:100%;text-align:left;border-radius:8px;padding:12px 14px;font-size:.92rem;font-weight:700;cursor:pointer;font-family:inherit;touch-action:manipulation;background:#eef6ee;color:#1b5e20;border:1px solid #c8e6c9;line-height:1.3;}
+.ct-opt small{display:block;font-weight:500;font-size:.76rem;color:#555;margin-top:2px;}
+.ct-opt.ct-danger{background:#fdecea;color:#b71c1c;border-color:#f5c2bd;}
+.ct-opt.ct-plain{background:#f3f3f3;color:#444;border-color:#ddd;text-align:center;}
+</style>
 
 <script>
 // ── Global confirm (in-app replacement for window.confirm — see the
@@ -6153,20 +6172,78 @@ function saveTourInfo(){
   toast(tourInfo.name ? tr('tour.overview.savedNamed', {name: tourInfo.name}) : tr('tour.overview.savedGeneric'));
 }
 
+// v3.37: "Maak Reisinligting Skoon" used to clear ONLY the five Trip
+// Details fields. Everything else on the Oorsig (days, stops, km, costs,
+// members, map) comes from the Schedule/Members tabs, so it stayed exactly
+// the same and members reported "niks gebeur nie". Now it asks: just the
+// details, or the whole tour (start a new one).
 function clearTourInfo(){
-  gConfirm(tr('tour.overview.clearConfirm'), function(){
-    tourInfo = {};
-    document.getElementById('tourName').value = '';
-    document.getElementById('tourStart').value = '';
-    document.getElementById('tourEnd').value = '';
-    document.getElementById('tourPeople').value = 2;
-    document.getElementById('tourCaravans').value = 1;
-    document.getElementById('ovDays').textContent = '0';
-    try{localStorage.setItem('nayela_tourinfo', JSON.stringify(tourInfo));}catch(e){}
-    renderOverview();
-    toast(tr('tour.overview.cleared'));
-  });
+  var bg = document.getElementById('ctBg');
+  document.getElementById('ctMsg').textContent = tr('tour.clear.question');
+  document.getElementById('ctDetails').innerHTML = esc(tr('tour.clear.details')) + '<small>' + esc(tr('tour.clear.detailsSub')) + '</small>';
+  document.getElementById('ctAll').innerHTML = esc(tr('tour.clear.all')) + '<small>' + esc(tr('tour.clear.allSub')) + '</small>';
+  document.getElementById('ctCancel').textContent = tr('gc.cancel');
+  document.getElementById('ctTip').textContent = tr('tour.clear.tip');
+  bg.classList.add('show');
 }
+function clearTourDetailsOnly(){
+  tourInfo = {};
+  document.getElementById('tourName').value = '';
+  document.getElementById('tourStart').value = '';
+  document.getElementById('tourEnd').value = '';
+  document.getElementById('tourPeople').value = 2;
+  document.getElementById('tourCaravans').value = 1;
+  document.getElementById('ovDays').textContent = '0';
+  try{localStorage.setItem('nayela_tourinfo', JSON.stringify(tourInfo));}catch(e){}
+  renderOverview();
+  toast(tr(tourStops.length ? 'tour.clear.detailsDoneStops' : 'tour.overview.cleared'));
+}
+function clearWholeTour(){
+  tourInfo = {}; tourStops = []; tourMembers = []; depositList = []; menuList = [];
+  try{localStorage.setItem('nayela_tourinfo', JSON.stringify(tourInfo));}catch(e){}
+  try{localStorage.setItem('nayela_stops', JSON.stringify(tourStops));}catch(e){}
+  try{localStorage.setItem('nayela_members', JSON.stringify(tourMembers));}catch(e){}
+  try{localStorage.setItem('nayela_deposits', JSON.stringify(depositList));}catch(e){}
+  try{localStorage.setItem('nayela_menu', JSON.stringify(menuList));}catch(e){}
+  try{ resetFuelLogForNewTour(); }catch(e){}
+  ['loadTourForm','renderOverview','renderSchedule','renderMembers','renderCampCosts','renderDeposits','renderMenu','recalcFuel'].forEach(function(fn){
+    try{ if(typeof window[fn] === 'function') window[fn](); }catch(e){ console.error(fn, e); }
+  });
+  document.getElementById('ovDays').textContent = '0';
+  toast(tr('tour.clear.allDone'));
+}
+(function(){
+  function hide(){ document.getElementById('ctBg').classList.remove('show'); }
+  document.getElementById('ctCancel').addEventListener('click', hide);
+  document.getElementById('ctBg').addEventListener('click', function(e){ if(e.target.id === 'ctBg') hide(); });
+  document.getElementById('ctDetails').addEventListener('click', function(){ hide(); clearTourDetailsOnly(); });
+  document.getElementById('ctAll').addEventListener('click', function(){
+    hide();
+    gConfirm(tr('tour.clear.allConfirm'), clearWholeTour);
+  });
+})();
+Object.assign(I18N.af, {
+  'tour.clear.question': 'Wat wil jy skoonmaak?',
+  'tour.clear.details': '📝 Net reisbesonderhede',
+  'tour.clear.detailsSub': 'Toernaam, datums, mense en karavane. Skedule, lede en koste bly.',
+  'tour.clear.all': '🗑 Hele toer — begin \'n nuwe een',
+  'tour.clear.allSub': 'Besonderhede, Skedule, Lede, Deposito\'s, Spyskaart en brandstoflog. Voertuig, noodnommers en paklys bly.',
+  'tour.clear.tip': 'Wenk: stoor eers die toer onder Gestoorde Toere as jy dit later weer wil gebruik.',
+  'tour.clear.allConfirm': 'Is jy seker? Die hele huidige toer (skedule, lede, deposito\'s, spyskaart en brandstoflog) word skoongemaak. Dit kan nie ontdoen word nie.',
+  'tour.clear.allDone': 'Toer skoongemaak — begin jou nuwe toer',
+  'tour.clear.detailsDoneStops': 'Reisbesonderhede skoongemaak (Skedule nie geraak nie)'
+});
+Object.assign(I18N.en, {
+  'tour.clear.question': 'What do you want to clear?',
+  'tour.clear.details': '📝 Trip details only',
+  'tour.clear.detailsSub': 'Tour name, dates, people and caravans. Schedule, members and costs stay.',
+  'tour.clear.all': '🗑 Whole tour — start a new one',
+  'tour.clear.allSub': 'Details, Schedule, Members, Deposits, Menu and fuel log. Vehicle, emergency numbers and packing list stay.',
+  'tour.clear.tip': 'Tip: save the tour under Saved Tours first if you want to use it again later.',
+  'tour.clear.allConfirm': 'Are you sure? The whole current tour (schedule, members, deposits, menu and fuel log) will be cleared. This cannot be undone.',
+  'tour.clear.allDone': 'Tour cleared — start your new tour',
+  'tour.clear.detailsDoneStops': 'Trip details cleared (Schedule not touched)'
+});
 
 // ════════════════════════════════════════════════════════════
 // SAVED TOURS — snapshot the whole active tour under a name so a new
@@ -12309,7 +12386,7 @@ async function renderMembers(){
         var q = isAdm
           ? 'Haal admin-regte weg by ' + who + ' (' + d.id + ')?\n\nHy bly \'n gewone lid.'
           : 'Maak ' + who + ' (' + d.id + ') \'n ADMIN?\n\n\'n Admin kan presies wat jy kan: lede byvoeg en permanent verwyder, ander admin maak of afhaal (ook jou), aan alle lede e-pos stuur, en die hele kampeerplek-databasis uitvoer, invoer of terugstel. Gee dit net aan iemand wat jy vertrou.';
-        if(!confirm(q)) return;
+        if(!(await askYes(q))) return;
         abtn.disabled = true;
         try{
           await setDoc(doc(db,'members', d.id), {role: isAdm ? 'member' : 'admin'}, {merge:true});
@@ -12333,8 +12410,8 @@ async function renderMembers(){
     btn.style.background = '#c62828';
     btn.addEventListener('click', async function(){
       var err = document.getElementById('fbMemErr'); err.textContent='';
-      if(d.id===currentMember.email){ alert('Jy kan nie jouself verwyder nie.'); return; }
-      if(!confirm('Verwyder '+d.id+' PERMANENT?\n\nDit kan nie ongedaan gemaak word nie. Om hom terug te bring moet jy hom van voor af bygevoeg.')) return;
+      if(d.id===currentMember.email){ err.style.color='#c62828'; err.textContent='Jy kan nie jouself verwyder nie.'; return; }
+      if(!(await askYes('Verwyder '+d.id+' PERMANENT?\n\nDit kan nie ongedaan gemaak word nie. Om hom terug te bring moet jy hom van voor af byvoeg.'))) return;
       btn.disabled = true;
       try{
         await deleteDoc(doc(db,'members', d.id));
@@ -12357,6 +12434,18 @@ async function renderMembers(){
 // app would log the admin out, so it runs on a separate, throw-away
 // Firebase app instance and that one is signed out straight after.
 // The password is never stored by NAYELA -- it only goes to Firebase Auth.
+// v3.38: in-app Yes/No for the members panel. Native confirm() is silently
+// suppressed by some phone/tablet browsers (returns false, no prompt), which
+// made "Verwyder" and "Maak admin" look dead. Uses the global gConfirm
+// dialog (z-index 2200, above the members panel's 2100).
+function askYes(msg){
+  return new Promise(function(resolve){
+    var c = document.getElementById('gcCancel');
+    function no(){ c.removeEventListener('click', no); resolve(false); }
+    c.addEventListener('click', no);
+    window.gConfirm(msg, function(){ c.removeEventListener('click', no); resolve(true); });
+  });
+}
 var memberCreatorAuth = null;
 function getMemberCreatorAuth(){
   if(!memberCreatorAuth) memberCreatorAuth = getAuth(initializeApp(firebaseConfig, 'nayela-member-creator'));
